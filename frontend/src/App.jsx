@@ -1,25 +1,79 @@
-import { Routes, Route } from "react-router";
-import HomePage from "./pages/HomePage.jsx";
-import CreatePage from "./pages/CreatePage.jsx";
-import DirectoryPage from "./pages/DirectoryPage.jsx";
-import { Toaster, toast } from "react-hot-toast";
+import { useState, useEffect } from "react";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import HomePage from "./pages/HomePage";
+import DirectoryPage from "./pages/DirectoryPage";
+import CreatePage from "./pages/CreatePage";
+// import SMVProfilingPage from "./pages/SMVProfilingPage";
+// import QRRPASubmissionPage from "./pages/QRRPASubmissionPage";
 
 export default function App() {
-    return (
-        <div>
-            {/* Example toast button */}
-            <button onClick={() => toast.success("Congrats!")}>Show Toast</button>
+  const [currentPage, setCurrentPage] = useState("home");
+  const [currentTheme, setCurrentTheme] = useState("default");
 
-            {/* Router */}
-            <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/create" element={<CreatePage />} />
-                <Route path="/directoryPage" element={<DirectoryPage />} />
-            </Routes>
+  // Apply DaisyUI theme to document
+  useEffect(() => {
+    const themes = {
+      default: "corporate",
+      emerald: "emerald",
+      sunset: "sunset",
+      synthwave: "synthwave",
+      retro: "retro",
+      cyberpunk: "cyberpunk",
+      valentine: "valentine",
+      aqua: "aqua"
+    };
+    
+    document.documentElement.setAttribute('data-theme', themes[currentTheme] || 'corporate');
+  }, [currentTheme]);
 
-            {/* Toast container */}
-            <Toaster position="top-right" />
-        </div>
-    );
-};
+  const handleNavigation = (page) => {
+    setCurrentPage(page);
+    // Scroll to top when navigating
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
+  const handleThemeChange = (theme) => {
+    setCurrentTheme(theme);
+  };
+
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case "home":
+        return <HomePage />;
+      case "directory":
+        return <DirectoryPage />;
+      case "create":
+        return <CreatePage />;
+      case "smv-profiling":
+        return <SMVProfilingPage />;
+      case "qrrpa-submission":
+        return <QRRPASubmissionPage />;
+      default:
+        return <HomePage />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-base-100">
+      {/* DaisyUI CSS CDN */}
+      <link href="https://cdnjs.cloudflare.com/ajax/libs/daisyui/4.4.19/full.css" rel="stylesheet" />
+      
+      {/* Navigation */}
+      <Navbar 
+        currentPage={currentPage} 
+        onNavigate={handleNavigation}
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
+      />
+      
+      {/* Main Content */}
+      <main className="flex-grow">
+        {renderCurrentPage()}
+      </main>
+      
+      {/* Footer */}
+      <Footer />
+    </div>
+  );
+}
