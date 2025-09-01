@@ -1,425 +1,795 @@
-// components/EditModal.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
-const EditModal = ({
+export default function EditModal({
   isOpen,
   editingPerson,
   updateLoading,
-  onInputChange, 
+  onInputChange,
   onUpdate,
   onClose,
-  formatDate
-}) => {
+  formatDate,
+}) {
   const [localData, setLocalData] = useState(editingPerson || {});
+  const [errors, setErrors] = useState({});
 
-  // Update local data when editingPerson changes
   useEffect(() => {
     if (editingPerson) {
-      setLocalData(editingPerson);
+      // Format dates for input fields (convert from ISO to YYYY-MM-DD)
+      const formattedData = {
+        ...editingPerson,
+        birthday: editingPerson.birthday
+          ? new Date(editingPerson.birthday).toISOString().split("T")[0]
+          : "",
+        dateOfMandatoryRetirement: editingPerson.dateOfMandatoryRetirement
+          ? new Date(editingPerson.dateOfMandatoryRetirement)
+              .toISOString()
+              .split("T")[0]
+          : "",
+        dateOfCompulsoryRetirement: editingPerson.dateOfCompulsoryRetirement
+          ? new Date(editingPerson.dateOfCompulsoryRetirement)
+              .toISOString()
+              .split("T")[0]
+          : "",
+        dateOfAppointment: editingPerson.dateOfAppointment
+          ? new Date(editingPerson.dateOfAppointment)
+              .toISOString()
+              .split("T")[0]
+          : "",
+      };
+      setLocalData(formattedData);
     }
   }, [editingPerson]);
 
   if (!isOpen || !editingPerson) return null;
 
+  // Validation rules based on your MongoDB schema
+  const validateField = (name, value) => {
+    let error = "";
+
+    // Check required fields
+    const requiredFields = [
+      "name",
+      "sex",
+      "civilStatus",
+      "lguType",
+      "lguName",
+      "incomeClass",
+      "plantillaPosition",
+      "statusOfAppointment",
+      "birthday",
+      "dateOfAppointment",
+    ];
+    if (requiredFields.includes(name) && !value.trim()) {
+      error = `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+      return error;
+    }
+
+    switch (name) {
+      case "sex":
+        if (!["Male", "Female", "Other"].includes(value)) {
+          error = "Invalid sex selection";
+        }
+        break;
+      case "civilStatus":
+        if (
+          !["Single", "Married", "Widowed", "Separated", "Other"].includes(
+            value
+          )
+        ) {
+          error = "Invalid civil status selection";
+        }
+        break;
+      case "lguType":
+        if (!["City", "Municipality", "Province"].includes(value)) {
+          error = "Invalid LGU type selection";
+        }
+        break;
+      case "statusOfAppointment":
+        if (
+          ![
+            "Permanent",
+            "Temporary",
+            "Casual",
+            "Job Order",
+            "Contractual",
+          ].includes(value)
+        ) {
+          error = "Invalid appointment status selection";
+        }
+        break;
+      case "contactNumber":
+        if (value && !/^[0-9]{10,15}$/.test(value.replace(/\D/g, ""))) {
+          error = "Contact number must be 10-15 digits";
+        }
+        break;
+      case "emailAddress":
+        if (value && !/^\S+@\S+\.\S+$/.test(value)) {
+          error = "Invalid email format";
+        }
+        break;
+      case "stepIncrement":
+        if (value && (isNaN(value) || parseInt(value) < 0)) {
+          error = "Step increment must be a non-negative number";
+        }
+        break;
+      case "birthday":
+      case "dateOfMandatoryRetirement":
+      case "dateOfCompulsoryRetirement":
+      case "dateOfAppointment":
+        if (value && isNaN(Date.parse(value))) {
+          error = "Invalid date format";
+        }
+        break;
+      default:
+        break;
+    }
+    return error;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setLocalData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Also call the parent handler if provided
+
+    let sanitizedValue = value;
+
+    // Apply specific sanitization
+    if (name === "contactNumber") {
+      sanitizedValue = value.replace(/\D/g, "");
+    } else if (name === "emailAddress") {
+      sanitizedValue = value.toLowerCase().trim();
+    } else if (name === "stepIncrement") {
+      sanitizedValue = value.replace(/[^0-9]/g, "");
+    }
+
+    const fieldError = validateField(name, sanitizedValue);
+    setErrors((prev) => ({ ...prev, [name]: fieldError }));
+    setLocalData((prev) => ({ ...prev, [name]: sanitizedValue }));
+
     if (onInputChange) {
-      onInputChange(e);
+      onInputChange({ target: { name, value: sanitizedValue } });
     }
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+    const requiredFields = [
+      "name",
+      "sex",
+      "civilStatus",
+      "lguType",
+      "lguName",
+      "incomeClass",
+      "plantillaPosition",
+      "statusOfAppointment",
+      "birthday",
+      "dateOfAppointment",
+    ];
+
+    // Validate all fields
+    Object.keys(localData).forEach((key) => {
+      const error = validateField(key, localData[key]);
+      if (error) newErrors[key] = error;
+    });
+
+    // Check required fields
+    requiredFields.forEach((field) => {
+      if (!localData[field] || localData[field].toString().trim() === "") {
+        newErrors[field] = `${
+          field.charAt(0).toUpperCase() +
+          field.slice(1).replace(/([A-Z])/g, " $1")
+        } is required`;
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      alert("Please fix all errors before submitting.");
+      return;
+    }
+
     if (onUpdate) {
-      onUpdate(e);
+      // Pass the localData directly instead of creating submissionData
+      await onUpdate(e); // This matches the parent component's expectation
     }
   };
 
   return (
-    <div className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box max-w-5xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-base-100 to-base-200 shadow-2xl border border-base-300">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-6 border-b border-base-300 bg-gradient-to-r from-primary/10 to-secondary/10">
-          <div className="flex items-center space-x-4">
-            <div className="avatar placeholder">
-              <div className="bg-primary text-primary-content rounded-full w-12 h-12">
-                <span className="text-lg font-bold">{editingPerson.name?.charAt(0) || 'U'}</span>
-              </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-gray-300 p-6 animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6 border-b pb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
+              {editingPerson.name?.charAt(0) || "U"}
             </div>
             <div>
-              <h3 className="font-bold text-2xl text-primary">Edit Personnel</h3>
-              <p className="text-base-content/70">{editingPerson.name}</p>
+              <h2 className="text-2xl font-bold text-primary">
+                Edit Personnel
+              </h2>
+              <p className="text-gray-500">{editingPerson.name}</p>
             </div>
           </div>
           <button
-            className="btn btn-ghost btn-circle"
+            className="text-gray-500 hover:text-gray-700 text-2xl"
             onClick={onClose}
           >
             ✕
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-180px)]">
-          <form onSubmit={handleSubmit}>
-            {/* Personal Information Section */}
-            <div className="mb-8">
-              <div className="flex items-center mb-4">
-                <div className="bg-primary/20 p-2 rounded-lg mr-3">
-                  <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-semibold text-primary">Personal Information</h4>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Personal Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+              Personal Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Full Name - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Full Name <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.name ? "border-red-500" : ""
+                  }`}
+                  name="name"
+                  value={localData.name || ""}
+                  onChange={handleInputChange}
+                  required
+                />
+                {errors.name && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.name}
+                  </span>
+                )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Full Name</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-primary"
-                    name="name"
-                    value={localData.name || ''}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Sex</span>
-                  </label>
-                  <select
-                    className="select select-bordered focus:select-primary"
-                    name="sex"
-                    value={localData.sex || ''}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Select Sex</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Civil Status</span>
-                  </label>
-                  <select
-                    className="select select-bordered focus:select-primary"
-                    name="civilStatus"
-                    value={localData.civilStatus || ''}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Select Status</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Widowed">Widowed</option>
-                    <option value="Separated">Separated</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Birthday</span>
-                  </label>
-                  <input
-                    type="date"
-                    className="input input-bordered focus:input-primary"
-                    name="birthday"
-                    value={localData.birthday ? new Date(localData.birthday).toISOString().split('T')[0] : ''}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Email Address</span>
-                  </label>
-                  <input
-                    type="email"
-                    className="input input-bordered focus:input-primary"
-                    name="emailAddress"
-                    value={localData.emailAddress || ''}
-                    onChange={handleInputChange}
-                    placeholder="example@email.com"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Contact Number</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-primary"
-                    name="contactNumber"
-                    value={localData.contactNumber || ''}
-                    onChange={handleInputChange}
-                    placeholder="+63 XXX XXX XXXX"
-                  />
-                </div>
+
+              {/* Sex - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Sex <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <select
+                  className={`select select-bordered w-full ${
+                    errors.sex ? "border-red-500" : ""
+                  }`}
+                  name="sex"
+                  value={localData.sex || ""}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Sex</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+                {errors.sex && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.sex}
+                  </span>
+                )}
+              </div>
+
+              {/* Civil Status - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Civil Status <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <select
+                  className={`select select-bordered w-full ${
+                    errors.civilStatus ? "border-red-500" : ""
+                  }`}
+                  name="civilStatus"
+                  value={localData.civilStatus || ""}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Civil Status</option>
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Widowed">Widowed</option>
+                  <option value="Separated">Separated</option>
+                  <option value="Other">Other</option>
+                </select>
+                {errors.civilStatus && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.civilStatus}
+                  </span>
+                )}
+              </div>
+
+              {/* Birthday - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Birthday <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  className={`input input-bordered w-full ${
+                    errors.birthday ? "border-red-500" : ""
+                  }`}
+                  name="birthday"
+                  value={localData.birthday || ""}
+                  onChange={handleInputChange}
+                  required
+                />
+                {errors.birthday && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.birthday}
+                  </span>
+                )}
+              </div>
+
+              {/* Contact Information */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">Contact Number</span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.contactNumber ? "border-red-500" : ""
+                  }`}
+                  name="contactNumber"
+                  value={localData.contactNumber || ""}
+                  onChange={handleInputChange}
+                  placeholder="10-15 digits only"
+                  maxLength="15"
+                />
+                {errors.contactNumber && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.contactNumber}
+                  </span>
+                )}
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">Email Address</span>
+                </label>
+                <input
+                  type="email"
+                  className={`input input-bordered w-full ${
+                    errors.emailAddress ? "border-red-500" : ""
+                  }`}
+                  name="emailAddress"
+                  value={localData.emailAddress || ""}
+                  onChange={handleInputChange}
+                  placeholder="user@example.com"
+                />
+                {errors.emailAddress && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.emailAddress}
+                  </span>
+                )}
               </div>
             </div>
-
-            {/* Employment Information Section */}
-            <div className="mb-8">
-              <div className="flex items-center mb-4">
-                <div className="bg-secondary/20 p-2 rounded-lg mr-3">
-                  <svg className="w-5 h-5 text-secondary" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-semibold text-secondary">Employment Information</h4>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">LGU Type</span>
-                  </label>
-                  <select
-                    className="select select-bordered focus:select-secondary"
-                    name="lguType"
-                    value={localData.lguType || ''}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Select LGU Type</option>
-                    <option value="City">City</option>
-                    <option value="Municipality">Municipality</option>
-                    <option value="Province">Province</option>
-                  </select>
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">LGU Name</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-secondary"
-                    name="lguName"
-                    value={localData.lguName || ''}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Enter LGU name"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Income Class</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-secondary"
-                    name="incomeClass"
-                    value={localData.incomeClass || ''}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="e.g., 1st Class"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Plantilla Position</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-secondary"
-                    name="plantillaPosition"
-                    value={localData.plantillaPosition || ''}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Enter position title"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Status of Appointment</span>
-                  </label>
-                  <select
-                    className="select select-bordered focus:select-secondary"
-                    name="statusOfAppointment"
-                    value={localData.statusOfAppointment || ''}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Select Status</option>
-                    <option value="Permanent">Permanent</option>
-                    <option value="Temporary">Temporary</option>
-                    <option value="Casual">Casual</option>
-                    <option value="Job Order">Job Order</option>
-                    <option value="Contractual">Contractual</option>
-                  </select>
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Salary Grade</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-secondary"
-                    name="salaryGrade"
-                    value={localData.salaryGrade || ''}
-                    onChange={handleInputChange}
-                    placeholder="e.g., SG-15"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Step Increment</span>
-                  </label>
-                  <input
-                    type="number"
-                    className="input input-bordered focus:input-secondary"
-                    name="stepIncrement"
-                    value={localData.stepIncrement || 0}
-                    onChange={handleInputChange}
-                    min="0"
-                    max="8"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Date of Appointment</span>
-                  </label>
-                  <input
-                    type="date"
-                    className="input input-bordered focus:input-secondary"
-                    name="dateOfAppointment"
-                    value={localData.dateOfAppointment ? new Date(localData.dateOfAppointment).toISOString().split('T')[0] : ''}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Education & Qualifications Section */}
-            <div className="mb-8">
-              <div className="flex items-center mb-4">
-                <div className="bg-accent/20 p-2 rounded-lg mr-3">
-                  <svg className="w-5 h-5 text-accent" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-semibold text-accent">Education & Qualifications</h4>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Eligibility</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-accent"
-                    name="eligibility"
-                    value={localData.eligibility || ''}
-                    onChange={handleInputChange}
-                    placeholder="Enter eligibility/s"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">PRC License Number</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-accent"
-                    name="prcLicenseNumber"
-                    value={localData.prcLicenseNumber || ''}
-                    onChange={handleInputChange}
-                    placeholder="Enter PRC license number"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Bachelor's Degree</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-accent"
-                    name="bachelorDegree"
-                    value={localData.bachelorDegree || ''}
-                    onChange={handleInputChange}
-                    placeholder="Enter bachelor's degree"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-medium">Master's Degree</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-accent"
-                    name="masteralDegree"
-                    value={localData.masteralDegree || ''}
-                    onChange={handleInputChange}
-                    placeholder="Enter master's degree"
-                  />
-                </div>
-                <div className="form-control md:col-span-2">
-                  <label className="label">
-                    <span className="label-text font-medium">Doctoral Degree</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input input-bordered focus:input-accent"
-                    name="doctoralDegree"
-                    value={localData.doctoralDegree || ''}
-                    onChange={handleInputChange}
-                    placeholder="Enter doctoral degree"
-                  />
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        {/* Modal Actions */}
-        <div className="flex justify-between items-center p-6 border-t border-base-300 bg-base-50">
-          <div className="text-sm text-base-content/60">
-            Last updated: {formatDate(localData.updatedAt)}
           </div>
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary px-8"
-              onClick={handleSubmit}
-              disabled={updateLoading === localData._id}
-            >
-              {updateLoading === localData._id ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Update Personnel
-                </>
-              )}
-            </button>
+
+          {/* Government Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+              Government Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* LGU Type - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    LGU Type <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <select
+                  className={`select select-bordered w-full ${
+                    errors.lguType ? "border-red-500" : ""
+                  }`}
+                  name="lguType"
+                  value={localData.lguType || ""}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select LGU Type</option>
+                  <option value="City">City</option>
+                  <option value="Municipality">Municipality</option>
+                  <option value="Province">Province</option>
+                </select>
+                {errors.lguType && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.lguType}
+                  </span>
+                )}
+              </div>
+
+              {/* LGU Name - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    LGU Name <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.lguName ? "border-red-500" : ""
+                  }`}
+                  name="lguName"
+                  value={localData.lguName || ""}
+                  onChange={handleInputChange}
+                  required
+                />
+                {errors.lguName && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.lguName}
+                  </span>
+                )}
+              </div>
+
+              {/* Income Class - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Income Class <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.incomeClass ? "border-red-500" : ""
+                  }`}
+                  name="incomeClass"
+                  value={localData.incomeClass || ""}
+                  onChange={handleInputChange}
+                  required
+                />
+                {errors.incomeClass && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.incomeClass}
+                  </span>
+                )}
+              </div>
+
+              {/* Plantilla Position - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Plantilla Position <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.plantillaPosition ? "border-red-500" : ""
+                  }`}
+                  name="plantillaPosition"
+                  value={localData.plantillaPosition || ""}
+                  onChange={handleInputChange}
+                  required
+                />
+                {errors.plantillaPosition && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.plantillaPosition}
+                  </span>
+                )}
+              </div>
+
+              {/* Status of Appointment - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Status of Appointment{" "}
+                    <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <select
+                  className={`select select-bordered w-full ${
+                    errors.statusOfAppointment ? "border-red-500" : ""
+                  }`}
+                  name="statusOfAppointment"
+                  value={localData.statusOfAppointment || ""}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select Status</option>
+                  <option value="Permanent">Permanent</option>
+                  <option value="Temporary">Temporary</option>
+                  <option value="Casual">Casual</option>
+                  <option value="Job Order">Job Order</option>
+                  <option value="Contractual">Contractual</option>
+                </select>
+                {errors.statusOfAppointment && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.statusOfAppointment}
+                  </span>
+                )}
+              </div>
+
+              {/* Date of Appointment - Required */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Date of Appointment <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  className={`input input-bordered w-full ${
+                    errors.dateOfAppointment ? "border-red-500" : ""
+                  }`}
+                  name="dateOfAppointment"
+                  value={localData.dateOfAppointment || ""}
+                  onChange={handleInputChange}
+                  required
+                />
+                {errors.dateOfAppointment && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.dateOfAppointment}
+                  </span>
+                )}
+              </div>
+
+              {/* Salary Grade */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">Salary Grade</span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.salaryGrade ? "border-red-500" : ""
+                  }`}
+                  name="salaryGrade"
+                  value={localData.salaryGrade || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.salaryGrade && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.salaryGrade}
+                  </span>
+                )}
+              </div>
+
+              {/* Step Increment */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">Step Increment</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  className={`input input-bordered w-full ${
+                    errors.stepIncrement ? "border-red-500" : ""
+                  }`}
+                  name="stepIncrement"
+                  value={localData.stepIncrement || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.stepIncrement && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.stepIncrement}
+                  </span>
+                )}
+              </div>
+
+              {/* PRC License Number */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    PRC License Number
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.prcLicenseNumber ? "border-red-500" : ""
+                  }`}
+                  name="prcLicenseNumber"
+                  value={localData.prcLicenseNumber || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.prcLicenseNumber && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.prcLicenseNumber}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Dates */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+              Important Dates
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Date of Mandatory Retirement
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  className={`input input-bordered w-full ${
+                    errors.dateOfMandatoryRetirement ? "border-red-500" : ""
+                  }`}
+                  name="dateOfMandatoryRetirement"
+                  value={localData.dateOfMandatoryRetirement || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.dateOfMandatoryRetirement && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.dateOfMandatoryRetirement}
+                  </span>
+                )}
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Date of Compulsory Retirement
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  className={`input input-bordered w-full ${
+                    errors.dateOfCompulsoryRetirement ? "border-red-500" : ""
+                  }`}
+                  name="dateOfCompulsoryRetirement"
+                  value={localData.dateOfCompulsoryRetirement || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.dateOfCompulsoryRetirement && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.dateOfCompulsoryRetirement}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Educational Attainment */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+              Educational Attainment
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Bachelor Degree
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.bachelorDegree ? "border-red-500" : ""
+                  }`}
+                  name="bachelorDegree"
+                  value={localData.bachelorDegree || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.bachelorDegree && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.bachelorDegree}
+                  </span>
+                )}
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Masteral Degree
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.masteralDegree ? "border-red-500" : ""
+                  }`}
+                  name="masteralDegree"
+                  value={localData.masteralDegree || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.masteralDegree && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.masteralDegree}
+                  </span>
+                )}
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">
+                    Doctoral Degree
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.doctoralDegree ? "border-red-500" : ""
+                  }`}
+                  name="doctoralDegree"
+                  value={localData.doctoralDegree || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.doctoralDegree && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.doctoralDegree}
+                  </span>
+                )}
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">Eligibility</span>
+                </label>
+                <input
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    errors.eligibility ? "border-red-500" : ""
+                  }`}
+                  name="eligibility"
+                  value={localData.eligibility || ""}
+                  onChange={handleInputChange}
+                />
+                {errors.eligibility && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {errors.eligibility}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-between items-center mt-8 pt-4 border-t">
+            <div className="text-sm text-gray-400">
+              Last updated:{" "}
+              {formatDate ? formatDate(localData.updatedAt) : "Never"}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="btn btn-outline px-6"
+                onClick={onClose}
+                disabled={updateLoading === localData._id}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary px-6"
+                disabled={updateLoading === localData._id}
+              >
+                {updateLoading === localData._id ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm mr-2"></span>
+                    Updating...
+                  </>
+                ) : (
+                  "Update Personnel"
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   );
-};
-
-export default EditModal;
+}
