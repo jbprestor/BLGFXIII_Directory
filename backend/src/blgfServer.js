@@ -14,12 +14,10 @@ const PORT = process.env.PORT || 5001
 //middleware
 app.use(express.json()) // this middleware will parse the JSON bodies: req.body
 app.use(rateLimiter)
-app.use(
-    cors(
-        {
-            origin: "https://automatic-tribble-grqpw6gp9pq39jqx-5173.app.github.dev",
-        }
-    ))
+app.use(cors({
+    origin: process.env.VITE_CLIENT_API_URL, // allow frontend URL
+    methods: ["GET", "POST", "PUT", "DELETE"],
+}));
 
 //our simple custom middleware
 // app.use ((req,res,next) => {
@@ -27,7 +25,7 @@ app.use(
 //     next();
 // })
 
-app.use("/api/directory", directoryRoutes);
+app.use("/", directoryRoutes);
 
 connectDB().then(() => {
     app.listen(PORT, () => {

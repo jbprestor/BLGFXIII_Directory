@@ -1,7 +1,9 @@
 import axios from "axios"
 
+
+//change this to backend URL
 const api = axios.create({
-    baseURL: "https://automatic-tribble-grqpw6gp9pq39jqx-5001.app.github.dev/api/directory"
+    baseURL: "https://potential-engine-r6gxvwjx56v3vq5-5001.app.github.dev"
 })
 
 export default api;

@@ -1,23 +1,49 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useEffect, useState, useMemo } from "react";
+import api from "../lib/axios.js";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorDisplay from "../components/ErrorDisplay";
+import SearchFilters from "../components/SearchFilters";
+import PersonnelTable from "../components/PersonnelTable";
+import QuickStats from "../components/QuickStats";
+import EmptyState from "../components/EmptyState";
+import EditModal from "../components/EditModal";
+import DetailsModal from "../components/DetailsModal";
+import { formatDate } from "../utils/formatters";
+import AddModal from "../components/AddModal.jsx";
 
 export default function DirectoryPage() {
+  // State declarations
   const [directory, setDirectory] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLguType, setSelectedLguType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedRegion, setSelectedRegion] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [deleteLoading, setDeleteLoading] = useState(null);
+  const [updateLoading, setUpdateLoading] = useState(null);
+  const [editingPerson, setEditingPerson] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newPerson, setNewPerson] = useState({});
+  const [createLoading, setCreateLoading] = useState(false);
+  const itemsPerPage = 10;
 
-  // FETCH DATA FROM MONGODB
+  // Data fetching
   useEffect(() => {
     const fetchDirectory = async () => {
       try {
-        const res = await axios.get(
-          "https://automatic-tribble-grqpw6gp9pq39jqx-5001.app.github.dev/api/directory"
-        );
-        setDirectory(res.data);
-        console.log(res.data);
+        const res = await api.get();
+        if (Array.isArray(res.data)) {
+          setDirectory(res.data);
+        } else {
+          console.error("Unexpected response format:", res.data);
+          setDirectory([]);
+        }
       } catch (err) {
         console.error("Error fetching directory:", err);
         setError("Failed to load directory");
@@ -29,289 +55,328 @@ export default function DirectoryPage() {
     fetchDirectory();
   }, []);
 
-  // Filter data based on search and filters
-  const filteredData = directory.filter(person => {
-    const matchesSearch = 
-      person.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.lguName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.plantillaPosition?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.emailAddress?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesLguType = selectedLguType === "all" || person.lguType === selectedLguType;
-    const matchesStatus = selectedStatus === "all" || person.statusOfAppointment === selectedStatus;
+  // Derived data
+  const uniqueRegions = useMemo(() =>
+    [...new Set(directory
+      .filter(person => person.region)
+      .map(person => person.region)
+    )].sort(),
+    [directory]
+  );
 
-    return matchesSearch && matchesLguType && matchesStatus;
-  });
+  // Filter data based on search and filters
+  const filteredData = useMemo(() => {
+    let result = directory.filter(person => {
+      const matchesSearch =
+        searchTerm === "" ||
+        person.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        person.lguName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        person.plantillaPosition?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        person.emailAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        person.region?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        person.province?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesLguType = selectedLguType === "all" || person.lguType === selectedLguType;
+      const matchesStatus = selectedStatus === "all" || person.statusOfAppointment === selectedStatus;
+      const matchesRegion = selectedRegion === "all" || person.region === selectedRegion;
+
+      return matchesSearch && matchesLguType && matchesStatus && matchesRegion;
+    });
+
+    // Sorting logic
+    if (sortConfig.key) {
+      result.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return result;
+  }, [directory, searchTerm, selectedLguType, selectedStatus, selectedRegion, sortConfig]);
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const currentItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredData.slice(startIndex, startIndex + itemsPerPage);
+  }, [currentPage, filteredData]);
+
+  // Handler functions
+  const handleSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const handleViewDetails = (person) => {
-    // In a real app, this would navigate to a detailed view
-    alert(`Viewing details for ${person.name}`);
+    setSelectedPerson(person);
+    setIsDetailsModalOpen(true);
   };
 
-  const handleContact = (person) => {
-    // In a real app, this would open a contact modal or form
-    alert(`Contacting ${person.name}`);
-  };
-
-  // Format date for display
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-          <p className="text-lg">Loading directory data...</p>
-        </div>
-      </div>
+  // Delete functionality
+  const handleDelete = async (person) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${person.name}?`
     );
-  }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="alert alert-error shadow-lg max-w-md">
-          <div>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current flex-shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{error}</span>
-          </div>
-          <button className="btn btn-sm btn-outline" onClick={() => window.location.reload()}>
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+    if (!confirmDelete) return;
+
+    setDeleteLoading(person._id);
+
+    try {
+      await api.delete(`/${person._id}`);
+
+      // Update frontend state to remove the deleted record
+      setDirectory((prev) => prev.filter((item) => item._id !== person._id));
+
+      alert(`${person.name} has been deleted successfully!`);
+    } catch (error) {
+      console.error("Error deleting directory entry:", error);
+      alert("Failed to delete. Please try again.");
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
+  const handleEdit = (person) => {
+    setEditingPerson({ ...person });
+    setIsEditModalOpen(true);
+  };
+
+  // Update functionality
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingPerson) return;
+
+    setUpdateLoading(editingPerson._id);
+
+    try {
+      const res = await api.put(`/${editingPerson._id}`, editingPerson);
+
+      // Update frontend state with the updated record
+      setDirectory(prev => prev.map(item =>
+        item._id === editingPerson._id ? res.data : item
+      ));
+
+      setIsEditModalOpen(false);
+      setEditingPerson(null);
+      alert(`${editingPerson.name} has been updated successfully!`);
+    } catch (error) {
+      console.error("Error updating directory entry:", error);
+      alert("Failed to update. Please try again.");
+    } finally {
+      setUpdateLoading(null);
+    }
+  };
+
+  // Create new assessor functionality
+  const handleCreateNew = () => {
+    setNewPerson({
+      name: '',
+      lguType: '',
+      lguName: '',
+      plantillaPosition: '',
+      emailAddress: '',
+      contactNumber: '',
+      dateOfAssumption: '',
+      statusOfAppointment: '',
+      region: '',
+      province: '',
+      district: '',
+      municipality: '',
+      dateOfBirth: '',
+      educationalBackground: '',
+      eligibility: '',
+      notes: ''
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreate = async (formData) => {
+    console.log('=== CREATE PERSONNEL WITH CORRECT SCHEMA ===');
+    console.log('Form data received:', formData);
+
+    setCreateLoading(true);
+
+    try {
+      // Send data exactly matching your MongoDB schema
+      const payload = {
+        name: formData.name,
+        sex: formData.sex,
+        civilStatus: formData.civilStatus,
+        lguType: formData.lguType,
+        lguName: formData.lguName,
+        incomeClass: formData.incomeClass,
+        plantillaPosition: formData.plantillaPosition,
+        statusOfAppointment: formData.statusOfAppointment,
+        salaryGrade: formData.salaryGrade || '',
+        stepIncrement: formData.stepIncrement || '',
+        birthday: formData.birthday,
+        dateOfMandatoryRetirement: formData.dateOfMandatoryRetirement || '',
+        dateOfCompulsoryRetirement: formData.dateOfCompulsoryRetirement || '',
+        bachelorDegree: formData.bachelorDegree || '',
+        masteralDegree: formData.masteralDegree || '',
+        doctoralDegree: formData.doctoralDegree || '',
+        eligibility: formData.eligibility || '',
+        emailAddress: formData.emailAddress || '',
+        contactNumber: formData.contactNumber || '',
+        dateOfAppointment: formData.dateOfAppointment,
+        prcLicenseNumber: formData.prcLicenseNumber || '',
+
+        // Add empty fields for other forms to prevent undefined errors
+        reportType: '',
+        quarter: '',
+        year: '',
+        description: '',
+        firstName: '',
+        lastName: '',
+        position: '',
+        department: '',
+        userEmail: '',
+        userPhone: ''
+      };
+
+      console.log('Payload being sent:', payload);
+
+      const res = await api.post('/', payload);
+      console.log('Success response:', res.data);
+
+      // Update frontend state
+      setDirectory(prev => [...prev, res.data]);
+      setIsCreateModalOpen(false);
+      setNewPerson({}); // Reset form
+
+      alert(`New assessor ${formData.name} has been added successfully!`);
+
+    } catch (error) {
+      console.error('=== ERROR DETAILS ===');
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+
+      alert(`Failed to create: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+  
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditingPerson(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleNewInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewPerson(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedLguType("all");
+    setSelectedStatus("all");
+    setSelectedRegion("all");
+    setCurrentPage(1);
+  };
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorDisplay error={error} onRetry={() => window.location.reload()} />;
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Page Header */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">BLGF Personnel Directory</h1>
-        <p className="text-xl text-base-content/70 max-w-2xl mx-auto">
-          Comprehensive directory of BLGF personnel across Local Government Units in the Philippines.
-        </p>
+    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
+      {/* Page Header with Add Button */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="text-center sm:text-left">
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">BLGF Personnel Directory</h1>
+          <p className="text-sm sm:text-xl text-base-content/70 max-w-1xl">
+            Comprehensive directory of BLGF personnel across Local Government Units in the Philippines.
+          </p>
+        </div>
+        <button
+          onClick={handleCreateNew}
+          className="btn btn-primary btn-lg"
+        >
+          + Add New Assessor
+        </button>
       </div>
 
       {/* Search and Filters */}
-      <div className="card bg-base-100 shadow-xl border border-base-300">
-        <div className="card-body">
-          <h2 className="card-title mb-4">Search & Filter</h2>
+      <SearchFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        selectedLguType={selectedLguType}
+        setSelectedLguType={setSelectedLguType}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        selectedRegion={selectedRegion}
+        setSelectedRegion={setSelectedRegion}
+        uniqueRegions={uniqueRegions}
+        resultCount={filteredData.length}
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            {/* Search Input */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Search Personnel</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Search by name, LGU, position, or email..."
-                className="input input-bordered w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {/* LGU Type Filter */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">LGU Type</span>
-              </label>
-              <select
-                className="select select-bordered w-full"
-                value={selectedLguType}
-                onChange={(e) => setSelectedLguType(e.target.value)}
-              >
-                <option value="all">All Types</option>
-                <option value="City">City</option>
-                <option value="Municipality">Municipality</option>
-                <option value="Province">Province</option>
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Appointment Status</span>
-              </label>
-              <select
-                className="select select-bordered w-full"
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-              >
-                <option value="all">All Status</option>
-                <option value="Permanent">Permanent</option>
-                <option value="Temporary">Temporary</option>
-                <option value="Casual">Casual</option>
-                <option value="Job Order">Job Order</option>
-                <option value="Contractual">Contractual</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Results Count */}
-          <div className="flex justify-between items-center">
-            <div className="badge badge-neutral badge-lg">
-              {filteredData.length} result{filteredData.length !== 1 ? 's' : ''} found
-            </div>
-            <button className="btn btn-outline btn-sm">
-              <span>📊</span>
-              Export Results
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Results Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredData.map(person => { 
-          // Determine border color based on LGU type
-          let borderColorClass = "border-primary/20"; // Default
-          if (person.lguType === "City") borderColorClass = "border-blue-400";
-          if (person.lguType === "Municipality") borderColorClass = "border-green-400";
-          if (person.lguType === "Province") borderColorClass = "border-purple-400";
-          
-          return (
-            <div 
-              key={person._id} 
-              className={`card bg-base-100 shadow-xl border-2 ${borderColorClass} hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]`}
-            >
-              <div className="card-body">
-                {/* Header */}
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="card-title text-lg">{person.name}</h3>
-                    <div className="flex gap-2 mt-2">
-                      <div className="badge badge-primary">{person.lguType}</div>
-                      <div className="badge badge-outline">{person.statusOfAppointment}</div>
-                    </div>
-                  </div>
-                  <div className={`badge ${person.sex === 'Male' ? 'badge-info' : 'badge-secondary'}`}>
-                    {person.sex}
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>🏢</span>
-                    <span><strong>LGU:</strong> {person.lguName}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>💼</span>
-                    <span><strong>Position:</strong> {person.plantillaPosition}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>💰</span>
-                    <span><strong>Salary Grade:</strong> {person.salaryGrade || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>📧</span>
-                    <span className="truncate">{person.emailAddress || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>📞</span>
-                    <span>{person.contactNumber || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span>🎓</span>
-                    <span><strong>Education:</strong> {person.bachelorDegree || 'N/A'}</span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="card-actions justify-end mt-4">
-                  <button
-                    className="btn btn-outline btn-sm"
-                    onClick={() => handleContact(person)}
-                  >
-                    <span>📧</span>
-                    Contact
-                  </button>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleViewDetails(person)}
-                  >
-                    <span>👁️</span>
-                    View Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Table View */}
+      <PersonnelTable
+        data={currentItems}
+        sortConfig={sortConfig}
+        onSort={handleSort}
+        onViewDetails={handleViewDetails}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        deleteLoading={deleteLoading}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
 
       {/* Empty State */}
       {filteredData.length === 0 && !loading && (
-        <div className="text-center py-16">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-2xl font-bold mb-2">No Results Found</h3>
-          <p className="text-base-content/70 mb-4">
-            Try adjusting your search terms or filters to find what you're looking for.
-          </p>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              setSearchTerm("");
-              setSelectedLguType("all");
-              setSelectedStatus("all");
-            }}
-          >
-            Clear Filters
-          </button>
-        </div>
+        <EmptyState onClearFilters={handleClearFilters} />
       )}
 
       {/* Quick Stats */}
-      <div className="stats stats-vertical lg:stats-horizontal shadow w-full border border-base-300">
-        <div className="stat border-base-300">
-          <div className="stat-title">Total Personnel</div>
-          <div className="stat-value text-primary">{directory.length}</div>
-          <div className="stat-desc">Registered in system</div>
-        </div>
+      <QuickStats directory={directory} />
 
-        <div className="stat border-base-300">
-          <div className="stat-title">Cities</div>
-          <div className="stat-value text-secondary">
-            {directory.filter(p => p.lguType === 'City').length}
-          </div>
-          <div className="stat-desc">Personnel in cities</div>
-        </div>
+      {/* Modals */}
 
-        <div className="stat border-base-300">
-          <div className="stat-title">Municipalities</div>
-          <div className="stat-value text-accent">
-            {directory.filter(p => p.lguType === 'Municipality').length}
-          </div>
-          <div className="stat-desc">Personnel in municipalities</div>
-        </div>
+      <AddModal
+        isOpen={isCreateModalOpen}
+        onAddPersonnel={handleCreate}
+        onClose={() => setIsCreateModalOpen(false)}
+        loading={createLoading}  // Changed from loading to match AddModal expectation
+      />
 
-        <div className="stat">
-          <div className="stat-title">Provinces</div>
-          <div className="stat-value text-warning">
-            {directory.filter(p => p.lguType === 'Province').length}
-          </div>
-          <div className="stat-desc">Personnel in provinces</div>
-        </div>
-      </div>
+      <EditModal
+        isOpen={isEditModalOpen}
+        editingPerson={editingPerson}
+        updateLoading={updateLoading}
+        onInputChange={handleInputChange}
+        onUpdate={handleUpdate}
+        onClose={() => setIsEditModalOpen(false)}
+        formatDate={formatDate}
+      />
+
+      <DetailsModal
+        isOpen={isDetailsModalOpen}
+        selectedPerson={selectedPerson}
+        onClose={() => setIsDetailsModalOpen(false)}
+        onEdit={handleEdit}
+        formatDate={formatDate}
+      />
+
     </div>
   );
 }

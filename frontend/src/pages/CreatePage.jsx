@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api from "../lib/axios"
+import api from "../lib/axios.js"
 
 export default function CreatePage() {
    const [selectedForm, setSelectedForm] = useState("assessor");
@@ -62,9 +62,9 @@ export default function CreatePage() {
          if (selectedForm === "assessor") {
             url = "/";
          } else if (selectedForm === "report") {
-            url = "https://automatic-tribble-grqpw6gp9pqx-5001.app.github.dev/api/reports";
+            url = `{${api}/api/reports}`;
          } else if (selectedForm === "user") {
-            url = "https://automatic-tribble-grqpw6gp9pqx-5001.app.github.dev/api/users";
+            url = `{${api}/api/users}`;
          }
 
          const response = await api.post(url, formData);
