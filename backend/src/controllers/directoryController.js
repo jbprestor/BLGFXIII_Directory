@@ -1,5 +1,5 @@
 import { Directory } from "../models/Directory.js"
-
+import mongoose from "mongoose"; // Import mongoose
 
 export async function getAllDirectory(req, res) {
     try {
@@ -110,14 +110,24 @@ export async function createDirectory(req, res) {
 
 export async function updateDirectory(req, res) {
     try {
-        const { id } = req.params; // get ID from URL, e.g., /api/directory/:id
-        const updates = req.body;  // get fields to update from request body
+        const { id } = req.params;
 
-        // Update the document
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid directory ID."
+            });
+        }
+
+        // Prevent updating _id
+        const updates = { ...req.body };
+        delete updates._id;
+
         const updatedDirectory = await Directory.findByIdAndUpdate(
             id,
-            updates,
-            { new: true, runValidators: true } // return updated doc and run schema validators
+            updates, // Directly use updates (Mongoose ignores invalid fields)
+            { new: true, runValidators: true }
         );
 
         if (!updatedDirectory) {
@@ -133,7 +143,7 @@ export async function updateDirectory(req, res) {
             data: updatedDirectory
         });
     } catch (error) {
-        console.error("Error updating directory:", error.message);
+        console.error("Error updating directory:", error);
         res.status(500).json({
             success: false,
             message: "Failed to update directory entry.",

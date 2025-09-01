@@ -147,7 +147,7 @@ export default function DirectoryPage() {
     }
   };
 
-  const handleEdit = (person) => {
+  const handleEdit = (person) => { 
     setEditingPerson({ ...person });
     setIsEditModalOpen(true);
   };

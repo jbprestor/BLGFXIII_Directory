@@ -5,7 +5,7 @@ const EditModal = ({
   isOpen,
   editingPerson,
   updateLoading,
-  onInputChange,
+  onInputChange, 
   onUpdate,
   onClose,
   formatDate
