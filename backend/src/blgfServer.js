@@ -11,11 +11,13 @@ dotenv.config();
 const app = express()
 const PORT = process.env.PORT || 5001
 
+const CLIENT_API_URL = process.env.CLIENT_API_URL || "http://localhost:5173";
+
 //middleware
 app.use(express.json()) // this middleware will parse the JSON bodies: req.body
 app.use(rateLimiter)
 app.use(cors({
-    origin: process.env.VITE_CLIENT_API_URL, // allow frontend URL
+    origin: CLIENT_API_URL,// allow frontend URL
     methods: ["GET", "POST", "PUT", "DELETE"],
 }));
 
