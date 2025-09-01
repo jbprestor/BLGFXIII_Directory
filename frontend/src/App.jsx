@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import HomePage from "./pages/HomePage";
 import DirectoryPage from "./pages/DirectoryPage";
 import CreatePage from "./pages/CreatePage";
+import Sidebar from "./components/sidebar";
 // import SMVProfilingPage from "./pages/SMVProfilingPage";
 // import QRRPASubmissionPage from "./pages/QRRPASubmissionPage";
 
@@ -66,6 +67,13 @@ export default function App() {
         currentTheme={currentTheme}
         onThemeChange={handleThemeChange}
       />
+
+      {/* <Sidebar 
+        currentPage={currentPage} 
+        onNavigate={handleNavigation}
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
+      /> */}
       
       {/* Main Content */}
       <main className="flex-grow">
