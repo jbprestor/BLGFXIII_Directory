@@ -9,14 +9,15 @@ import EmptyState from "../components/common/EmptyState.jsx";
 import EditModal from "../components/modals/EditModal.jsx";
 import DetailsModal from "../components/modals/DetailsModal.jsx";
 import AddModal from "../components/modals/AddModal.jsx";
+import { confirmToastDaisy } from "../components/common/ConfirmToast";
 import { formatDate } from "../utils/formatters";
+import toast from "react-hot-toast";
 
 export default function DirectoryPage() {
-  // ---------- STATE ----------
+  // State management
   const [directory, setDirectory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLguType, setSelectedLguType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -26,65 +27,61 @@ export default function DirectoryPage() {
     direction: "ascending",
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [updateLoading, setUpdateLoading] = useState(null);
   const [createLoading, setCreateLoading] = useState(false);
-
   const [editingPerson, setEditingPerson] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newPerson, setNewPerson] = useState({});
 
-  // ---------- DATA FETCH ----------
-  useEffect(() => {
-    const fetchDirectory = async () => {
-      try {
-        const res = await api.get();
-        setDirectory(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load directory");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDirectory();
+  const itemsPerPage = 10;
+
+  const fetchDirectory = useCallback(async () => {
+    try {
+      const res = await api.get();
+      setDirectory(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load directory");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // ---------- DERIVED DATA ----------
+  useEffect(() => {
+    fetchDirectory();
+  }, [fetchDirectory]);
+
+  // Derived data
   const uniqueRegions = useMemo(
     () => [...new Set(directory.map((p) => p.region).filter(Boolean))].sort(),
     [directory]
   );
 
   const filteredData = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+
     let result = directory.filter((person) => {
       const searchMatch =
         searchTerm === "" ||
-        Object.values({
-          name: person.name,
-          lguName: person.lguName,
-          plantillaPosition: person.plantillaPosition,
-          emailAddress: person.emailAddress,
-          region: person.region,
-          province: person.province,
-        }).some((val) => val?.toLowerCase().includes(searchTerm.toLowerCase()));
+        [
+          "name",
+          "lguName",
+          "plantillaPosition",
+          "emailAddress",
+          "region",
+          "province",
+        ].some((field) => person[field]?.toLowerCase().includes(searchLower));
 
-      const lguMatch =
-        selectedLguType === "all" || person.lguType === selectedLguType;
-      const statusMatch =
-        selectedStatus === "all" ||
-        person.statusOfAppointment === selectedStatus;
-      const regionMatch =
-        selectedRegion === "all" || person.region === selectedRegion;
-
-      return searchMatch && lguMatch && statusMatch && regionMatch;
+      return (
+        searchMatch &&
+        (selectedLguType === "all" || person.lguType === selectedLguType) &&
+        (selectedStatus === "all" ||
+          person.statusOfAppointment === selectedStatus) &&
+        (selectedRegion === "all" || person.region === selectedRegion)
+      );
     });
 
     if (sortConfig.key) {
@@ -113,17 +110,44 @@ export default function DirectoryPage() {
     return filteredData.slice(start, start + itemsPerPage);
   }, [currentPage, filteredData]);
 
-  // ---------- HANDLERS ----------
-  const handleSort = useCallback(
-    (key) => {
-      const direction =
-        sortConfig.key === key && sortConfig.direction === "ascending"
-          ? "descending"
-          : "ascending";
-      setSortConfig({ key, direction });
-    },
-    [sortConfig]
+  // Helper function to build API payload
+  const buildPayload = useCallback(
+    (data) => ({
+      name: data.name,
+      sex: data.sex,
+      civilStatus: data.civilStatus,
+      lguType: data.lguType,
+      lguName: data.lguName,
+      incomeClass: data.incomeClass,
+      plantillaPosition: data.plantillaPosition,
+      statusOfAppointment: data.statusOfAppointment,
+      salaryGrade: data.salaryGrade ?? "",
+      stepIncrement: data.stepIncrement ?? "",
+      birthday: data.birthday,
+      dateOfMandatoryRetirement: data.dateOfMandatoryRetirement ?? "",
+      dateOfCompulsoryRetirement: data.dateOfCompulsoryRetirement ?? "",
+      bachelorDegree: data.bachelorDegree ?? "",
+      masteralDegree: data.masteralDegree ?? "",
+      doctoralDegree: data.doctoralDegree ?? "",
+      eligibility: data.eligibility ?? "",
+      emailAddress: data.emailAddress ?? "",
+      contactNumber: data.contactNumber ?? "",
+      dateOfAppointment: data.dateOfAppointment,
+      prcLicenseNumber: data.prcLicenseNumber ?? "",
+    }),
+    []
   );
+
+  // Event handlers
+  const handleSort = useCallback((key) => {
+    setSortConfig((prev) => ({
+      key,
+      direction:
+        prev.key === key && prev.direction === "ascending"
+          ? "descending"
+          : "ascending",
+    }));
+  }, []);
 
   const handleViewDetails = useCallback((person) => {
     setSelectedPerson(person);
@@ -135,114 +159,98 @@ export default function DirectoryPage() {
     setIsEditModalOpen(true);
   }, []);
 
-  const handleDelete = useCallback(async (person) => {
-    if (!window.confirm(`Are you sure you want to delete ${person.name}?`))
-      return;
+  const handleDelete = useCallback(
+    (person) => {
+      confirmToastDaisy(
+        `Are you sure you want to delete ${person.name}?`,
+        async () => {
+          setDeleteLoading(person._id);
+          try {
+            await api.delete(`/${person._id}`);
+            setDirectory((prev) => prev.filter((p) => p._id !== person._id));
+            toast.success(`${person.name} deleted successfully`);
 
-    setDeleteLoading(person._id);
-    try {
-      await api.delete(`/${person._id}`);
-      setDirectory((prev) => prev.filter((p) => p._id !== person._id));
-      alert(`${person.name} deleted successfully`);
-    } catch {
-      alert("Failed to delete");
-    } finally {
-      setDeleteLoading(null);
-    }
+            // ✅ Re-fetch latest data
+            await fetchDirectory();
+          } catch {
+            toast.error(`Failed to delete ${person.name}`);
+          } finally {
+            setDeleteLoading(null);
+          }
+        }
+      );
+    },
+    [fetchDirectory]
+  );
+
+  const handleUpdate = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!editingPerson) return;
+
+      try {
+        setUpdateLoading(editingPerson._id);
+        const payload = buildPayload(editingPerson);
+        const res = await api.put(`/${editingPerson._id}`, payload);
+
+        setDirectory((prev) =>
+          prev.map((person) =>
+            person._id === editingPerson._id ? res.data : person
+          )
+        );
+
+        setIsEditModalOpen(false);
+        toast.success(`${editingPerson.name} updated successfully`);
+        // ✅ Re-fetch latest data after successful creation
+        await fetchDirectory();
+      } catch (error) {
+        console.error("Error updating directory:", error);
+        alert("Failed to update record. Please try again.");
+      } finally {
+        setUpdateLoading(null);
+      }
+    },
+    [editingPerson, buildPayload, fetchDirectory]
+  );
+
+  const handleInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setEditingPerson((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  const buildPayload = (data) => ({
-    name: data.name,
-    sex: data.sex,
-    civilStatus: data.civilStatus,
-    lguType: data.lguType,
-    lguName: data.lguName,
-    incomeClass: data.incomeClass,
-    plantillaPosition: data.plantillaPosition,
-    statusOfAppointment: data.statusOfAppointment,
-    salaryGrade: data.salaryGrade ?? "",
-    stepIncrement: data.stepIncrement ?? "",
-    birthday: data.birthday,
-    dateOfMandatoryRetirement: data.dateOfMandatoryRetirement ?? "",
-    dateOfCompulsoryRetirement: data.dateOfCompulsoryRetirement ?? "",
-    bachelorDegree: data.bachelorDegree ?? "",
-    masteralDegree: data.masteralDegree ?? "",
-    doctoralDegree: data.doctoralDegree ?? "",
-    eligibility: data.eligibility ?? "",
-    emailAddress: data.emailAddress ?? "",
-    contactNumber: data.contactNumber ?? "",
-    dateOfAppointment: data.dateOfAppointment,
-    prcLicenseNumber: data.prcLicenseNumber ?? "",
-  });
-
-const handleUpdate = async (id, updatedData) => {
-  try {
-    setUpdateLoading(id);
-    
-    const response = await fetch(`/api/directory/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updatedData),
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      showNotification("Record updated successfully!");
-      // Refresh your data or update state
-      fetchDirectoryData(); // Your function to refresh data
-      onCloseEditModal();
-    } else {
-      showNotification(`Update failed: ${result.message}`, 'error');
-    }
-  } catch (error) {
-    console.error("Error updating directory:", error);
-    showNotification("Failed to update record. Please try again.", 'error');
-  } finally {
-    setUpdateLoading(null);
-  }
-};
-
-  const handleCreateNew = () => {
-    setNewPerson({
-      name: "",
-      lguType: "",
-      lguName: "",
-      plantillaPosition: "",
-      emailAddress: "",
-      contactNumber: "",
-      statusOfAppointment: "",
-    });
+  const handleCreateNew = useCallback(() => {
     setIsCreateModalOpen(true);
-  };
+  }, []);
 
-  const handleCreate = async (formData) => {
-    setCreateLoading(true);
-    try {
-      const payload = buildPayload(formData);
-      const res = await api.post("/", payload);
-      setDirectory((prev) => [...prev, res.data]);
-      setIsCreateModalOpen(false);
-      setNewPerson({});
-      alert(`${formData.name} added successfully`);
-    } catch {
-      alert("Failed to create personnel");
-    } finally {
-      setCreateLoading(false);
-    }
-  };
+  const handleCreate = useCallback(
+    async (formData) => {
+      setCreateLoading(true);
+      try {
+        const payload = buildPayload(formData);
+        await api.post("/", payload);
 
-  const handleClearFilters = () => {
+        // ✅ Re-fetch latest data after successful creation
+        await fetchDirectory();
+
+        setIsCreateModalOpen(false);
+      } catch {
+        alert("Failed to create personnel");
+      } finally {
+        setCreateLoading(false);
+      }
+    },
+    [buildPayload, fetchDirectory]
+  );
+
+  const handleClearFilters = useCallback(() => {
     setSearchTerm("");
     setSelectedLguType("all");
     setSelectedStatus("all");
     setSelectedRegion("all");
     setCurrentPage(1);
-  };
+  }, []);
 
-  // ---------- RENDER ----------
+  // Render loading or error states
   if (loading) return <LoadingSpinner />;
   if (error)
     return (
@@ -280,8 +288,10 @@ const handleUpdate = async (id, updatedData) => {
         uniqueRegions={uniqueRegions}
         resultCount={filteredData.length}
       />
+
       {/* Stats */}
       <QuickStats directory={directory} />
+
       {/* Table */}
       <PersonnelTable
         data={currentItems}
@@ -296,7 +306,7 @@ const handleUpdate = async (id, updatedData) => {
         onPageChange={setCurrentPage}
       />
 
-      {/* Empty */}
+      {/* Empty state */}
       {filteredData.length === 0 && !loading && (
         <EmptyState onClearFilters={handleClearFilters} />
       )}
@@ -308,14 +318,17 @@ const handleUpdate = async (id, updatedData) => {
         onClose={() => setIsCreateModalOpen(false)}
         loading={createLoading}
       />
+
       <EditModal
         isOpen={isEditModalOpen}
         editingPerson={editingPerson}
         updateLoading={updateLoading}
+        onInputChange={handleInputChange}
         onUpdate={handleUpdate}
         onClose={() => setIsEditModalOpen(false)}
         formatDate={formatDate}
       />
+
       <DetailsModal
         isOpen={isDetailsModalOpen}
         selectedPerson={selectedPerson}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import toast from "react-hot-toast";
 import { validateField } from "../../utils/validationRules.js";
 import {
   FIELD_CONFIG,
@@ -11,24 +12,23 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
 
-  // Initialize empty form data when modal opens
+  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      const emptyFormData = Object.keys(FIELD_CONFIG).reduce((acc, key) => {
+      const emptyData = Object.keys(FIELD_CONFIG).reduce((acc, key) => {
         acc[key] = "";
         return acc;
       }, {});
-      setFormData(emptyFormData);
+      setFormData(emptyData);
       setErrors({});
     }
   }, [isOpen]);
 
-  // Handle input changes with validation
+  // Handle input change with validation
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     let sanitizedValue = value;
 
-    // Apply specific sanitization
     if (name === "contactNumber") {
       sanitizedValue = value.replace(/\D/g, "");
     } else if (name === "emailAddress") {
@@ -37,7 +37,6 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
       sanitizedValue = value.replace(/[^0-9]/g, "");
     }
 
-    // Validate field
     const fieldError = validateField(name, sanitizedValue);
     setErrors((prev) => ({ ...prev, [name]: fieldError }));
     setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
@@ -46,12 +45,10 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
   // Validate entire form
   const validateForm = useCallback(() => {
     const newErrors = {};
-
-    Object.keys(FIELD_CONFIG).forEach((fieldName) => {
-      const error = validateField(fieldName, formData[fieldName]);
-      if (error) newErrors[fieldName] = error;
-    });
-
+    for (const field of Object.keys(FIELD_CONFIG)) {
+      const error = validateField(field, formData[field]);
+      if (error) newErrors[field] = error;
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
@@ -62,56 +59,43 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
       e.preventDefault();
 
       if (!validateForm()) {
-        alert("Please fix all errors before submitting.");
+        toast.error("Please fix the highlighted errors before submitting.");
         return;
       }
 
       try {
         await onAddPersonnel(formData);
-      } catch (error) {
-        console.error("Error submitting form:", error);
+        toast.success(`${formData.name} added successfully`);
+        onClose();
+      } catch (err) {
+        toast.error(
+          err?.message || "Failed to add personnel. Please try again."
+        );
       }
     },
-    [validateForm, onAddPersonnel, formData]
+    [validateForm, onAddPersonnel, formData, onClose]
   );
 
-  // Function to render input fields based on type
+  // Render individual fields
   const renderField = useCallback(
-    (fieldName) => {
-      const config = FIELD_CONFIG[fieldName];
+    (name) => {
+      const config = FIELD_CONFIG[name];
       if (!config) return null;
 
-      const commonProps = {
-        name: fieldName,
-        value: formData[fieldName] || "",
-        error: errors[fieldName],
+      const props = {
+        name,
+        value: formData[name] || "",
+        error: errors[name],
         onChange: handleInputChange,
-        required: config.validation && config.validation.includes("required"),
-        ...config, // Spread all config properties
+        required: config.validation?.includes("required"),
+        ...config,
       };
 
-      switch (config.type) {
-        case "select":
-          return (
-            <SelectField
-              label={config.label}
-              options={config.options}
-              {...commonProps}
-            />
-          );
-        case "date":
-        case "email":
-        case "number":
-        case "text":
-        default:
-          return (
-            <InputField
-              label={config.label}
-              type={config.type}
-              {...commonProps}
-            />
-          );
-      }
+      return config.type === "select" ? (
+        <SelectField label={config.label} options={config.options} {...props} />
+      ) : (
+        <InputField label={config.label} type={config.type} {...props} />
+      );
     },
     [formData, errors, handleInputChange]
   );
@@ -124,49 +108,37 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
         {/* Header */}
         <ModalHeader onClose={onClose} />
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Information */}
-          <FormSection
-            title={SECTION_CONFIG.personalInfo.title}
-            color={SECTION_CONFIG.personalInfo.color}
-            icon={SECTION_CONFIG.personalInfo.icon}
-          >
+          {/* Sections */}
+          <FormSection {...SECTION_CONFIG.personalInfo}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.personalInfo.map(renderField)}
+              {FIELD_GROUPS.personalInfo.map((f) => (
+                <div key={f}>{renderField(f)}</div>
+              ))}
             </div>
           </FormSection>
 
-          {/* Government Information */}
-          <FormSection
-            title={SECTION_CONFIG.governmentInfo.title}
-            color={SECTION_CONFIG.governmentInfo.color}
-            icon={SECTION_CONFIG.governmentInfo.icon}
-          >
+          <FormSection {...SECTION_CONFIG.governmentInfo}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.governmentInfo.map(renderField)}
+              {FIELD_GROUPS.governmentInfo.map((f) => (
+                <div key={f}>{renderField(f)}</div>
+              ))}
             </div>
           </FormSection>
 
-          {/* Important Dates */}
-          <FormSection
-            title={SECTION_CONFIG.importantDates.title}
-            color={SECTION_CONFIG.importantDates.color}
-            icon={SECTION_CONFIG.importantDates.icon}
-          >
+          <FormSection {...SECTION_CONFIG.importantDates}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {FIELD_GROUPS.importantDates.map(renderField)}
+              {FIELD_GROUPS.importantDates.map((f) => (
+                <div key={f}>{renderField(f)}</div>
+              ))}
             </div>
           </FormSection>
 
-          {/* Educational Attainment */}
-          <FormSection
-            title={SECTION_CONFIG.education.title}
-            color={SECTION_CONFIG.education.color}
-            icon={SECTION_CONFIG.education.icon}
-          >
+          <FormSection {...SECTION_CONFIG.education}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.education.map(renderField)}
+              {FIELD_GROUPS.education.map((f) => (
+                <div key={f}>{renderField(f)}</div>
+              ))}
             </div>
           </FormSection>
 
@@ -178,7 +150,7 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
   );
 }
 
-// Modal Header for AddModal
+/* ======= SUB COMPONENTS ======= */
 function ModalHeader({ onClose }) {
   return (
     <div className="flex items-center justify-between mb-6 border-b border-base-300 dark:border-gray-700 pb-4">
@@ -206,7 +178,6 @@ function ModalHeader({ onClose }) {
   );
 }
 
-// Form Section Component (reusable)
 function FormSection({ title, children, color = "primary", icon }) {
   const colorClasses = {
     primary: "bg-primary/10 dark:bg-primary/20 border-l-4 border-primary",
@@ -245,13 +216,11 @@ function FormSection({ title, children, color = "primary", icon }) {
   );
 }
 
-// Form Footer for AddModal
 function FormFooter({ loading, onClose }) {
   return (
     <div className="flex justify-between items-center mt-8 pt-4 border-t border-base-300 dark:border-gray-700">
       <div className="text-sm text-base-content/70">
-        All fields marked with <span className="text-error">*</span> are
-        required
+        Fields marked with <span className="text-error">*</span> are required
       </div>
       <div className="flex gap-3">
         <button

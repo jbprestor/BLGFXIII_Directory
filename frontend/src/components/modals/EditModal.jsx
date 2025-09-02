@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { validateField } from "../../utils/validationRules.js";
 import {
   FIELD_CONFIG,
@@ -146,7 +146,7 @@ export default function EditModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-gray-300 p-6 animate-fade-in">
+      <div className="bg-base-100 dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-base-300 dark:border-gray-700 p-6 animate-fade-in">
         {/* Header */}
         <ModalHeader editingPerson={editingPerson} onClose={onClose} />
 
@@ -159,7 +159,9 @@ export default function EditModal({
             icon={SECTION_CONFIG.personalInfo.icon}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.personalInfo.map(renderField)}
+              {FIELD_GROUPS.personalInfo.map((fieldName) => (
+                <div key={fieldName}>{renderField(fieldName)}</div>
+              ))}
             </div>
           </FormSection>
 
@@ -170,7 +172,9 @@ export default function EditModal({
             icon={SECTION_CONFIG.governmentInfo.icon}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.governmentInfo.map(renderField)}
+              {FIELD_GROUPS.governmentInfo.map((fieldName) => (
+                <div key={fieldName}>{renderField(fieldName)}</div>
+              ))}
             </div>
           </FormSection>
 
@@ -181,7 +185,9 @@ export default function EditModal({
             icon={SECTION_CONFIG.importantDates.icon}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {FIELD_GROUPS.importantDates.map(renderField)}
+              {FIELD_GROUPS.importantDates.map((fieldName) => (
+                <div key={fieldName}>{renderField(fieldName)}</div>
+              ))}
             </div>
           </FormSection>
 
@@ -192,7 +198,9 @@ export default function EditModal({
             icon={SECTION_CONFIG.education.icon}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.education.map(renderField)}
+              {FIELD_GROUPS.education.map((fieldName) => (
+                <div key={fieldName}>{renderField(fieldName)}</div>
+              ))}
             </div>
           </FormSection>
 
@@ -209,22 +217,41 @@ export default function EditModal({
   );
 }
 
-// ... rest of the component code remains the same
 // Extracted components for better readability
 function ModalHeader({ editingPerson, onClose }) {
   return (
-    <div className="flex items-center justify-between mb-6 border-b pb-4">
+    <div className="flex items-center justify-between mb-6 border-b border-base-300 dark:border-gray-700 pb-4">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
+        <div className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg">
           {editingPerson.name?.charAt(0) || "U"}
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-primary">Edit Personnel</h2>
-          <p className="text-gray-500">{editingPerson.name}</p>
+          <h2 className="text-2xl font-bold text-base-content">
+            Edit Personnel
+          </h2>
+          <p className="text-base-content/70 font-medium">
+            {editingPerson.name}
+          </p>
+          <div className="flex items-center space-x-2 mt-2">
+            <span
+              className={`badge ${
+                editingPerson.lguType === "City"
+                  ? "badge-primary"
+                  : editingPerson.lguType === "Municipality"
+                  ? "badge-secondary"
+                  : "badge-accent"
+              }`}
+            >
+              {editingPerson.lguType}
+            </span>
+            <span className="badge badge-outline">
+              {editingPerson.statusOfAppointment}
+            </span>
+          </div>
         </div>
       </div>
       <button
-        className="text-gray-500 hover:text-gray-700 text-2xl"
+        className="btn btn-ghost btn-circle text-lg"
         onClick={onClose}
         aria-label="Close modal"
       >
@@ -234,12 +261,39 @@ function ModalHeader({ editingPerson, onClose }) {
   );
 }
 
-function FormSection({ title, children }) {
+function FormSection({ title, children, color = "primary", icon }) {
+  const colorClasses = {
+    primary: "bg-primary/10 dark:bg-primary/20 border-l-4 border-primary",
+    secondary:
+      "bg-secondary/10 dark:bg-secondary/20 border-l-4 border-secondary",
+    accent: "bg-accent/10 dark:bg-accent/20 border-l-4 border-accent",
+    info: "bg-info/10 dark:bg-info/20 border-l-4 border-info",
+  };
+
+  const textColorClasses = {
+    primary: "text-primary",
+    secondary: "text-secondary",
+    accent: "text-accent",
+    info: "text-info",
+  };
+
+  const iconBgClasses = {
+    primary: "bg-primary/20 text-primary",
+    secondary: "bg-secondary/20 text-secondary",
+    accent: "bg-accent/20 text-accent",
+    info: "bg-info/20 text-info",
+  };
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
-        {title}
-      </h3>
+    <div className={`rounded-lg p-5 ${colorClasses[color]} shadow-sm`}>
+      <div className="flex items-center mb-4">
+        <div className={`p-2 rounded-lg mr-3 ${iconBgClasses[color]}`}>
+          {icon}
+        </div>
+        <h3 className={`text-lg font-semibold ${textColorClasses[color]}`}>
+          {title}
+        </h3>
+      </div>
       {children}
     </div>
   );
@@ -256,24 +310,30 @@ function InputField({
   ...props
 }) {
   return (
-    <div className="form-control">
+    <div className="form-control w-full">
       <label className="label">
-        <span className="label-text font-medium">
-          {label} {required && <span className="text-red-500">*</span>}
+        <span className="label-text font-medium text-base-content">
+          {label} {required && <span className="text-error">*</span>}
         </span>
       </label>
       <input
         type={type}
         className={`input input-bordered w-full ${
-          error ? "border-red-500" : ""
-        }`}
+          error
+            ? "input-error focus:ring-error/20"
+            : "focus:ring-primary/20 focus:border-primary"
+        } focus:ring-4`}
         name={name}
         value={value || ""}
         onChange={onChange}
         required={required}
         {...props}
       />
-      {error && <span className="text-red-500 text-sm mt-1">{error}</span>}
+      {error && (
+        <label className="label">
+          <span className="label-text-alt text-error">{error}</span>
+        </label>
+      )}
     </div>
   );
 }
@@ -289,16 +349,18 @@ function SelectField({
   ...props
 }) {
   return (
-    <div className="form-control">
+    <div className="form-control w-full">
       <label className="label">
-        <span className="label-text font-medium">
-          {label} {required && <span className="text-red-500">*</span>}
+        <span className="label-text font-medium text-base-content">
+          {label} {required && <span className="text-error">*</span>}
         </span>
       </label>
       <select
         className={`select select-bordered w-full ${
-          error ? "border-red-500" : ""
-        }`}
+          error
+            ? "select-error focus:ring-error/20"
+            : "focus:ring-primary/20 focus:border-primary"
+        } focus:ring-4`}
         name={name}
         value={value || ""}
         onChange={onChange}
@@ -312,16 +374,26 @@ function SelectField({
           </option>
         ))}
       </select>
-      {error && <span className="text-red-500 text-sm mt-1">{error}</span>}
+      {error && (
+        <label className="label">
+          <span className="label-text-alt text-error">{error}</span>
+        </label>
+      )}
     </div>
   );
 }
 
 function FormFooter({ localData, formatDate, updateLoading, onClose }) {
   return (
-    <div className="flex justify-between items-center mt-8 pt-4 border-t">
-      <div className="text-sm text-gray-400">
-        Last updated: {formatDate ? formatDate(localData.updatedAt) : "Never"}
+    <div className="flex justify-between items-center mt-8 pt-4 border-t border-base-300 dark:border-gray-700">
+      <div className="flex space-x-4">
+        <div className="text-sm text-base-content/70">
+          <span className="font-medium">ID:</span> {localData._id}
+        </div>
+        <div className="text-sm text-base-content/70">
+          <span className="font-medium">Last Updated:</span>{" "}
+          {formatDate ? formatDate(localData.updatedAt) : "Never"}
+        </div>
       </div>
       <div className="flex gap-3">
         <button
