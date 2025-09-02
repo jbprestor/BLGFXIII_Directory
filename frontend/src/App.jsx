@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+import Navbar from "./components/layout/Navbar";
+import Footer from "./components/layout/Footer";
 import HomePage from "./pages/HomePage";
 import DirectoryPage from "./pages/DirectoryPage";
 import CreatePage from "./pages/CreatePage";
-import Sidebar from "./components/sidebar";
+import Sidebar from "./components/layout/sidebar";
 // import SMVProfilingPage from "./pages/SMVProfilingPage";
 // import QRRPASubmissionPage from "./pages/QRRPASubmissionPage";
 

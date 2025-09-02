@@ -1,14 +1,14 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import api from "../lib/axios.js";
-import LoadingSpinner from "../components/LoadingSpinner";
-import ErrorDisplay from "../components/ErrorDisplay";
-import SearchFilters from "../components/SearchFilters";
-import PersonnelTable from "../components/PersonnelTable";
-import QuickStats from "../components/QuickStats";
-import EmptyState from "../components/EmptyState";
-import EditModal from "../components/EditModal";
-import DetailsModal from "../components/DetailsModal";
-import AddModal from "../components/AddModal.jsx";
+import api from "../services/axios.js";
+import LoadingSpinner from "../components/common/LoadingSpinner";
+import ErrorDisplay from "../components/common/ErrorDisplay.jsx";
+import SearchFilters from "../components/directory/SearchFilters.jsx";
+import PersonnelTable from "../components/directory/PersonnelTable.jsx";
+import QuickStats from "../components/directory/QuickStats.jsx";
+import EmptyState from "../components/common/EmptyState.jsx";
+import EditModal from "../components/modals/EditModal.jsx";
+import DetailsModal from "../components/modals/DetailsModal.jsx";
+import AddModal from "../components/modals/AddModal.jsx";
 import { formatDate } from "../utils/formatters";
 
 export default function DirectoryPage() {
@@ -175,25 +175,35 @@ export default function DirectoryPage() {
     prcLicenseNumber: data.prcLicenseNumber ?? "",
   });
 
-  const handleUpdate = async (updatedData) => {
-    if (!updatedData) return;
-
-    setUpdateLoading(updatedData._id);
-    try {
-      const payload = buildPayload(updatedData);
-      const res = await api.put(`/${updatedData._id}`, payload);
-      setDirectory((prev) =>
-        prev.map((p) => (p._id === updatedData._id ? res.data : p))
-      );
-      setIsEditModalOpen(false);
-      setEditingPerson(null);
-      alert(`${updatedData.name} updated successfully`);
-    } catch {
-      alert("Failed to update");
-    } finally {
-      setUpdateLoading(null);
+const handleUpdate = async (id, updatedData) => {
+  try {
+    setUpdateLoading(id);
+    
+    const response = await fetch(`/api/directory/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedData),
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showNotification("Record updated successfully!");
+      // Refresh your data or update state
+      fetchDirectoryData(); // Your function to refresh data
+      onCloseEditModal();
+    } else {
+      showNotification(`Update failed: ${result.message}`, 'error');
     }
-  };
+  } catch (error) {
+    console.error("Error updating directory:", error);
+    showNotification("Failed to update record. Please try again.", 'error');
+  } finally {
+    setUpdateLoading(null);
+  }
+};
 
   const handleCreateNew = () => {
     setNewPerson({
@@ -270,7 +280,8 @@ export default function DirectoryPage() {
         uniqueRegions={uniqueRegions}
         resultCount={filteredData.length}
       />
-
+      {/* Stats */}
+      <QuickStats directory={directory} />
       {/* Table */}
       <PersonnelTable
         data={currentItems}
@@ -289,9 +300,6 @@ export default function DirectoryPage() {
       {filteredData.length === 0 && !loading && (
         <EmptyState onClearFilters={handleClearFilters} />
       )}
-
-      {/* Stats */}
-      <QuickStats directory={directory} />
 
       {/* Modals */}
       <AddModal
