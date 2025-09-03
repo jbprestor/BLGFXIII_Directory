@@ -5,7 +5,7 @@ import {
   FIELD_CONFIG,
   FIELD_GROUPS,
   SECTION_CONFIG,
-} from "../../utils/fieldConfig.jsx";
+} from "../../utils/fieldConfig.jsx"
 import { InputField, SelectField } from "../common/FormFields";
 
 export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
@@ -31,7 +31,7 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
 
     if (name === "contactNumber") {
       sanitizedValue = value.replace(/\D/g, "");
-    } else if (name === "emailAddress") {
+    } else if (name === "officeEmail" || name === "personalEmail") {
       sanitizedValue = value.toLowerCase().trim();
     } else if (name === "stepIncrement") {
       sanitizedValue = value.replace(/[^0-9]/g, "");

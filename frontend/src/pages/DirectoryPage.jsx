@@ -130,7 +130,8 @@ export default function DirectoryPage() {
       masteralDegree: data.masteralDegree ?? "",
       doctoralDegree: data.doctoralDegree ?? "",
       eligibility: data.eligibility ?? "",
-      emailAddress: data.emailAddress ?? "",
+      officeEmail: data.officeEmail ?? "",
+      personalEmail: data.personalEmail ?? "",
       contactNumber: data.contactNumber ?? "",
       dateOfAppointment: data.dateOfAppointment,
       prcLicenseNumber: data.prcLicenseNumber ?? "",
@@ -190,8 +191,10 @@ export default function DirectoryPage() {
 
       try {
         setUpdateLoading(editingPerson._id);
+
         const payload = buildPayload(editingPerson);
         const res = await api.put(`/${editingPerson._id}`, payload);
+        console.log(res);
 
         setDirectory((prev) =>
           prev.map((person) =>

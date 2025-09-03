@@ -62,7 +62,11 @@ export default function PersonnelTable({
                             {person.name}
                           </div>
                           <div className="text-xs opacity-50">
-                            {person.emailAddress || "N/A"}
+                            {person.personalEmail || person.officeEmail
+                              ? `${person.personalEmail || "N/A"} / ${
+                                  person.officeEmail || "N/A"
+                                }`
+                              : "N/A"}
                           </div>
                         </div>
                       </div>
@@ -131,8 +135,12 @@ export default function PersonnelTable({
                       <td colSpan="6" className="bg-base-200 p-4">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Email:</strong>{" "}
-                            {person.emailAddress || "N/A"}
+                            <strong>Personal Email:</strong>{" "}
+                            {person.personalEmail || "N/A"}
+                          </div>
+                          <div>
+                            <strong>Office Email:</strong>{" "}
+                            {person.officeEmail || "N/A"}
                           </div>
                           <div>
                             <strong>Contact:</strong>{" "}

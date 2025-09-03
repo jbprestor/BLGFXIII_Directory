@@ -65,6 +65,8 @@ const themes = {
     accent: "primary",
     icon: "🌊",
     colors: { primary: "#570df8", secondary: "#f000b8", accent: "#37cdbe" },
+    shadow: "0 4px 14px 0 rgba(87, 13, 248, 0.2)",
+    border: "1px solid rgba(87, 13, 248, 0.15)",
   },
   emerald: {
     name: "Emerald Forest",
@@ -73,6 +75,8 @@ const themes = {
     accent: "success",
     icon: "🌲",
     colors: { primary: "#059669", secondary: "#10b981", accent: "#14b8a6" },
+    shadow: "0 4px 14px 0 rgba(5, 150, 105, 0.2)",
+    border: "1px solid rgba(5, 150, 105, 0.15)",
   },
   sunset: {
     name: "Sunset Warmth",
@@ -81,6 +85,8 @@ const themes = {
     accent: "warning",
     icon: "🌅",
     colors: { primary: "#ea580c", secondary: "#f97316", accent: "#fb923c" },
+    shadow: "0 4px 14px 0 rgba(234, 88, 12, 0.2)",
+    border: "1px solid rgba(234, 88, 12, 0.15)",
   },
   synthwave: {
     name: "Synthwave Neon",
@@ -89,6 +95,8 @@ const themes = {
     accent: "secondary",
     icon: "🌈",
     colors: { primary: "#e779c1", secondary: "#58c7f3", accent: "#f3cc30" },
+    shadow: "0 4px 14px 0 rgba(231, 121, 193, 0.25)",
+    border: "1px solid rgba(231, 121, 193, 0.2)",
   },
   retro: {
     name: "Retro Vintage",
@@ -97,6 +105,8 @@ const themes = {
     accent: "warning",
     icon: "📻",
     colors: { primary: "#ef9995", secondary: "#a4cbb4", accent: "#dc8850" },
+    shadow: "0 4px 14px 0 rgba(239, 153, 149, 0.2)",
+    border: "1px solid rgba(239, 153, 149, 0.15)",
   },
   cyberpunk: {
     name: "Cyberpunk Dark",
@@ -105,6 +115,8 @@ const themes = {
     accent: "accent",
     icon: "🤖",
     colors: { primary: "#ff7598", secondary: "#75d1f0", accent: "#c7f59b" },
+    shadow: "0 4px 14px 0 rgba(255, 117, 152, 0.25)",
+    border: "1px solid rgba(255, 117, 152, 0.2)",
   },
   valentine: {
     name: "Valentine Pink",
@@ -113,6 +125,8 @@ const themes = {
     accent: "secondary",
     icon: "💖",
     colors: { primary: "#e96d7b", secondary: "#a991f7", accent: "#88dbdd" },
+    shadow: "0 4px 14px 0 rgba(233, 109, 123, 0.2)",
+    border: "1px solid rgba(233, 109, 123, 0.15)",
   },
   aqua: {
     name: "Aqua Marine",
@@ -121,6 +135,8 @@ const themes = {
     accent: "info",
     icon: "🌊",
     colors: { primary: "#09ecf3", secondary: "#966fb3", accent: "#ffe999" },
+    shadow: "0 4px 14px 0 rgba(9, 236, 243, 0.2)",
+    border: "1px solid rgba(9, 236, 243, 0.15)",
   },
 };
 
@@ -128,7 +144,7 @@ const themes = {
 const Logo = ({ isScrolled, theme, onClick }) => (
   <div className="flex items-center space-x-3">
     <div className="avatar">
-      <div className="w-10 rounded-full">
+      <div className="w-10 rounded-full ring-2 ring-offset-2 ring-offset-base-100 ring-primary/30">
         <img
           src="https://blgf.gov.ph/wp-content/uploads/2022/05/BLGF-Seal-HD-768x768.png"
           alt="BLGF Logo"
@@ -144,9 +160,11 @@ const Logo = ({ isScrolled, theme, onClick }) => (
     </div>
     <button
       onClick={onClick}
-      className={`btn btn-ghost text-xl font-bold ${
-        isScrolled ? "text-primary" : "text-white"
-      } hover:scale-105 transition-transform`}
+      className={`btn btn-ghost text-xl font-bold transition-all duration-300 ${
+        isScrolled
+          ? "text-primary hover:text-primary-focus"
+          : "text-white hover:text-primary-content"
+      } hover:scale-105`}
       aria-label="Go to homepage"
     >
       <span className="hidden md:inline">BLGF Portal</span>
@@ -159,34 +177,40 @@ const NavItem = ({ item, currentPage, isScrolled, onClick }) => (
   <li>
     <button
       onClick={() => onClick(item.name, item.page)}
-      className={`btn btn-ghost ${
+      className={`btn btn-ghost rounded-btn transition-all duration-300 ${
         currentPage === item.page
           ? isScrolled
-            ? "btn-primary"
-            : "bg-white/20 text-white"
+            ? "btn-primary shadow-md"
+            : "bg-white/20 text-white shadow-md"
           : isScrolled
-          ? "hover:btn-primary"
-          : "text-white hover:bg-white/10"
+          ? "hover:btn-primary hover:shadow-md"
+          : "text-white hover:bg-white/10 hover:shadow-md"
       }`}
       aria-current={currentPage === item.page ? "page" : undefined}
     >
       <span className="text-sm">{item.icon}</span>
-      {item.name}
+      <span className="hidden lg:inline">{item.name}</span>
     </button>
   </li>
 );
 
-const NotificationToast = ({ notifications }) => (
+const NotificationToast = ({ notifications, theme }) => (
   <div className="toast toast-top toast-center sm:toast-end z-50">
     {notifications.map((notification) => (
       <div
         key={notification.id}
         className={`alert ${
           notification.type === "success" ? "alert-success" : "alert-error"
-        } shadow-lg animate-pulse mx-4 sm:mx-0`}
+        } shadow-lg mx-4 sm:mx-0 animate-fade-in-down`}
+        style={{
+          maxWidth: "90vw",
+          boxShadow: theme.shadow,
+        }}
       >
-        <div>
-          <span>{notification.type === "success" ? "✓" : "✗"}</span>
+        <div className="flex items-center">
+          <span className="text-lg mr-2">
+            {notification.type === "success" ? "✓" : "✗"}
+          </span>
           <span className="font-medium text-sm sm:text-base">
             {notification.message}
           </span>
@@ -203,19 +227,27 @@ const ThemeSelector = ({
   themeRef,
   themeOpen,
   setThemeOpen,
+  theme,
 }) => (
   <div className="dropdown dropdown-end hidden sm:block" ref={themeRef}>
     <button
       onClick={() => setThemeOpen(!themeOpen)}
-      className={`btn btn-ghost btn-circle ${isScrolled ? "" : "text-white"}`}
+      className={`btn btn-ghost btn-circle transition-all duration-300 ${
+        isScrolled ? "" : "text-white"
+      }`}
       aria-label="Change theme"
       aria-expanded={themeOpen}
+      style={themeOpen ? { transform: "rotate(180deg)" } : {}}
     >
       <span className="text-xl">{themes[currentTheme].icon}</span>
     </button>
     {themeOpen && (
       <ul
-        className="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-64 mt-3"
+        className="dropdown-content z-[1] menu p-2 shadow-2xl bg-base-100 rounded-box w-64 mt-3"
+        style={{
+          border: theme.border,
+          boxShadow: theme.shadow,
+        }}
         role="menu"
       >
         <li className="menu-title">
@@ -225,8 +257,10 @@ const ThemeSelector = ({
           <li key={key}>
             <button
               onClick={() => onThemeChange(key)}
-              className={`justify-between ${
-                currentTheme === key ? "active" : ""
+              className={`justify-between transition-colors duration-300 ${
+                currentTheme === key
+                  ? "active bg-primary/10"
+                  : "hover:bg-base-200"
               }`}
               role="menuitem"
             >
@@ -258,21 +292,26 @@ const UserMenu = ({
   setProfileOpen,
   showNotification,
   handleLogout,
+  theme,
 }) => (
   <div className="dropdown dropdown-end" ref={profileRef}>
     <button
       onClick={() => setProfileOpen(!profileOpen)}
-      className="btn btn-ghost btn-circle avatar"
+      className="btn btn-ghost btn-circle avatar transition-all duration-300"
       aria-label="User menu"
       aria-expanded={profileOpen}
     >
-      <div className="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
+      <div className="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold ring-2 ring-offset-2 ring-offset-base-100 ring-primary/30">
         U
       </div>
     </button>
     {profileOpen && (
       <ul
-        className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52"
+        className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-2xl bg-base-100 rounded-box w-52"
+        style={{
+          border: theme.border,
+          boxShadow: theme.shadow,
+        }}
         role="menu"
       >
         <li className="menu-title">
@@ -286,6 +325,7 @@ const UserMenu = ({
               setProfileOpen(false);
             }}
             role="menuitem"
+            className="transition-colors duration-300 hover:bg-base-200"
           >
             <span>👤</span>
             Profile
@@ -298,6 +338,7 @@ const UserMenu = ({
               setProfileOpen(false);
             }}
             role="menuitem"
+            className="transition-colors duration-300 hover:bg-base-200"
           >
             <span>⚙️</span>
             Settings
@@ -310,6 +351,7 @@ const UserMenu = ({
               setProfileOpen(false);
             }}
             role="menuitem"
+            className="transition-colors duration-300 hover:bg-base-200"
           >
             <span>❓</span>
             Help
@@ -317,7 +359,11 @@ const UserMenu = ({
         </li>
         <div className="divider my-1"></div>
         <li>
-          <button onClick={handleLogout} className="text-error" role="menuitem">
+          <button
+            onClick={handleLogout}
+            className="text-error transition-colors duration-300 hover:bg-error/10"
+            role="menuitem"
+          >
             <span>🚪</span>
             Sign out
           </button>
@@ -409,7 +455,7 @@ export default function Navbar({
 
   return (
     <>
-      <NotificationToast notifications={notifications} />
+      <NotificationToast notifications={notifications} theme={theme} />
 
       {/* Mobile Menu */}
       <MobileMenu
@@ -434,12 +480,20 @@ export default function Navbar({
             ? "bg-base-100/95 backdrop-blur-md shadow-xl"
             : `bg-gradient-to-r ${theme.gradient}`
         } fixed top-0 z-40 transition-all duration-500 px-4 sm:px-6`}
+        style={
+          isScrolled
+            ? {
+                boxShadow: theme.shadow,
+                borderBottom: theme.border,
+              }
+            : {}
+        }
       >
         <div className="navbar-start">
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className={`btn btn-ghost btn-circle lg:hidden ${
+            className={`btn btn-ghost btn-circle lg:hidden transition-all duration-300 ${
               isScrolled ? "" : "text-white"
             }`}
             aria-label="Open menu"
@@ -473,7 +527,7 @@ export default function Navbar({
           <div className="flex sm:hidden flex-1 justify-center">
             <button
               onClick={() => handleLinkClick("Home", "home")}
-              className={`btn btn-ghost text-lg font-bold ${
+              className={`btn btn-ghost text-lg font-bold transition-all duration-300 ${
                 isScrolled ? "text-primary" : "text-white"
               }`}
             >
@@ -484,7 +538,7 @@ export default function Navbar({
 
         {/* Desktop Menu */}
         <div className="navbar-center hidden lg:flex">
-          <ul className="menu menu-horizontal px-1">
+          <ul className="menu menu-horizontal px-1 space-x-1">
             {navItems.map((item) => (
               <NavItem
                 key={item.page}
@@ -505,23 +559,24 @@ export default function Navbar({
             themeRef={themeRef}
             themeOpen={themeOpen}
             setThemeOpen={setThemeOpen}
+            theme={theme}
           />
 
           {/* Mobile Quick Actions */}
           <div className="flex sm:hidden space-x-1">
             {isLoggedIn ? (
               <button className="btn btn-ghost btn-circle avatar">
-                <div className="w-9 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
+                <div className="w-9 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold ring-2 ring-offset-2 ring-offset-base-100 ring-primary/30">
                   U
                 </div>
               </button>
             ) : (
               <button
                 onClick={handleLogin}
-                className={`btn btn-sm ${
+                className={`btn btn-sm transition-all duration-300 ${
                   isScrolled
                     ? "btn-primary"
-                    : "btn-ghost text-white border-white"
+                    : "btn-ghost text-white border-white hover:bg-white hover:text-primary"
                 }`}
               >
                 Sign in
@@ -540,12 +595,13 @@ export default function Navbar({
                 setProfileOpen={setProfileOpen}
                 showNotification={showNotification}
                 handleLogout={handleLogout}
+                theme={theme}
               />
             ) : (
               <div className="space-x-2">
                 <button
                   onClick={handleLogin}
-                  className={`btn btn-ghost ${
+                  className={`btn btn-ghost transition-all duration-300 ${
                     isScrolled
                       ? "btn-outline"
                       : "text-white border-white hover:bg-white hover:text-base-content"
@@ -553,7 +609,11 @@ export default function Navbar({
                 >
                   Log in
                 </button>
-                <button onClick={handleLogin} className="btn btn-primary">
+                <button
+                  onClick={handleLogin}
+                  className="btn btn-primary transition-all duration-300 hover:shadow-lg"
+                  style={{ boxShadow: theme.shadow }}
+                >
                   Sign up
                 </button>
               </div>
@@ -592,11 +652,11 @@ const MobileMenu = ({
       <div className="absolute inset-0 bg-base-100 flex flex-col">
         {/* Mobile Menu Header */}
         <div
-          className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme.gradient}`}
+          className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme.gradient} text-white`}
         >
           <div className="flex items-center space-x-3">
             <div className="avatar">
-              <div className="w-10 rounded-full">
+              <div className="w-10 rounded-full ring-2 ring-offset-2 ring-offset-base-100 ring-white/30">
                 <img
                   src="https://blgf.gov.ph/wp-content/uploads/2022/05/BLGF-Seal-HD-768x768.png"
                   alt="BLGF Logo"
@@ -610,7 +670,7 @@ const MobileMenu = ({
                 </div>
               </div>
             </div>
-            <span className="text-white font-bold text-lg">BLGF Portal</span>
+            <span className="font-bold text-lg">BLGF Portal</span>
           </div>
           <button
             onClick={onClose}
@@ -647,7 +707,7 @@ const MobileMenu = ({
                     onClick={() => onLinkClick(item.name, item.page)}
                     className={`w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
                       currentPage === item.page
-                        ? "bg-primary text-primary-content"
+                        ? "bg-primary text-primary-content shadow-md"
                         : "hover:bg-base-200"
                     }`}
                   >
@@ -681,7 +741,7 @@ const MobileMenu = ({
             <h3 className="text-xs uppercase tracking-wider text-base-content/60 font-semibold mb-2 px-4">
               Theme
             </h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {Object.entries(themes).map(([key, themeData]) => (
                 <button
                   key={key}
@@ -691,7 +751,7 @@ const MobileMenu = ({
                   }}
                   className={`p-3 rounded-lg border-2 transition-all ${
                     currentTheme === key
-                      ? "border-primary bg-primary/10"
+                      ? "border-primary bg-primary/10 shadow-md"
                       : "border-base-300 hover:border-primary/50"
                   }`}
                 >
@@ -721,7 +781,7 @@ const MobileMenu = ({
                 <div className="bg-base-200 rounded-lg p-4 mb-3">
                   <div className="flex items-center space-x-3">
                     <div className="avatar">
-                      <div className="w-12 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
+                      <div className="w-12 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold ring-2 ring-offset-2 ring-offset-base-100 ring-primary/30">
                         U
                       </div>
                     </div>
@@ -735,19 +795,19 @@ const MobileMenu = ({
                 </div>
                 <ul className="space-y-1">
                   <li>
-                    <button className="w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-base-200">
+                    <button className="w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors hover:bg-base-200">
                       <span>👤</span>
                       <span>Profile</span>
                     </button>
                   </li>
                   <li>
-                    <button className="w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-base-200">
+                    <button className="w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors hover:bg-base-200">
                       <span>⚙️</span>
                       <span>Settings</span>
                     </button>
                   </li>
                   <li>
-                    <button className="w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-base-200">
+                    <button className="w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors hover:bg-base-200">
                       <span>❓</span>
                       <span>Help & Support</span>
                     </button>
@@ -755,7 +815,7 @@ const MobileMenu = ({
                   <li>
                     <button
                       onClick={onLogout}
-                      className="w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-error/10 text-error"
+                      className="w-full text-left flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors hover:bg-error/10 text-error"
                     >
                       <span>🚪</span>
                       <span>Sign out</span>
@@ -765,10 +825,17 @@ const MobileMenu = ({
               </div>
             ) : (
               <div className="space-y-3">
-                <button onClick={onLogin} className="btn btn-primary btn-block">
+                <button
+                  onClick={onLogin}
+                  className="btn btn-primary btn-block transition-all duration-300 hover:shadow-lg"
+                  style={{ boxShadow: theme.shadow }}
+                >
                   Sign in
                 </button>
-                <button onClick={onLogin} className="btn btn-outline btn-block">
+                <button
+                  onClick={onLogin}
+                  className="btn btn-outline btn-block transition-all duration-300"
+                >
                   Create Account
                 </button>
               </div>

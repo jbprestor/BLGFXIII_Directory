@@ -1,6 +1,6 @@
 // models/blgfModel.js
 import mongoose from "mongoose";
- 
+
 const blgfSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -37,12 +37,22 @@ const blgfSchema = new mongoose.Schema(
     doctoralDegree: { type: String, trim: true },
 
     eligibility: { type: String, trim: true },
-    emailAddress: {
+
+    // Email addresses - UPDATED
+    officeEmail: {
       type: String,
       trim: true,
       lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, "Invalid email format"],
+      match: [/^\S+@\S+\.\S+$/, "Invalid personal email format"]
     },
+    
+    personalEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      match: [/^\S+@\S+\.\S+$/, "Invalid personal email format"]
+    },
+
     contactNumber: {
       type: String,
       trim: true,

@@ -51,7 +51,7 @@ export default function EditModal({
       // Apply specific sanitization
       if (name === "contactNumber") {
         sanitizedValue = value.replace(/\D/g, "");
-      } else if (name === "emailAddress") {
+      } else if (name === "officeEmail" || name === "personalEmail") {
         sanitizedValue = value.toLowerCase().trim();
       } else if (name === "stepIncrement") {
         sanitizedValue = value.replace(/[^0-9]/g, "");
