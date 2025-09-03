@@ -36,12 +36,14 @@ export default function DirectoryPage() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   const fetchDirectory = useCallback(async () => {
     try {
       const res = await api.get();
+      console.log("Fetched directory:", res.data);
       setDirectory(Array.isArray(res.data) ? res.data : []);
+
     } catch (err) {
       console.error(err);
       setError("Failed to load directory");

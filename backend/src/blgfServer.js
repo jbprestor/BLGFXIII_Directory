@@ -11,49 +11,39 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
-// Allow requests from your frontend or Postman (no origin)
 
-const CLIENT_API_URL =
-  process.env.CLIENT_API_URL || process.env.VITE_CLIENT_API_URL_LOCAL;
+// Middleware
+app.use(express.json()); // Parse JSON bodies
 
-
+// CORS configuration
 if (process.env.NODE_ENV !== "production") {
-  app.use(
-    cors({
-      origin: function (origin, callback) {
-        try {
-          // Allow requests from your frontend or Postman (no origin)
-          if (!origin || origin === CLIENT_API_URL) {
-            callback(null, true); // allow
-          } else {
-            callback(new Error("Not allowed by CORS")); // reject
-          }
-        } catch (err) {
-          console.error("CORS error:", err);
-          callback(err); // pass error to Express
-        }
-      },
-      methods: ["GET", "POST", "PUT", "DELETE"],
-    })
-  );
+  console.log("CORS enabled for development");
+  app.use(cors({
+    origin: process.env.VITE_CLIENT_API_URL_LOCAL
+  }));
 }
 
-//middleware
-app.use(express.json()); // this middleware will parse the JSON bodies: req.body
+// Rate limiting
 app.use(rateLimiter);
 
-app.use("/", directoryRoutes);
+// API routes - should come BEFORE static file serving
+app.use("/api/directory", directoryRoutes); // Consider adding /api prefix for clarity
 
+// Static file serving for production - should come AFTER API routes
 if (process.env.NODE_ENV === "production") {
+  console.log("Serving static files in production");
+
+  // Serve static files from React build directory
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-  app.get("/*splat", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+  // Handle SPA routing - serve index.html for all non-API routes
+  // Express 5 compatible wildcard pattern
+  app.get('/{*splat}', (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
   });
-}
+};
 
-//connect to db and start server
-
+// Connect to database and start server
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log("Server started on PORT: ", PORT);
