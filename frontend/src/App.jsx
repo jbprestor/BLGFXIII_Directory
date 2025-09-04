@@ -1,15 +1,24 @@
 import { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router";
+import { useAuth } from "./contexts/AuthContext.jsx";
+
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
+
 import HomePage from "./pages/HomePage";
 import DirectoryPage from "./pages/DirectoryPage";
 import CreatePage from "./pages/CreatePage";
-// import SMVProfilingPage from "./pages/SMVProfilingPage";
-// import QRRPASubmissionPage from "./pages/QRRPASubmissionPage";
+// import Dashboard from "./pages/Dashboard";
+// import LGUsPage from "./pages/LGUsPage";
+// import AssessorsPage from "./pages/AssessorsPage";
+// import SMVProcessesPage from "./pages/SMVProcessesPage";
+// import LAOEMonitoringPage from "./pages/LAOEMonitoringPage";
+// import QRRPAMonitoringPage from "./pages/QRRPAMonitoringPage";
+// import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState("home");
   const [currentTheme, setCurrentTheme] = useState("default");
+   const { user, loading } = useAuth();
 
   // Apply DaisyUI theme to document
   useEffect(() => {
@@ -21,64 +30,98 @@ export default function App() {
       retro: "retro",
       cyberpunk: "cyberpunk",
       valentine: "valentine",
-      aqua: "aqua"
+      aqua: "aqua",
     };
-    
-    document.documentElement.setAttribute('data-theme', themes[currentTheme] || 'corporate');
+    document.documentElement.setAttribute(
+      "data-theme",
+      themes[currentTheme] || "corporate"
+    );
   }, [currentTheme]);
 
-  const handleNavigation = (page) => {
-    setCurrentPage(page);
-    // Scroll to top when navigating
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const handleThemeChange = (theme) => setCurrentTheme(theme);
 
-  const handleThemeChange = (theme) => {
-    setCurrentTheme(theme);
-  };
-
-  const renderCurrentPage = () => {
-    switch (currentPage) {
-      case "home":
-        return <HomePage />;
-      case "directory":
-        return <DirectoryPage />;
-      case "create":
-        return <CreatePage />;
-      case "smv-profiling":
-        return <SMVProfilingPage />;
-      case "qrrpa-submission":
-        return <QRRPASubmissionPage />;
-      default:
-        return <HomePage />;
-    }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-base-100">
       {/* DaisyUI CSS CDN */}
-      <link href="https://cdnjs.cloudflare.com/ajax/libs/daisyui/4.4.19/full.css" rel="stylesheet" />
-      
-      {/* Navigation */}
-      <Navbar 
-        currentPage={currentPage} 
-        onNavigate={handleNavigation}
-        currentTheme={currentTheme}
-        onThemeChange={handleThemeChange}
+      <link
+        href="https://cdnjs.cloudflare.com/ajax/libs/daisyui/4.4.19/full.css"
+        rel="stylesheet"
       />
 
-      {/* <Sidebar 
-        currentPage={currentPage} 
-        onNavigate={handleNavigation}
-        currentTheme={currentTheme}
-        onThemeChange={handleThemeChange}
-      /> */}
-      
+      {/* Navigation */}
+      <Navbar currentTheme={currentTheme} onThemeChange={handleThemeChange} user={user} />
+
       {/* Main Content */}
       <main className="flex-grow">
-        {renderCurrentPage()}
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/directory" element={<DirectoryPage />} />
+          <Route path="/create" element={<CreatePage />} />
+
+          {/* Protected Routes
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/lgus"
+            element={
+              <ProtectedRoute>
+                <LGUsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assessors"
+            element={
+              <ProtectedRoute>
+                <AssessorsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/smv-processes"
+            element={
+              <ProtectedRoute>
+                <SMVProcessesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laoe-monitoring"
+            element={
+              <ProtectedRoute>
+                <LAOEMonitoringPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/qrrpa-monitoring"
+            element={
+              <ProtectedRoute>
+                <QRRPAMonitoringPage />
+              </ProtectedRoute>
+            }
+          /> */}
+
+          {/* Redirect unknown routes to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
-      
+
       {/* Footer */}
       <Footer />
     </div>

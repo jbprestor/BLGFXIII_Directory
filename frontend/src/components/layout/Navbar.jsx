@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import LoginPage from "../../pages/LoginPage";
 
 // Custom hooks for better organization
 const useScrollDetection = () => {
@@ -379,27 +381,29 @@ export default function Navbar({
   currentTheme,
   onThemeChange,
 }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false); // <-- modal state
+  const [notifications, setNotifications] = useState([]);
 
   const profileRef = useRef(null);
   const themeRef = useRef(null);
 
   const isScrolled = useScrollDetection();
   const theme = themes[currentTheme] || themes.default;
+  const isLoggedIn = !!user;
 
-  // Use custom hooks
   useClickOutside(profileRef, () => setProfileOpen(false));
   useClickOutside(themeRef, () => setThemeOpen(false));
   useEscapeKey(() => {
     setMobileMenuOpen(false);
     setProfileOpen(false);
     setThemeOpen(false);
+    setLoginOpen(false); // close modal on escape
   });
-  useBodyScrollLock(mobileMenuOpen);
+  useBodyScrollLock(mobileMenuOpen || loginOpen);
 
   const navItems = useMemo(
     () => [
@@ -414,90 +418,67 @@ export default function Navbar({
 
   const showNotification = useCallback((message, type = "success") => {
     const id = Date.now();
-    const notification = { id, message, type };
-    setNotifications((prev) => [...prev, notification]);
-
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    }, 3000);
+    setNotifications((prev) => [...prev, { id, message, type }]);
+    setTimeout(
+      () => setNotifications((prev) => prev.filter((n) => n.id !== id)),
+      3000
+    );
   }, []);
 
-  const handleLinkClick = useCallback(
-    (name, page) => {
-      showNotification(`Navigating to ${name}`);
-      setMobileMenuOpen(false);
-      onNavigate(page);
-    },
-    [showNotification, onNavigate]
-  );
-
-  const handleLogin = useCallback(() => {
-    setIsLoggedIn(true);
-    showNotification("Successfully logged in!");
-    setMobileMenuOpen(false);
-  }, [showNotification]);
-
-  const handleLogout = useCallback(() => {
-    setIsLoggedIn(false);
+  const handleLogout = useCallback(async () => {
+    await logout();
     setProfileOpen(false);
-    showNotification("Successfully logged out!");
     setMobileMenuOpen(false);
-  }, [showNotification]);
+    showNotification("Logged out successfully!");
+  }, [logout, showNotification]);
 
   const handleThemeChange = useCallback(
     (themeKey) => {
       onThemeChange(themeKey);
       setThemeOpen(false);
-      showNotification(`Theme changed to ${themes[themeKey].name}!`);
+      showNotification(`Theme changed to ${themes[themeKey].name}`);
     },
     [onThemeChange, showNotification]
   );
 
+  const handleLoginOpen = () => setLoginOpen(true);
+  const handleLoginClose = () => setLoginOpen(false);
+
   return (
     <>
+      {/* Notifications */}
       <NotificationToast notifications={notifications} theme={theme} />
 
-      {/* Mobile Menu */}
-      <MobileMenu
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        currentPage={currentPage}
-        theme={theme}
-        themes={themes}
-        currentTheme={currentTheme}
-        onThemeChange={handleThemeChange}
-        isLoggedIn={isLoggedIn}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
-        navItems={navItems}
-        onLinkClick={handleLinkClick}
-      />
+      {/* Login Modal */}
+      {loginOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-base-100 p-6 rounded-lg shadow-lg relative">
+            <button
+              className="absolute top-2 right-2 btn btn-sm btn-circle"
+              onClick={handleLoginClose}
+            >
+              ✕
+            </button>
+            <LoginPage onSuccess={handleLoginClose} />
+          </div>
+        </div>
+      )}
 
-      {/* Main Navbar */}
+      {/* Navbar */}
       <div
         className={`navbar ${
           isScrolled
             ? "bg-base-100/95 backdrop-blur-md shadow-xl"
             : `bg-gradient-to-r ${theme.gradient}`
         } fixed top-0 z-40 transition-all duration-500 px-4 sm:px-6`}
-        style={
-          isScrolled
-            ? {
-                boxShadow: theme.shadow,
-                borderBottom: theme.border,
-              }
-            : {}
-        }
       >
         <div className="navbar-start">
-          {/* Mobile Menu Button */}
+          {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className={`btn btn-ghost btn-circle lg:hidden transition-all duration-300 ${
+            className={`btn btn-ghost btn-circle lg:hidden ${
               isScrolled ? "" : "text-white"
             }`}
-            aria-label="Open menu"
-            aria-expanded={mobileMenuOpen}
           >
             <svg
               className="w-6 h-6"
@@ -514,29 +495,15 @@ export default function Navbar({
             </svg>
           </button>
 
-          {/* Logo - Hidden on Mobile, Visible on Desktop */}
-          <div className="hidden sm:flex">
-            <Logo
-              isScrolled={isScrolled}
-              theme={theme}
-              onClick={() => handleLinkClick("Home", "home")}
-            />
-          </div>
-
-          {/* Mobile Logo - Centered */}
-          <div className="flex sm:hidden flex-1 justify-center">
-            <button
-              onClick={() => handleLinkClick("Home", "home")}
-              className={`btn btn-ghost text-lg font-bold transition-all duration-300 ${
-                isScrolled ? "text-primary" : "text-white"
-              }`}
-            >
-              BLGF Portal
-            </button>
-          </div>
+          {/* Logo */}
+          <Logo
+            isScrolled={isScrolled}
+            theme={theme}
+            onClick={() => onNavigate("home")}
+          />
         </div>
 
-        {/* Desktop Menu */}
+        {/* Navbar Center */}
         <div className="navbar-center hidden lg:flex">
           <ul className="menu menu-horizontal px-1 space-x-1">
             {navItems.map((item) => (
@@ -545,12 +512,13 @@ export default function Navbar({
                 item={item}
                 currentPage={currentPage}
                 isScrolled={isScrolled}
-                onClick={handleLinkClick}
+                onClick={(name, page) => onNavigate(page)}
               />
             ))}
           </ul>
         </div>
 
+        {/* Navbar End */}
         <div className="navbar-end space-x-2">
           <ThemeSelector
             currentTheme={currentTheme}
@@ -562,72 +530,35 @@ export default function Navbar({
             theme={theme}
           />
 
-          {/* Mobile Quick Actions */}
-          <div className="flex sm:hidden space-x-1">
-            {isLoggedIn ? (
-              <button className="btn btn-ghost btn-circle avatar">
-                <div className="w-9 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold ring-2 ring-offset-2 ring-offset-base-100 ring-primary/30">
-                  U
-                </div>
-              </button>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className={`btn btn-sm transition-all duration-300 ${
-                  isScrolled
-                    ? "btn-primary"
-                    : "btn-ghost text-white border-white hover:bg-white hover:text-primary"
-                }`}
-              >
-                Sign in
-              </button>
-            )}
-          </div>
-
-          {/* Desktop Authentication */}
-          <div className="hidden sm:flex space-x-2">
-            {isLoggedIn ? (
-              <UserMenu
-                isLoggedIn={isLoggedIn}
-                isScrolled={isScrolled}
-                profileRef={profileRef}
-                profileOpen={profileOpen}
-                setProfileOpen={setProfileOpen}
-                showNotification={showNotification}
-                handleLogout={handleLogout}
-                theme={theme}
-              />
-            ) : (
-              <div className="space-x-2">
-                <button
-                  onClick={handleLogin}
-                  className={`btn btn-ghost transition-all duration-300 ${
-                    isScrolled
-                      ? "btn-outline"
-                      : "text-white border-white hover:bg-white hover:text-base-content"
-                  }`}
-                >
-                  Log in
-                </button>
-                <button
-                  onClick={handleLogin}
-                  className="btn btn-primary transition-all duration-300 hover:shadow-lg"
-                  style={{ boxShadow: theme.shadow }}
-                >
-                  Sign up
-                </button>
-              </div>
-            )}
-          </div>
+          {isLoggedIn ? (
+            <UserMenu
+              isLoggedIn={isLoggedIn}
+              isScrolled={isScrolled}
+              profileRef={profileRef}
+              profileOpen={profileOpen}
+              setProfileOpen={setProfileOpen}
+              showNotification={showNotification}
+              handleLogout={handleLogout}
+              theme={theme}
+            />
+          ) : (
+            <button
+              onClick={handleLoginOpen}
+              className={`btn btn-primary ${
+                isScrolled ? "" : "btn-outline text-white"
+              }`}
+            >
+              Log in
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Spacer for fixed navbar */}
+      {/* Spacer */}
       <div className="h-16"></div>
     </>
   );
 }
-
 // Mobile Menu Component (extracted for better organization)
 const MobileMenu = ({
   isOpen,
