@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router";
 import { useAuth } from "./contexts/AuthContext.jsx";
 
-import Navbar from "./components/layout/Navbar";
+import Navbar from "./components/layout/Navbar/Navbar.jsx";
 import Footer from "./components/layout/Footer";
 
 import HomePage from "./pages/HomePage";

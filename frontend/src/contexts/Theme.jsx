@@ -1,114 +1,86 @@
-// src/data/themes.js
-export const themes = {
-  default: {
-    name: "Corporate Blue",
-    daisyTheme: "corporate",
-    gradient: "from-blue-600 via-indigo-600 to-purple-700",
-    accent: "primary",
-    icon: "🌊",
-    colors: {
-      primary: "#570df8",
-      secondary: "#f000b8",
-      accent: "#37cdbe",
+// Theme configuration
+export default function Theme() {
+  const themes = {
+    default: {
+      name: "Corporate Blue",
+      daisyTheme: "corporate",
+      gradient: "from-blue-600 via-indigo-600 to-purple-700",
+      accent: "primary",
+      icon: "🌊",
+      colors: { primary: "#570df8", secondary: "#f000b8", accent: "#37cdbe" },
+      shadow: "0 4px 14px 0 rgba(87, 13, 248, 0.2)",
+      border: "1px solid rgba(87, 13, 248, 0.15)",
     },
-  },
-  emerald: {
-    name: "Emerald Forest",
-    daisyTheme: "emerald",
-    gradient: "from-emerald-600 via-green-600 to-teal-700",
-    accent: "success",
-    icon: "🌲",
-    colors: {
-      primary: "#059669",
-      secondary: "#10b981",
-      accent: "#14b8a6",
+    emerald: {
+      name: "Emerald Forest",
+      daisyTheme: "emerald",
+      gradient: "from-emerald-600 via-green-600 to-teal-700",
+      accent: "success",
+      icon: "🌲",
+      colors: { primary: "#059669", secondary: "#10b981", accent: "#14b8a6" },
+      shadow: "0 4px 14px 0 rgba(5, 150, 105, 0.2)",
+      border: "1px solid rgba(5, 150, 105, 0.15)",
     },
-  },
-  sunset: {
-    name: "Sunset Warmth",
-    daisyTheme: "sunset",
-    gradient: "from-orange-500 via-red-500 to-pink-600",
-    accent: "warning",
-    icon: "🌅",
-    colors: {
-      primary: "#ea580c",
-      secondary: "#f97316",
-      accent: "#fb923c",
+    sunset: {
+      name: "Sunset Warmth",
+      daisyTheme: "sunset",
+      gradient: "from-orange-500 via-red-500 to-pink-600",
+      accent: "warning",
+      icon: "🌅",
+      colors: { primary: "#ea580c", secondary: "#f97316", accent: "#fb923c" },
+      shadow: "0 4px 14px 0 rgba(234, 88, 12, 0.2)",
+      border: "1px solid rgba(234, 88, 12, 0.15)",
     },
-  },
-  synthwave: {
-    name: "Synthwave Neon",
-    daisyTheme: "synthwave",
-    gradient: "from-purple-600 via-pink-600 to-blue-600",
-    accent: "secondary",
-    icon: "🌈",
-    colors: {
-      primary: "#e779c1",
-      secondary: "#58c7f3",
-      accent: "#f3cc30",
+    synthwave: {
+      name: "Synthwave Neon",
+      daisyTheme: "synthwave",
+      gradient: "from-purple-600 via-pink-600 to-blue-600",
+      accent: "secondary",
+      icon: "🌈",
+      colors: { primary: "#e779c1", secondary: "#58c7f3", accent: "#f3cc30" },
+      shadow: "0 4px 14px 0 rgba(231, 121, 193, 0.25)",
+      border: "1px solid rgba(231, 121, 193, 0.2)",
     },
-  },
-  retro: {
-    name: "Retro Vintage",
-    daisyTheme: "retro",
-    gradient: "from-amber-500 via-orange-500 to-red-600",
-    accent: "warning",
-    icon: "📻",
-    colors: {
-      primary: "#ef9995",
-      secondary: "#a4cbb4",
-      accent: "#dc8850",
+    retro: {
+      name: "Retro Vintage",
+      daisyTheme: "retro",
+      gradient: "from-amber-500 via-orange-500 to-red-600",
+      accent: "warning",
+      icon: "📻",
+      colors: { primary: "#ef9995", secondary: "#a4cbb4", accent: "#dc8850" },
+      shadow: "0 4px 14px 0 rgba(239, 153, 149, 0.2)",
+      border: "1px solid rgba(239, 153, 149, 0.15)",
     },
-  },
-  cyberpunk: {
-    name: "Cyberpunk Dark",
-    daisyTheme: "cyberpunk",
-    gradient: "from-yellow-400 via-pink-500 to-purple-600",
-    accent: "accent",
-    icon: "🤖",
-    colors: {
-      primary: "#ff7598",
-      secondary: "#75d1f0",
-      accent: "#c7f59b",
+    cyberpunk: {
+      name: "Cyberpunk Dark",
+      daisyTheme: "cyberpunk",
+      gradient: "from-yellow-400 via-pink-500 to-purple-600",
+      accent: "accent",
+      icon: "🤖",
+      colors: { primary: "#ff7598", secondary: "#75d1f0", accent: "#c7f59b" },
+      shadow: "0 4px 14px 0 rgba(255, 117, 152, 0.25)",
+      border: "1px solid rgba(255, 117, 152, 0.2)",
     },
-  },
-  valentine: {
-    name: "Valentine Pink",
-    daisyTheme: "valentine",
-    gradient: "from-pink-500 via-rose-500 to-red-500",
-    accent: "secondary",
-    icon: "💖",
-    colors: {
-      primary: "#e96d7b",
-      secondary: "#a991f7",
-      accent: "#88dbdd",
+    valentine: {
+      name: "Valentine Pink",
+      daisyTheme: "valentine",
+      gradient: "from-pink-500 via-rose-500 to-red-500",
+      accent: "secondary",
+      icon: "💖",
+      colors: { primary: "#e96d7b", secondary: "#a991f7", accent: "#88dbdd" },
+      shadow: "0 4px 14px 0 rgba(233, 109, 123, 0.2)",
+      border: "1px solid rgba(233, 109, 123, 0.15)",
     },
-  },
-  aqua: {
-    name: "Aqua Marine",
-    daisyTheme: "aqua",
-    gradient: "from-cyan-500 via-blue-500 to-indigo-600",
-    accent: "info",
-    icon: "🌊",
-    colors: {
-      primary: "#09ecf3",
-      secondary: "#966fb3",
-      accent: "#ffe999",
+    aqua: {
+      name: "Aqua Marine",
+      daisyTheme: "aqua",
+      gradient: "from-cyan-500 via-blue-500 to-indigo-600",
+      accent: "info",
+      icon: "🌊",
+      colors: { primary: "#09ecf3", secondary: "#966fb3", accent: "#ffe999" },
+      shadow: "0 4px 14px 0 rgba(9, 236, 243, 0.2)",
+      border: "1px solid rgba(9, 236, 243, 0.15)",
     },
-  },
-};
-
-// Helper function to get a theme by key
-export const getTheme = (themeKey) => {
-  return themes[themeKey] || themes.default;
-};
-
-// Helper function to get all theme keys
-export const getThemeKeys = () => {
-  return Object.keys(themes);
-};
-
-// Helper function to get the default theme
-export const getDefaultTheme = () => {
-  return themes.default;
-};
+  };
+  return themes;
+}
