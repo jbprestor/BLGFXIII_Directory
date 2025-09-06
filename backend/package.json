@@ -19,8 +19,11 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^4.21.2",
+    "joi": "^18.0.1",
+    "joi-password-complexity": "^5.2.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.18.0"
+    "mongoose": "^8.18.0",
+    "path-to-regexp": "^8.3.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

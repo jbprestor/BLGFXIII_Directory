@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
-import { validateField } from "../../utils/validationRules.js";
+import { validateField } from "../../../utils/validationRules.js";
 import {
   FIELD_CONFIG,
   FIELD_GROUPS,
   SECTION_CONFIG,
-} from "../../utils/fieldConfig.jsx"
-import { InputField, SelectField } from "../common/FormFields";
+} from "../../../utils/fieldConfig.jsx"
+import { InputField, SelectField } from "../../common/FormFields.jsx";
 
 export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
   const [formData, setFormData] = useState({});

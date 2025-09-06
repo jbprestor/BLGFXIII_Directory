@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import Joi from "joi";
+import passwordComplexity from "joi-password-complexity";
 
 const userSchema = new mongoose.Schema(
   {
@@ -61,4 +64,28 @@ userSchema.methods.correctPassword = async function (
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 
+userSchema.methods.generateAuthToken = function () {
+  const token = jwt.sign(
+    { _id: this._id, role: this.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+  return token;
+};
+
 export const User = mongoose.model("User", userSchema);
+
+const validate = (data) => {
+  const schema = Joi.object({
+    email: Joi.string().email().required().label("Email"),
+    password: passwordComplexity().required().label("Password"),
+    firstName: Joi.string().required().label("First Name"),
+    lastName: Joi.string().required().label("Last Name"),
+    role: Joi.string().valid("Admin", "Regional", "Provincial", "Municipal").label("Role"),
+    region: Joi.string().label("Region"),
+    isActive: Joi.boolean().label("Is Active"),
+  }).options({ abortEarly: false });
+  return schema.validate(data);
+};
+
+export const validateUser = validate;   

@@ -6,6 +6,7 @@ import { rateLimiter, authRateLimiter } from "./middleware/rateLimiter.js";
 import path from "path";
 
 // Import all route files
+import { userRoutes } from "./routes/usersRoutes.js";
 import { authRoutes } from "./routes/authRoutes.js";
 import { lguRoutes } from "./routes/lguRoutes.js";
 import { assessorRoutes } from "./routes/assessorRoutes.js";
@@ -39,6 +40,7 @@ if (process.env.NODE_ENV !== "production") {
 app.use(rateLimiter);
 
 // API routes - organized by resource
+app.use("/api/users", userRoutes);
 app.use("/api/auth", authRateLimiter, authRoutes); // Stricter rate limiting for auth
 app.use("/api/lgus", lguRoutes);
 app.use("/api/assessors", assessorRoutes);
@@ -69,7 +71,7 @@ if (process.env.NODE_ENV === "production") {
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({  
     message: "Something went wrong!", 
     error: process.env.NODE_ENV === "production" ? {} : err.message 
   });

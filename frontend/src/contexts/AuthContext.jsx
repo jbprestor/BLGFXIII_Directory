@@ -1,40 +1,38 @@
-// contexts/AuthProvider.js
 import { createContext, useState, useContext, useEffect } from "react";
-import api from "../services/axios.js";
-
+import useApi from "../services/axios.js";
 const AuthContext = createContext();
 
-// Named hook export
 export function useAuth() {
   return useContext(AuthContext);
 }
 
-// Named provider export
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const api = useApi();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      api
-        .get("/auth/profile")
-        .then((res) => setUser(res.data.data))
-        .catch(() => localStorage.removeItem("token"))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+    const userData = localStorage.getItem("user");
+    if (token && userData) {
+      setUser(JSON.parse(userData)); // restore user from localStorage
     }
+    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
-      const res = await api.post("/auth/login", { email, password });
-      const { token, user } = res.data.data;
+      // use the helper function
+      const res = await api.loginUser({ email, password });
+
+      const { token, user } = res.data; // matches controller
       localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
       setUser(user);
-      return { success: true };
+
+      return { success: true, user, token };
     } catch (err) {
+      console.error("Login error:", err.response?.data || err);
       return {
         success: false,
         message: err.response?.data?.message || "Login failed",
@@ -44,6 +42,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
   };
 

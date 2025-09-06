@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { validateField } from "../../utils/validationRules.js";
+import { validateField } from "../../../utils/validationRules.js";
 import {
   FIELD_CONFIG,
   FIELD_GROUPS,
   SECTION_CONFIG,
-} from "../../utils/fieldConfig.jsx";
+} from "../../../utils/fieldConfig.jsx";
 
 export default function EditModal({
   isOpen,

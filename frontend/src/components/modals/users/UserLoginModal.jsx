@@ -1,19 +1,17 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
-import { useAuth } from "../../contexts/AuthContext.jsx";
-import Theme from "../../contexts/Theme.jsx";
+import { useAuth } from "../../../contexts/AuthContext.jsx";
+import Theme from "../../../contexts/Theme.jsx";
+import UserCreateModal from "./UserCreateModal.jsx";
 
-export default function LoginPage({ onSuccess }) {
+export default function UserLoginPage({ onSuccess, onClose, onRequestAccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-
   const { login } = useAuth();
-  const navigate = useNavigate();
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
@@ -22,21 +20,27 @@ export default function LoginPage({ onSuccess }) {
     }
 
     setLoading(true);
+    setError(""); // reset error
+
     try {
-      const result = await login(email, password);
-      if (result.success) {
-        if (rememberMe) {
-          localStorage.setItem("rememberMe", "true");
-        } else {
-          localStorage.removeItem("rememberMe");
-        }
-        onSuccess?.();
-        navigate("/dashboard");
-      } else {
-        setError(result.message || "Failed to log in");
+      const result = await login(email, password, rememberMe);
+      // If login returns nothing or user is null
+      if (!result || !result.success) {
+        setError(
+          result?.message || "Login failed. Please check your credentials."
+        );
+        return;
       }
-    } catch {
-      setError("An unexpected error occurred. Please try again.");
+
+      // Remember Me
+      if (rememberMe) localStorage.setItem("rememberMe", "true");
+      else localStorage.removeItem("rememberMe");
+
+      onSuccess?.(); // close modal
+    } catch (err) {
+      setError(
+        err.message || "An unexpected error occurred. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -46,9 +50,7 @@ export default function LoginPage({ onSuccess }) {
     <div className="w-full max-w-sm">
       <div className="text-center mb-6">
         <h1 className="text-xl font-bold text-base-content">BLGF Portal</h1>
-        <p className="text-sm text-base-content/60">
-          Sign in to continue
-        </p>
+        <p className="text-sm text-base-content/60">Sign in to continue</p>
       </div>
 
       <div className="card bg-base-100 shadow-lg border border-base-300/20">
@@ -119,11 +121,21 @@ export default function LoginPage({ onSuccess }) {
         </div>
       </div>
 
+      {/* ... login form ... */}
+
       <p className="mt-4 text-sm text-center text-base-content/60">
         Don’t have an account?{" "}
-        <Link to="/register" className="link link-primary">Request access</Link>
+        <button
+          type="button"
+          onClick={() => {
+            onClose(); // close login
+            onRequestAccess(); // open create modal
+          }}
+          className="link link-primary"
+        >
+          Request access
+        </button>
       </p>
     </div>
   );
 }
-

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import { DetailField } from "../common/FormFields";
+import { DetailField } from "../../common/FormFields.jsx";
 import {
   FIELD_CONFIG,
   FIELD_GROUPS,
   SECTION_CONFIG,
-} from "../../utils/fieldConfig.jsx";
+} from "../../../utils/fieldConfig.jsx";
 
 export default function DetailsModal({
   isOpen,
