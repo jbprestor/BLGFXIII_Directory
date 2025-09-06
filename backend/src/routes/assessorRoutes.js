@@ -19,7 +19,7 @@ router.get("/:id", getAssessorById);
 router.get("/lgu/:lguId", getAssessorsByLGU);
 
 // Protected routes
-router.post("/", authenticate, createAssessor);
+router.post("/",  createAssessor);
 router.put("/:id", authenticate, updateAssessor);
 router.delete("/:id", authenticate, deleteAssessor);
 
