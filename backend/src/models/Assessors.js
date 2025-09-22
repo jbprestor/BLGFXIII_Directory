@@ -3,23 +3,24 @@ import mongoose from "mongoose";
 const assessorSchema = new mongoose.Schema(
   {
     // Personal Information
-    lastName: { type: String, required: true, trim: true },
-    firstName: { type: String, required: true, trim: true },
+    lastName: { type: String, trim: true },
+    firstName: { type: String, trim: true },
     middleName: { type: String, trim: true },
-    sex: { type: String, enum: ["Male", "Female", "Other"], required: true },
-    civilStatus: { type: String, enum: ["Single", "Married", "Widowed", "Separated", "Other"], required: true },
-    birthday: { type: Date, required: true },
+    sex: { type: String, enum: ["Male", "Female", "Other"] },
+    civilStatus: { type: String, enum: ["Single", "Married", "Widowed", "Separated", "Other"] },
+    birthday: { type: Date },
 
     // Reference to LGU
-    lgu: { type: mongoose.Schema.Types.ObjectId, ref: "LGU", required: true },
+    lgu: { type: mongoose.Schema.Types.ObjectId, ref: "LGU" },
 
     // Professional Information
-    plantillaPosition: { type: String, required: true, trim: true },
-    officialDesignation: { type: String, trim: true, required: true },
-    statusOfAppointment: { type: String, enum: ["Permanent","Temporary","Casual","Job Order","Contractual","Acting","OIC"], required: true },
-    dateOfAppointment: { type: Date, required: true },
+    plantillaPosition: { type: String, trim: true },
+    officialDesignation: { type: String, trim: true },
+    statusOfAppointment: { type: String, enum: ["Permanent","Temporary","Casual","Job Order","Contractual","Acting","OIC"] },
+    dateOfAppointment: { type: Date },
     salaryGrade: { type: String, trim: true },
     stepIncrement: { type: Number, default: 1 },
+    incomeClass: { type: String, trim: true },
 
     // Educational Background
     bachelorDegree: { type: String, trim: true },

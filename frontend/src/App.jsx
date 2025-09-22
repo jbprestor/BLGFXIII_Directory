@@ -1,24 +1,22 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router";
+import { Routes, Route, Navigate, useNavigate } from "react-router";
 import { useAuth } from "./contexts/AuthContext.jsx";
 
 import Navbar from "./components/layout/Navbar/Navbar.jsx";
 import Footer from "./components/layout/Footer";
-
 import HomePage from "./pages/HomePage";
-import DirectoryPage from "./pages/DirectoryPage";
+import AssessorsPage from "./pages/AssessorsPage";
 import CreatePage from "./pages/CreatePage";
 // import Dashboard from "./pages/Dashboard";
 // import LGUsPage from "./pages/LGUsPage";
-// import AssessorsPage from "./pages/AssessorsPage";
-// import SMVProcessesPage from "./pages/SMVProcessesPage";
+import SMVProcessesPage from "./pages/SMVMonitoringPage.jsx";
 // import LAOEMonitoringPage from "./pages/LAOEMonitoringPage";
 // import QRRPAMonitoringPage from "./pages/QRRPAMonitoringPage";
-// import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   const [currentTheme, setCurrentTheme] = useState("default");
-   const { user, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   // Apply DaisyUI theme to document
   useEffect(() => {
@@ -48,6 +46,30 @@ export default function App() {
     );
   }
 
+  const navigate = useNavigate();
+
+  const handleNavigate = (page) => {
+    switch (page) {
+      case "home":
+        navigate("/");
+        break;
+      case "directory":
+        navigate("/directory");
+        break;
+      case "smv-profiling":
+        navigate("/smv-processes"); // adjust to your route
+        break;
+      case "qrrpa-submission":
+        navigate("/qrrpa-monitoring"); // adjust
+        break;
+      case "create":
+        navigate("/create");
+        break;
+      default:
+        navigate("/");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-base-100">
       {/* DaisyUI CSS CDN */}
@@ -57,18 +79,23 @@ export default function App() {
       />
 
       {/* Navigation */}
-      <Navbar currentTheme={currentTheme} onThemeChange={handleThemeChange} user={user} />
+      <Navbar
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
+        user={user}
+        onNavigate={handleNavigate}
+      />
 
       {/* Main Content */}
       <main className="flex-grow">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/directory" element={<DirectoryPage />} />
+          <Route path="/directory" element={<AssessorsPage />} />
           <Route path="/create" element={<CreatePage />} />
 
-          {/* Protected Routes
-          <Route
+          {/* Protected Routes */}
+          {/* <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
@@ -83,7 +110,7 @@ export default function App() {
                 <LGUsPage />
               </ProtectedRoute>
             }
-          />
+          /> */}
           <Route
             path="/assessors"
             element={
@@ -100,7 +127,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
+          {/*<Route
             path="/laoe-monitoring"
             element={
               <ProtectedRoute>
@@ -114,8 +141,7 @@ export default function App() {
               <ProtectedRoute>
                 <QRRPAMonitoringPage />
               </ProtectedRoute>
-            }
-          /> */}
+            }/> */}
 
           {/* Redirect unknown routes to home */}
           <Route path="*" element={<Navigate to="/" replace />} />

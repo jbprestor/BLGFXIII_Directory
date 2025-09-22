@@ -1,10 +1,23 @@
 // utils/fieldConfig.js
+
 export const FIELD_CONFIG = {
-  name: {
-    label: "Full Name",
+  // Personal Information
+  lastName: {
+    label: "Last Name",
     type: "text",
     validation: ["required"],
-    placeholder: "Enter full name",
+    placeholder: "Enter last name",
+  },
+  firstName: {
+    label: "First Name",
+    type: "text",
+    validation: ["required"],
+    placeholder: "Enter first name",
+  },
+  middleName: {
+    label: "Middle Name",
+    type: "text",
+    placeholder: "Enter middle name",
   },
   sex: {
     label: "Sex",
@@ -42,23 +55,39 @@ export const FIELD_CONFIG = {
     placeholder: "user@example.com",
     validation: ["email"],
   },
-  lguType: {
-    label: "LGU Type",
+
+  // Government Information
+  region: {
+    label: "Region",
     type: "select",
     validation: ["required"],
-    options: ["City", "Municipality", "Province"],
+    options: ["Caraga"], // dynamic expansion later
+  },
+  province: {
+    label: "Province",
+    type: "select",
+    validation: ["required"],
+    options: [], // populated dynamically based on region
   },
   lguName: {
     label: "LGU Name",
-    type: "text",
+    type: "select",
     validation: ["required"],
-    placeholder: "Enter LGU name",
+    options: [], // populated dynamically based on province
+  },
+  lguType: {
+    label: "LGU Type",
+    type: "text", // auto-filled
+    validation: ["required"],
+    readOnly: true,
+    placeholder: "Auto-filled",
   },
   incomeClass: {
     label: "Income Class",
-    type: "text",
+    type: "text", // auto-filled
     validation: ["required"],
-    placeholder: "Enter income class",
+    readOnly: true,
+    placeholder: "Auto-filled",
   },
   plantillaPosition: {
     label: "Plantilla Position",
@@ -93,6 +122,8 @@ export const FIELD_CONFIG = {
     type: "text",
     placeholder: "Enter PRC license number",
   },
+
+  // Important Dates
   dateOfMandatoryRetirement: {
     label: "Date of Mandatory Retirement",
     type: "date",
@@ -103,6 +134,8 @@ export const FIELD_CONFIG = {
     type: "date",
     validation: ["date"],
   },
+
+  // Education
   bachelorDegree: {
     label: "Bachelor Degree",
     type: "text",
@@ -125,20 +158,24 @@ export const FIELD_CONFIG = {
   },
 };
 
-// Field groups for different sections
+// Field groups for sections
 export const FIELD_GROUPS = {
   personalInfo: [
-    "name",
+    "lastName",
+    "firstName",
+    "middleName",
     "sex",
     "civilStatus",
     "birthday",
     "contactNumber",
     "officeEmail",
-    "personalEmail"
+    "personalEmail",
   ],
   governmentInfo: [
-    "lguType",
+    "region",
+    "province",
     "lguName",
+    "lguType",
     "incomeClass",
     "plantillaPosition",
     "statusOfAppointment",
@@ -156,7 +193,7 @@ export const FIELD_GROUPS = {
   ],
 };
 
-// Section configuration with icons and colors
+// Section configuration (icons/colors remain the same)
 export const SECTION_CONFIG = {
   personalInfo: {
     title: "Personal Information",

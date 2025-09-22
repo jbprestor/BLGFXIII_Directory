@@ -6,7 +6,7 @@ import { rateLimiter, authRateLimiter } from "./middleware/rateLimiter.js";
 import path from "path";
 
 // Import all route files
-import { userRoutes } from "./routes/usersRoutes.js";
+import { userRoutes } from "./routes/usersRoutes.js"; 
 import { authRoutes } from "./routes/authRoutes.js";
 import { lguRoutes } from "./routes/lguRoutes.js";
 import { assessorRoutes } from "./routes/assessorRoutes.js";

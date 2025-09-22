@@ -3,7 +3,7 @@ import { LGU } from "../models/LGU.js";
 
 export async function getAllAssessors(req, res) {
   try {
-    const { page = 1, limit = 10, search, lgu } = req.query;
+    const { page = 1, limit = 20000, search, lgu } = req.query;
     let query = {};
     
     if (search) {
@@ -13,29 +13,23 @@ export async function getAllAssessors(req, res) {
         { plantillaPosition: { $regex: search, $options: 'i' } }
       ];
     }
-    
+
     if (lgu) {
       query.lgu = lgu;
     }
-    
+
     const assessors = await Assessor.find(query)
-      .populate('lgu', 'name province region')
+      .populate('lgu', 'name province region classification')
       .sort({ lastName: 1, firstName: 1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
-    
-    const total = await Assessor.countDocuments(query);
-    
-    res.status(200).json({
-      assessors,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
-    });
+
+    res.status(200).json(assessors); // ✅ return plain array only
   } catch (error) {
     res.status(500).json({ message: "Error fetching assessors", error: error.message });
   }
 }
+
 
 export async function getAssessorById(req, res) {
   try {
@@ -89,23 +83,59 @@ export async function searchAssessors(req, res) {
 
 export async function createAssessor(req, res) {
   try {
-    // Verify LGU exists
-    const lgu = await LGU.findById(req.body.lgu);
-    if (!lgu) {
+    const {
+      firstName,
+      lastName,
+      sex,
+      civilStatus,
+      birthday,
+      lgu,
+      plantillaPosition,
+      officialDesignation,
+      statusOfAppointment,
+      dateOfAppointment,
+    } = req.body;
+
+    // Check required fields
+    if (
+      !firstName || 
+      !lastName || 
+      !sex || 
+      !civilStatus || 
+      !birthday || 
+      !lgu || 
+      !plantillaPosition || 
+      !officialDesignation || 
+      !statusOfAppointment || 
+      !dateOfAppointment
+    ) {
+      return res.status(400).json({
+        message: "Missing required fields. Please fill all mandatory fields."
+      });
+    }
+
+    // Check LGU exists
+    const lguExists = await LGU.findById(lgu);
+    if (!lguExists) {
       return res.status(404).json({ message: "LGU not found" });
     }
-    
+
+    // Create assessor
     const assessor = new Assessor(req.body);
     const savedAssessor = await assessor.save();
-    
-    // Populate the LGU field before returning
-    await savedAssessor.populate('lgu', 'name province region');
-    
-    res.status(201).json(savedAssessor);
+
+    await savedAssessor.populate("lgu", "name province region");
+
+    return res.status(201).json(savedAssessor);
   } catch (error) {
-    res.status(400).json({ message: "Error creating assessor", error: error.message });
+    console.error("Error creating assessor:", error);
+    return res.status(400).json({
+      message: "Error creating assessor",
+      error: error.message
+    });
   }
 }
+
 
 export async function updateAssessor(req, res) {
   try {

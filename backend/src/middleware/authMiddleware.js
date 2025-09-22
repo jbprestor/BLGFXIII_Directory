@@ -4,18 +4,13 @@ import { User } from "../models/User.js";
 export const authenticate = async (req, res, next) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
-    
-    if (!token) {
-      return res.status(401).json({ message: "Access denied. No token provided." });
-    }
-    
+    if (!token) return res.status(401).json({ message: "Access denied. No token provided." });
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
-    
-    if (!user) {
-      return res.status(401).json({ message: "Token is not valid." });
-    }
-    
+    const user = await User.findById(decoded._id).select("-password"); // ✅ use _id
+
+    if (!user) return res.status(401).json({ message: "Token is not valid." });
+
     req.user = user;
     next();
   } catch (error) {
@@ -23,6 +18,9 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
+
+
+// Role-based authorization
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {

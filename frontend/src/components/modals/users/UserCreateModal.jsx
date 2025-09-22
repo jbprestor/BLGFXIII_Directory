@@ -19,12 +19,12 @@ export default function UserCreateModal({
         acc[key] = "";
         return acc;
       }, {});
-      emptyData.role = "Regional"; // default
+      emptyData.role = "Regional"; // default role
+      emptyData.region = ""; // default empty region
       setFormData(emptyData);
       setErrors({});
     }
   }, [isOpen]);
-  
 
   // Handle input change
   const handleInputChange = useCallback((e) => {
@@ -142,7 +142,19 @@ export default function UserCreateModal({
               error={errors.role}
               required
             />
-       
+
+            {/* Conditionally show region select if not Admin */}
+            {formData.role !== "Admin" && (
+              <SelectField
+                label={USER_FIELD_CONFIG.region.label}
+                name="region"
+                options={USER_FIELD_CONFIG.region.options}
+                value={formData.region}
+                onChange={(val) => handleSelectChange("region", val)}
+                error={errors.region}
+                required
+              />
+            )}
           </div>
 
           <FormFooter loading={loading} onClose={onClose} />

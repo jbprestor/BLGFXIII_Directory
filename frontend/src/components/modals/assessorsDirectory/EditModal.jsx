@@ -1,212 +1,356 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import toast from "react-hot-toast";
 import { validateField } from "../../../utils/validationRules.js";
 import {
   FIELD_CONFIG,
   FIELD_GROUPS,
   SECTION_CONFIG,
 } from "../../../utils/fieldConfig.jsx";
+import { InputField, SelectField } from "../../common/FormFields.jsx";
+import useApi from "../../../services/axios.js";
 
 export default function EditModal({
   isOpen,
   editingPerson,
-  updateLoading,
-  onInputChange,
   onUpdate,
+  updateLoading,
   onClose,
   formatDate,
 }) {
-  const [localData, setLocalData] = useState({});
-  const [errors, setErrors] = useState({});
+  const { api: apiInstance, getAllLgusNoPagination } = useApi();
+  const apiRef = useMemo(() => apiInstance, [apiInstance]);
 
-  // Format dates for input fields
-  const formatDateForInput = useCallback((dateString) => {
-    return dateString ? new Date(dateString).toISOString().split("T")[0] : "";
+  const [formData, setFormData] = useState({});
+  const [errors, setErrors] = useState({});
+  const [allLgusFromDb, setAllLgusFromDb] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState("Caraga");
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedLgu, setSelectedLgu] = useState("");
+
+  // Fetch LGUs
+  useEffect(() => {
+    async function fetchLGUs() {
+      try {
+        const response = await getAllLgusNoPagination();
+        const { lgus } = response.data;
+        setAllLgusFromDb(Array.isArray(lgus) ? lgus : []);
+      } catch (err) {
+        console.error("Failed to fetch LGUs:", err);
+        setAllLgusFromDb([]);
+      }
+    }
+    fetchLGUs();
   }, []);
 
-  // Initialize form data when editingPerson changes
+  // Initialize form when editingPerson changes or LGUs loaded
   useEffect(() => {
-    if (editingPerson) {
-      const formattedData = {
+    if (editingPerson && allLgusFromDb.length) {
+      const formatDateForInput = (dateString) =>
+        dateString ? new Date(dateString).toISOString().split("T")[0] : "";
+
+      // Match LGU in DB
+      const matchedLgu = allLgusFromDb.find(
+        (l) =>
+          l._id === editingPerson.lgu ||
+          l.name?.toLowerCase() === (editingPerson.lguName || "").toLowerCase()
+      );
+
+      const matchedProvince = matchedLgu?.province || editingPerson.province || "";
+      const matchedRegion = matchedLgu?.region || editingPerson.region || "Caraga";
+      const matchedLguName = matchedLgu?.name || editingPerson.lguName || "";
+
+      setFormData({
         ...editingPerson,
         birthday: formatDateForInput(editingPerson.birthday),
-        dateOfMandatoryRetirement: formatDateForInput(
-          editingPerson.dateOfMandatoryRetirement
-        ),
-        dateOfCompulsoryRetirement: formatDateForInput(
-          editingPerson.dateOfCompulsoryRetirement
-        ),
         dateOfAppointment: formatDateForInput(editingPerson.dateOfAppointment),
-      };
-      setLocalData(formattedData);
+        dateOfMandatoryRetirement: formatDateForInput(editingPerson.dateOfMandatoryRetirement),
+        dateOfCompulsoryRetirement: formatDateForInput(editingPerson.dateOfCompulsoryRetirement),
+        officialDesignation: editingPerson.officialDesignation || editingPerson.plantillaPosition,
+        region: matchedRegion,
+        province: matchedProvince,
+        lguName: matchedLguName,
+        lguType: matchedLgu?.classification || "",
+        incomeClass: matchedLgu?.incomeClass || "",
+        lgu: matchedLgu?._id || "",
+      });
+
+      setSelectedRegion(matchedRegion);
+      setSelectedProvince(matchedProvince);
+      setSelectedLgu(matchedLguName);
       setErrors({});
     }
-  }, [editingPerson, formatDateForInput]);
+  }, [editingPerson, allLgusFromDb]);
 
-  // Handle input changes with validation
-  const handleInputChange = useCallback(
-    (e) => {
-      const { name, value } = e.target;
-      let sanitizedValue = value;
-
-      // Apply specific sanitization
-      if (name === "contactNumber") {
-        sanitizedValue = value.replace(/\D/g, "");
-      } else if (name === "officeEmail" || name === "personalEmail") {
-        sanitizedValue = value.toLowerCase().trim();
-      } else if (name === "stepIncrement") {
-        sanitizedValue = value.replace(/[^0-9]/g, "");
-      }
-
-      // Validate field
-      const fieldError = validateField(name, sanitizedValue);
-      setErrors((prev) => ({ ...prev, [name]: fieldError }));
-      setLocalData((prev) => ({ ...prev, [name]: sanitizedValue }));
-
-      // Notify parent component
-      if (onInputChange) {
-        onInputChange({ target: { name, value: sanitizedValue } });
-      }
-    },
-    [onInputChange]
+  // Derived provinces and LGUs
+  const provinces = useMemo(
+    () => [...new Set(allLgusFromDb.map((lgu) => lgu.province))],
+    [allLgusFromDb]
   );
+  const lgus = useMemo(() => {
+    if (!selectedProvince) return [];
+    return allLgusFromDb
+      .filter((lgu) => lgu.province === selectedProvince)
+      .map((lgu) => lgu.name);
+  }, [selectedProvince, allLgusFromDb]);
 
-  // Validate entire form
+  // Input change
+  const handleInputChange = useCallback((eOrVal, maybeName) => {
+    let name, value;
+    if (eOrVal?.target) {
+      name = eOrVal.target.name;
+      value = eOrVal.target.value;
+    } else {
+      name = maybeName;
+      value = eOrVal;
+    }
+
+    let sanitized = value;
+    if (name === "contactNumber") sanitized = value.replace(/\D/g, "");
+    if (name === "officeEmail" || name === "personalEmail")
+      sanitized = value.toLowerCase().trim();
+    if (name === "stepIncrement") sanitized = value.replace(/[^0-9]/g, "");
+
+    setErrors((prev) => ({ ...prev, [name]: validateField(name, sanitized) }));
+    setFormData((prev) => ({ ...prev, [name]: sanitized }));
+  }, []);
+
+  const handleRegionChange = (valOrEvent) => {
+    const region = valOrEvent?.target ? valOrEvent.target.value : valOrEvent;
+    setSelectedRegion(region);
+    setSelectedProvince("");
+    setSelectedLgu("");
+    setFormData((prev) => ({
+      ...prev,
+      region,
+      province: "",
+      lguName: "",
+      lguType: "",
+      incomeClass: "",
+      lgu: "",
+    }));
+  };
+
+  const handleProvinceChange = (valOrEvent) => {
+    const province = valOrEvent?.target ? valOrEvent.target.value : valOrEvent;
+    setSelectedProvince(province);
+    setSelectedLgu("");
+    setFormData((prev) => ({
+      ...prev,
+      province,
+      lguName: "",
+      lguType: "",
+      incomeClass: "",
+      lgu: "",
+    }));
+  };
+
+  const handleLguChange = (valOrEvent) => {
+    const lguName = valOrEvent?.target ? valOrEvent.target.value : valOrEvent;
+    setSelectedLgu(lguName);
+
+    const lguObj = allLgusFromDb.find((l) => l.name === lguName);
+    setFormData((prev) => ({
+      ...prev,
+      lguName,
+      lgu: lguObj?._id || "",
+      lguType: lguObj?.classification || "",
+      incomeClass: lguObj?.incomeClass || "",
+    }));
+  };
+
   const validateForm = useCallback(() => {
     const newErrors = {};
-
-    Object.keys(FIELD_CONFIG).forEach((fieldName) => {
-      const error = validateField(fieldName, localData[fieldName]);
-      if (error) newErrors[fieldName] = error;
+    Object.keys(FIELD_CONFIG).forEach((field) => {
+      const err = validateField(field, formData[field]);
+      if (err) newErrors[field] = err;
     });
-
+    if (!formData.lgu) newErrors.lgu = "Please select an LGU";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [localData]);
+  }, [formData]);
 
-  // Handle form submission
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
+      if (!validateForm()) return toast.error("Fix errors before submitting");
 
-      if (!validateForm()) {
-        alert("Please fix all errors before submitting.");
-        return;
-      }
-
-      if (onUpdate) {
-        await onUpdate(e);
+      try {
+        const payload = {
+          ...formData,
+          stepIncrement: formData.stepIncrement
+            ? Number(formData.stepIncrement)
+            : 1,
+          birthday: formData.birthday
+            ? new Date(formData.birthday).toISOString()
+            : null,
+          dateOfAppointment: formData.dateOfAppointment
+            ? new Date(formData.dateOfAppointment).toISOString()
+            : null,
+          officialDesignation:
+            formData.officialDesignation || formData.plantillaPosition,
+        };
+        await onUpdate(payload);
+        toast.success(
+          `${payload.firstName} ${payload.lastName} updated successfully`
+        );
+        onClose();
+      } catch (err) {
+        console.error(err);
+        toast.error(err?.response?.data?.message || "Update failed");
       }
     },
-    [validateForm, onUpdate]
+    [formData, validateForm, onUpdate, onClose]
   );
 
-  // Function to render input fields based on type
   const renderField = useCallback(
-    (fieldName) => {
-      const config = FIELD_CONFIG[fieldName];
+    (name) => {
+      const config = FIELD_CONFIG[name];
       if (!config) return null;
 
-      const commonProps = {
-        name: fieldName,
-        value: localData[fieldName] || "",
-        error: errors[fieldName],
-        onChange: handleInputChange,
-        required: config.validation && config.validation.includes("required"),
-        ...config, // Spread all config properties
-      };
+      if (name === "region")
+        return (
+          <SelectField
+            label="Region"
+            name="region"
+            value={selectedRegion}
+            options={["Caraga"]}
+            onChange={handleRegionChange}
+            required
+          />
+        );
+      if (name === "province")
+        return (
+          <SelectField
+            label="Province"
+            name="province"
+            value={selectedProvince}
+            options={provinces}
+            onChange={handleProvinceChange}
+            required
+          />
+        );
+      if (name === "lguName")
+        return (
+          <SelectField
+            label="LGU"
+            name="lguName"
+            value={selectedLgu}
+            options={lgus}
+            onChange={handleLguChange}
+            required
+          />
+        );
+      if (["lguType", "incomeClass"].includes(name))
+        return (
+          <InputField
+            label={config.label}
+            name={name}
+            value={formData[name] || ""}
+            readOnly
+          />
+        );
 
-      switch (config.type) {
-        case "select":
-          return (
-            <SelectField
-              label={config.label}
-              options={config.options}
-              {...commonProps}
-            />
-          );
-        case "date":
-        case "email":
-        case "number":
-        case "text":
-        default:
-          return (
-            <InputField
-              label={config.label}
-              type={config.type}
-              {...commonProps}
-            />
-          );
+      if (["sex", "statusOfAppointment", "civilStatus"].includes(name)) {
+        const options =
+          name === "sex"
+            ? ["Male", "Female", "Other"]
+            : name === "statusOfAppointment"
+            ? ["Permanent", "Temporary", "Contractual", "Casual"]
+            : [
+                "Single",
+                "Married",
+                "Widowed",
+                "Separated",
+                "Divorced",
+                "Others",
+              ];
+        return (
+          <SelectField
+            label={config.label}
+            name={name}
+            value={formData[name] || ""}
+            options={options}
+            onChange={(v) => handleInputChange(v, name)}
+            required
+          />
+        );
       }
+
+      return config.type === "select" ? (
+        <SelectField
+          label={config.label}
+          name={name}
+          value={formData[name] || ""}
+          options={config.options}
+          onChange={handleInputChange}
+          required
+        />
+      ) : (
+        <InputField
+          label={config.label}
+          name={name}
+          value={formData[name] || ""}
+          onChange={handleInputChange}
+          type={config.type}
+          error={errors[name]}
+          required={config.validation?.includes("required")}
+        />
+      );
     },
-    [localData, errors, handleInputChange]
+    [
+      formData,
+      errors,
+      selectedRegion,
+      selectedProvince,
+      selectedLgu,
+      provinces,
+      lgus,
+      handleInputChange,
+    ]
   );
 
-  // Don't render if modal is not open
   if (!isOpen || !editingPerson) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
       <div className="bg-base-100 dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-base-300 dark:border-gray-700 p-6 animate-fade-in">
-        {/* Header */}
         <ModalHeader editingPerson={editingPerson} onClose={onClose} />
-
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Information */}
-          <FormSection
-            title={SECTION_CONFIG.personalInfo.title}
-            color={SECTION_CONFIG.personalInfo.color}
-            icon={SECTION_CONFIG.personalInfo.icon}
-          >
+          <FormSection {...SECTION_CONFIG.personalInfo}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.personalInfo.map((fieldName) => (
-                <div key={fieldName}>{renderField(fieldName)}</div>
+              {FIELD_GROUPS.personalInfo.map((f) => (
+                <div key={f}>{renderField(f)}</div>
               ))}
             </div>
           </FormSection>
 
-          {/* Government Information */}
-          <FormSection
-            title={SECTION_CONFIG.governmentInfo.title}
-            color={SECTION_CONFIG.governmentInfo.color}
-            icon={SECTION_CONFIG.governmentInfo.icon}
-          >
+          <FormSection {...SECTION_CONFIG.governmentInfo}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.governmentInfo.map((fieldName) => (
-                <div key={fieldName}>{renderField(fieldName)}</div>
+              {FIELD_GROUPS.governmentInfo.map((f) => (
+                <div key={f}>{renderField(f)}</div>
               ))}
+            
             </div>
           </FormSection>
 
-          {/* Important Dates */}
-          <FormSection
-            title={SECTION_CONFIG.importantDates.title}
-            color={SECTION_CONFIG.importantDates.color}
-            icon={SECTION_CONFIG.importantDates.icon}
-          >
+          <FormSection {...SECTION_CONFIG.importantDates}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {FIELD_GROUPS.importantDates.map((fieldName) => (
-                <div key={fieldName}>{renderField(fieldName)}</div>
+              {FIELD_GROUPS.importantDates.map((f) => (
+                <div key={f}>{renderField(f)}</div>
               ))}
             </div>
           </FormSection>
 
-          {/* Educational Attainment */}
-          <FormSection
-            title={SECTION_CONFIG.education.title}
-            color={SECTION_CONFIG.education.color}
-            icon={SECTION_CONFIG.education.icon}
-          >
+          <FormSection {...SECTION_CONFIG.education}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.education.map((fieldName) => (
-                <div key={fieldName}>{renderField(fieldName)}</div>
+              {FIELD_GROUPS.education.map((f) => (
+                <div key={f}>{renderField(f)}</div>
               ))}
             </div>
           </FormSection>
 
-          {/* Footer */}
           <FormFooter
-            localData={localData}
+            localData={formData}
             formatDate={formatDate}
             updateLoading={updateLoading}
             onClose={onClose}
@@ -217,37 +361,21 @@ export default function EditModal({
   );
 }
 
-// Extracted components for better readability
-function ModalHeader({ editingPerson, onClose }) {
+/* ======= SUB COMPONENTS ======= */
+function ModalHeader({ onClose }) {
   return (
     <div className="flex items-center justify-between mb-6 border-b border-base-300 dark:border-gray-700 pb-4">
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg">
-          {editingPerson.name?.charAt(0) || "U"}
+          +
         </div>
         <div>
           <h2 className="text-2xl font-bold text-base-content">
             Edit Personnel
           </h2>
           <p className="text-base-content/70 font-medium">
-            {editingPerson.name}
+            Update BLGF personnel record
           </p>
-          <div className="flex items-center space-x-2 mt-2">
-            <span
-              className={`badge ${
-                editingPerson.lguType === "City"
-                  ? "badge-primary"
-                  : editingPerson.lguType === "Municipality"
-                  ? "badge-secondary"
-                  : "badge-accent"
-              }`}
-            >
-              {editingPerson.lguType}
-            </span>
-            <span className="badge badge-outline">
-              {editingPerson.statusOfAppointment}
-            </span>
-          </div>
         </div>
       </div>
       <button
@@ -269,14 +397,12 @@ function FormSection({ title, children, color = "primary", icon }) {
     accent: "bg-accent/10 dark:bg-accent/20 border-l-4 border-accent",
     info: "bg-info/10 dark:bg-info/20 border-l-4 border-info",
   };
-
   const textColorClasses = {
     primary: "text-primary",
     secondary: "text-secondary",
     accent: "text-accent",
     info: "text-info",
   };
-
   const iconBgClasses = {
     primary: "bg-primary/20 text-primary",
     secondary: "bg-secondary/20 text-secondary",
@@ -299,117 +425,23 @@ function FormSection({ title, children, color = "primary", icon }) {
   );
 }
 
-function InputField({
-  label,
-  name,
-  value,
-  error,
-  onChange,
-  required,
-  type = "text",
-  ...props
-}) {
-  return (
-    <div className="form-control w-full">
-      <label className="label">
-        <span className="label-text font-medium text-base-content">
-          {label} {required && <span className="text-error">*</span>}
-        </span>
-      </label>
-      <input
-        type={type}
-        className={`input input-bordered w-full ${
-          error
-            ? "input-error focus:ring-error/20"
-            : "focus:ring-primary/20 focus:border-primary"
-        } focus:ring-4`}
-        name={name}
-        value={value || ""}
-        onChange={onChange}
-        required={required}
-        {...props}
-      />
-      {error && (
-        <label className="label">
-          <span className="label-text-alt text-error">{error}</span>
-        </label>
-      )}
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  name,
-  value,
-  error,
-  onChange,
-  required,
-  options,
-  ...props
-}) {
-  return (
-    <div className="form-control w-full">
-      <label className="label">
-        <span className="label-text font-medium text-base-content">
-          {label} {required && <span className="text-error">*</span>}
-        </span>
-      </label>
-      <select
-        className={`select select-bordered w-full ${
-          error
-            ? "select-error focus:ring-error/20"
-            : "focus:ring-primary/20 focus:border-primary"
-        } focus:ring-4`}
-        name={name}
-        value={value || ""}
-        onChange={onChange}
-        required={required}
-        {...props}
-      >
-        <option value="">Select {label}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <label className="label">
-          <span className="label-text-alt text-error">{error}</span>
-        </label>
-      )}
-    </div>
-  );
-}
-
-function FormFooter({ localData, formatDate, updateLoading, onClose }) {
+function FormFooter({ loading, onClose }) {
   return (
     <div className="flex justify-between items-center mt-8 pt-4 border-t border-base-300 dark:border-gray-700">
-      <div className="flex space-x-4">
-        <div className="text-sm text-base-content/70">
-          <span className="font-medium">ID:</span> {localData._id}
-        </div>
-        <div className="text-sm text-base-content/70">
-          <span className="font-medium">Last Updated:</span>{" "}
-          {formatDate ? formatDate(localData.updatedAt) : "Never"}
-        </div>
+      <div className="text-sm text-base-content/70">
+        Fields marked with <span className="text-error">*</span> are required
       </div>
       <div className="flex gap-3">
         <button
           type="button"
-          className="btn btn-outline px-6"
+          className="btn btn-outline"
           onClick={onClose}
-          disabled={updateLoading === localData._id}
+          disabled={loading}
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          className="btn btn-primary px-6"
-          disabled={updateLoading === localData._id}
-        >
-          {updateLoading === localData._id ? (
+        <button type="submit" className="btn btn-primary" disabled={loading}>
+          {loading ? (
             <>
               <span className="loading loading-spinner loading-sm mr-2"></span>
               Updating...

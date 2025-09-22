@@ -30,13 +30,37 @@ export const USER_FIELD_CONFIG = {
     validation: ["required"],
     options: ["Admin", "Regional", "Provincial", "Municipal"],
   },
-
+  region: {
+    label: "Region",
+    type: "select",
+    validation: ["required"],
+    options: [
+      "NCR",
+      "CAR",
+      "Region I",
+      "Region II",
+      "Region III",
+      "Region IV-A",
+      "Region IV-B",
+      "Region V",
+      "Region VI",
+      "Region VII",
+      "Region VIII",
+      "Region IX",
+      "Region X",
+      "Region XI",
+      "Region XII",
+      "CARAGA",
+      "BARMM",
+    ],
+  },
   isActive: {
     label: "Active Status",
     type: "checkbox",
     default: true,
   },
 };
+
 
 export const USER_FIELD_GROUPS = {
   account: ["username", "password", "email"],

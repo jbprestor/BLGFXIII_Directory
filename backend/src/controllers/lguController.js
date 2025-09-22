@@ -4,27 +4,37 @@ import { SMVMonitoring } from "../models/SMVMonitoring.js";
 
 export async function getAllLGUs(req, res) {
   try {
-    const { page = 1, limit = 10, search } = req.query;
-    const query = search ? { 
-      $or: [
-        { name: { $regex: search, $options: 'i' } },
-        { province: { $regex: search, $options: 'i' } },
-        { region: { $regex: search, $options: 'i' } }
-      ]
-    } : {};
+    const { page = 1, limit = 10, search, all } = req.query;
 
+    const query = search
+      ? {
+          $or: [
+            { name: { $regex: search, $options: "i" } },
+            { province: { $regex: search, $options: "i" } },
+            { region: { $regex: search, $options: "i" } },
+          ],
+        }
+      : {};
+
+    // 👇 if all=true, return all LGUs without pagination
+    if (all === "true") {
+      const lgus = await LGU.find(query).sort({ name: 1 });
+      return res.status(200).json({ lgus, total: lgus.length });
+    }
+
+    // Otherwise, paginate
     const lgus = await LGU.find(query)
       .sort({ name: 1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
-    
+
     const total = await LGU.countDocuments(query);
-    
+
     res.status(200).json({
       lgus,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
-      total
+      total,
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching LGUs", error: error.message });
@@ -145,5 +155,43 @@ export async function deleteLGU(req, res) {
     res.status(200).json({ message: "LGU deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting LGU", error: error.message });
+  }
+}
+
+// Get distinct regions
+export async function getRegions(req, res) {
+  try {
+    const regions = await LGU.distinct("region");
+    res.status(200).json(regions.sort());
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching regions", error: error.message });
+  }
+}
+
+// Get provinces (optionally by region)
+export async function getProvinces(req, res) {
+  try {
+    const { region } = req.query;
+    const filter = region ? { region } : {};
+    const provinces = await LGU.distinct("province", filter);
+    res.status(200).json(provinces.sort());
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching provinces", error: error.message });
+  }
+}
+
+// Get LGUs (name + incomeClass + classification) by province
+export async function getLGUsByProvince(req, res) {
+  try {
+    const { province } = req.query;
+    if (!province) {
+      return res.status(400).json({ message: "province query param required" });
+    }
+    const lgus = await LGU.find({ province })
+      .select("name incomeClass classification")
+      .sort({ name: 1 });
+    res.status(200).json(lgus);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching LGUs by province", error: error.message });
   }
 }

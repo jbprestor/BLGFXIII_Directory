@@ -44,6 +44,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
+    // Force full reload to homepage
+    window.location.replace("/"); // replaces current history entry
   };
 
   return (

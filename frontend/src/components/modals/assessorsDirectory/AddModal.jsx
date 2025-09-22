@@ -1,16 +1,53 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 import { validateField } from "../../../utils/validationRules.js";
 import {
   FIELD_CONFIG,
   FIELD_GROUPS,
   SECTION_CONFIG,
-} from "../../../utils/fieldConfig.jsx"
+} from "../../../utils/fieldConfig.jsx";
 import { InputField, SelectField } from "../../common/FormFields.jsx";
+import useApi from "../../../services/axios.js";
 
-export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
+export default function AddModal({ isOpen, onClose, refreshAssessors }) {
+  const { api: apiInstance, getAllLgusNoPagination, createAssessor } = useApi(); // ✅ FIX: also grab helper
+  const apiRef = useRef(apiInstance);
+
+  useEffect(() => {
+    apiRef.current = apiInstance;
+  }, [apiInstance]);
+
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const [allLgusFromDb, setAllLgusFromDb] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState("Caraga");
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedLgu, setSelectedLgu] = useState("");
+
+  const regions = ["Caraga"];
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = user?.role;
+
+  // Fetch ALL LGUs (no pagination now)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLgus = async () => {
+      try {
+        const response = await getAllLgusNoPagination(); // ✅ FIX: no stray "/"
+        const { lgus } = response.data;
+        setAllLgusFromDb(Array.isArray(lgus) ? lgus : []);
+      } catch (err) {
+        console.error("Failed to fetch LGUs:", err);
+        setAllLgusFromDb([]);
+      }
+    };
+    fetchLgus();
+    return () => {
+      isMounted = false; // cleanup to prevent race conditions
+    };
+  }, []);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -19,69 +56,296 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
         acc[key] = "";
         return acc;
       }, {});
+
+      emptyData.region = "Caraga"; // ✅ ensure region field is prefilled
+
       setFormData(emptyData);
       setErrors({});
+      setSelectedRegion("Caraga");
+      setSelectedProvince("");
+      setSelectedLgu("");
     }
   }, [isOpen]);
 
-  // Handle input change with validation
-  const handleInputChange = useCallback((e) => {
-    const { name, value } = e.target;
-    let sanitizedValue = value;
+  // Provinces memo
+  const provinces = useMemo(() => {
+    return [...new Set(allLgusFromDb.map((lgu) => lgu.province))];
+  }, [allLgusFromDb]);
 
-    if (name === "contactNumber") {
-      sanitizedValue = value.replace(/\D/g, "");
-    } else if (name === "officeEmail" || name === "personalEmail") {
-      sanitizedValue = value.toLowerCase().trim();
-    } else if (name === "stepIncrement") {
-      sanitizedValue = value.replace(/[^0-9]/g, "");
+  // LGUs memo based on selected province
+  const lgus = useMemo(() => {
+    if (!selectedProvince) return [];
+    return allLgusFromDb
+      .filter((lgu) => lgu.province === selectedProvince)
+      .map((lgu) => lgu.name);
+  }, [selectedProvince, allLgusFromDb]);
+
+  // Input change handler
+  // ✅ FIX: works for <input> and <SelectField>
+  const handleInputChange = useCallback((eOrVal, maybeName) => {
+    let name, value;
+
+    if (eOrVal?.target) {
+      // Normal input event
+      name = eOrVal.target.name;
+      value = eOrVal.target.value;
+    } else {
+      // Custom select sending raw value
+      name = maybeName;
+      value = eOrVal;
     }
 
-    const fieldError = validateField(name, sanitizedValue);
-    setErrors((prev) => ({ ...prev, [name]: fieldError }));
-    setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
+    let sanitized = value;
+
+    if (name === "contactNumber") sanitized = value.replace(/\D/g, "");
+    if (name === "officeEmail" || name === "personalEmail")
+      sanitized = value.toLowerCase().trim();
+    if (name === "stepIncrement") sanitized = value.replace(/[^0-9]/g, "");
+
+    setErrors((prev) => ({ ...prev, [name]: validateField(name, sanitized) }));
+    setFormData((prev) => ({ ...prev, [name]: sanitized }));
   }, []);
 
-  // Validate entire form
+  // Handle region change
+  const handleRegionChange = (valOrEvent) => {
+    const region = valOrEvent?.target ? valOrEvent.target.value : valOrEvent;
+    setSelectedRegion(region);
+
+    if (!region) {
+      // ✅ Reset province + LGU when region is empty
+      setSelectedProvince("");
+      setSelectedLgu("");
+      setFormData((prev) => ({
+        ...prev,
+        region: "",
+        province: "",
+        lguName: "",
+        lguType: "",
+        incomeClass: "",
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, region }));
+    }
+  };
+
+  // Handle province change
+  const handleProvinceChange = (valOrEvent) => {
+    const province = valOrEvent?.target ? valOrEvent.target.value : valOrEvent;
+    setSelectedProvince(province);
+    setSelectedLgu("");
+    setFormData((prev) => ({
+      ...prev,
+      province,
+      lguType: "",
+      incomeClass: "",
+    }));
+  };
+
+  // Handle LGU change (auto-populate type + income class)
+  const handleLguChange = (valOrEvent) => {
+    const lguName = valOrEvent?.target ? valOrEvent.target.value : valOrEvent;
+    setSelectedLgu(lguName);
+
+    const lguObj = allLgusFromDb.find((lgu) => lgu.name === lguName);
+
+    setFormData((prev) => ({
+      ...prev,
+      lguName,
+      lgu: lguObj?._id || "", // <-- add this
+      lguType: lguObj?.classification || "",
+      incomeClass: lguObj?.incomeClass || "",
+    }));
+  };
+
+  // Validate form
   const validateForm = useCallback(() => {
     const newErrors = {};
-    for (const field of Object.keys(FIELD_CONFIG)) {
-      const error = validateField(field, formData[field]);
-      if (error) newErrors[field] = error;
-    }
+    Object.keys(FIELD_CONFIG).forEach((field) => {
+      const err = validateField(field, formData[field]);
+      if (err) newErrors[field] = err;
+    });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // Handle form submission
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
 
       if (!validateForm()) {
-        toast.error("Please fix the highlighted errors before submitting.");
-        return;
+        return toast.error("Fix errors before submitting");
+      }
+
+      if (role !== "Admin" && role !== "superadmin") {
+        return toast.error("No permission");
       }
 
       try {
-        await onAddPersonnel(formData);
-        toast.success(`${formData.name} added successfully`);
+        setSubmitting(true);
+
+        // Find LGU object
+        const selectedLguObj = allLgusFromDb.find(
+          (lgu) => lgu.name === formData.lguName
+        );
+
+        if (!selectedLguObj) {
+          toast.error("Selected LGU not found");
+          return;
+        }
+
+        // Build payload with safe defaults
+        const payload = {
+          ...formData,
+          officialDesignation: formData.plantillaPosition, // or provide actual designation
+          birthday: formData.birthday
+            ? new Date(formData.birthday).toISOString()
+            : null,
+          dateOfAppointment: formData.dateOfAppointment
+            ? new Date(formData.dateOfAppointment).toISOString()
+            : null,
+          lgu: formData.lgu, // must be valid ObjectId
+          stepIncrement: formData.stepIncrement
+            ? Number(formData.stepIncrement)
+            : 1,
+          officeEmail: formData.officeEmail || "",
+          personalEmail: formData.personalEmail || "",
+          contactNumber: formData.contactNumber || "",
+          salaryGrade: formData.salaryGrade || "",
+        };
+
+        console.log("Submitting Assessor Payload:", payload);
+
+        const res = await createAssessor(payload);
+
+        toast.success(
+          `${payload.firstName} ${payload.lastName} added successfully`
+        );
+
+        if (refreshAssessors) await refreshAssessors();
         onClose();
       } catch (err) {
-        toast.error(
-          err?.message || "Failed to add personnel. Please try again."
-        );
+        console.error("Backend Error Response:", err.response?.data || err);
+        toast.error(err?.response?.data?.message || "Failed to add personnel");
+      } finally {
+        setSubmitting(false);
       }
     },
-    [validateForm, onAddPersonnel, formData, onClose]
+    [validateForm, formData, onClose, refreshAssessors, role, allLgusFromDb]
   );
 
-  // Render individual fields
+  // Memoized field renderer
+  // ✅ FIXED renderField
   const renderField = useCallback(
     (name) => {
       const config = FIELD_CONFIG[name];
       if (!config) return null;
 
+      if (name === "region") {
+        return (
+          <SelectField
+            label="Region"
+            name="region"
+            value={selectedRegion}
+            options={regions}
+            onChange={handleRegionChange}
+            required
+          />
+        );
+      }
+
+      if (name === "province") {
+        return (
+          <SelectField
+            label="Province"
+            name="province"
+            value={selectedProvince}
+            options={provinces}
+            onChange={handleProvinceChange}
+            required
+            disabled={!selectedRegion}
+          />
+        );
+      }
+
+      if (name === "lguName") {
+        return (
+          <SelectField
+            label="LGU Name"
+            name="lguName"
+            value={selectedLgu}
+            options={lgus}
+            onChange={handleLguChange}
+            required
+            disabled={!lgus.length}
+          />
+        );
+      }
+
+      if (name === "lguType" || name === "incomeClass") {
+        return (
+          <InputField
+            label={config.label}
+            name={name}
+            value={formData[name] || ""}
+            readOnly
+          />
+        );
+      }
+
+      // ✅ FIX sex, status, civilStatus
+      // ✅ FIX sex
+      if (name === "sex") {
+        return (
+          <SelectField
+            label="Sex"
+            name="sex"
+            value={formData.sex || ""}
+            options={["Male", "Female", "Other"]}
+            // force (value, name) style, not event
+            onChange={(value) => handleInputChange(value, "sex")}
+            required
+          />
+        );
+      }
+
+      // ✅ FIX statusOfAppointment
+      if (name === "statusOfAppointment") {
+        return (
+          <SelectField
+            label="Employment Status"
+            name="statusOfAppointment"
+            value={formData.statusOfAppointment || ""}
+            options={["Permanent", "Temporary", "Contractual", "Casual"]}
+            onChange={(value) =>
+              handleInputChange(value, "statusOfAppointment")
+            }
+            required
+          />
+        );
+      }
+
+      // ✅ FIX civilStatus
+      if (name === "civilStatus") {
+        return (
+          <SelectField
+            label="Civil Status"
+            name="civilStatus"
+            value={formData.civilStatus || ""}
+            options={[
+              "Single",
+              "Married",
+              "Widowed",
+              "Separated",
+              "Divorced",
+              "Others",
+            ]}
+            onChange={(value) => handleInputChange(value, "civilStatus")}
+            required
+          />
+        );
+      }
+
+      // Default render
       const props = {
         name,
         value: formData[name] || "",
@@ -97,7 +361,17 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
         <InputField label={config.label} type={config.type} {...props} />
       );
     },
-    [formData, errors, handleInputChange]
+    [
+      formData,
+      errors,
+      handleInputChange,
+      selectedRegion,
+      selectedProvince,
+      selectedLgu,
+      regions,
+      provinces,
+      lgus,
+    ]
   );
 
   if (!isOpen) return null;
@@ -105,11 +379,8 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
       <div className="bg-base-100 dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-base-300 dark:border-gray-700 p-6 animate-fade-in">
-        {/* Header */}
         <ModalHeader onClose={onClose} />
-
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Sections */}
           <FormSection {...SECTION_CONFIG.personalInfo}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {FIELD_GROUPS.personalInfo.map((f) => (
@@ -120,9 +391,25 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
 
           <FormSection {...SECTION_CONFIG.governmentInfo}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FIELD_GROUPS.governmentInfo.map((f) => (
-                <div key={f}>{renderField(f)}</div>
-              ))}
+              {["region", "province", "lguName", "lguType", "incomeClass"].map(
+                (f) => (
+                  <div key={f}>{renderField(f)}</div>
+                )
+              )}
+              {FIELD_GROUPS.governmentInfo
+                .filter(
+                  (f) =>
+                    ![
+                      "region",
+                      "province",
+                      "lguName",
+                      "lguType",
+                      "incomeClass",
+                    ].includes(f)
+                )
+                .map((f) => (
+                  <div key={f}>{renderField(f)}</div>
+                ))}
             </div>
           </FormSection>
 
@@ -142,8 +429,7 @@ export default function AddModal({ isOpen, onClose, onAddPersonnel, loading }) {
             </div>
           </FormSection>
 
-          {/* Footer */}
-          <FormFooter loading={loading} onClose={onClose} />
+          <FormFooter loading={submitting} onClose={onClose} />
         </form>
       </div>
     </div>
@@ -186,14 +472,12 @@ function FormSection({ title, children, color = "primary", icon }) {
     accent: "bg-accent/10 dark:bg-accent/20 border-l-4 border-accent",
     info: "bg-info/10 dark:bg-info/20 border-l-4 border-info",
   };
-
   const textColorClasses = {
     primary: "text-primary",
     secondary: "text-secondary",
     accent: "text-accent",
     info: "text-info",
   };
-
   const iconBgClasses = {
     primary: "bg-primary/20 text-primary",
     secondary: "bg-secondary/20 text-secondary",

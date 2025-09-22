@@ -12,7 +12,7 @@ import AddModal from "../components/modals/assessorsDirectory/AddModal.jsx";
 import { confirmToastDaisy } from "../components/common/ConfirmToast";
 import { formatDate } from "../utils/formatters";
 import toast from "react-hot-toast";
-
+ 
 export default function DirectoryPage() {
   // State management
   const [directory, setDirectory] = useState([]);

@@ -13,16 +13,20 @@ import { authenticate } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Public routes
-router.get("/", getAllLGUs);
-router.get("/search", searchLGUs);
-router.get("/:id", getLGUById);
+/**
+ * Public Routes
+ */
+router.get("/", getAllLGUs);                  // List LGUs with pagination + search
+router.get("/search", searchLGUs);            // Quick search LGUs
+router.get("/:id", getLGUById);               // Get LGU by ID
+router.get("/:id/assessors", getLGUWithAssessors); // Get LGU + assessors
+router.get("/:id/smv-process", getLGUWithSMVProcess); // Get LGU + SMV Monitoring
 
-// Protected routes
-router.post("/",  createLGU);
-router.put("/:id", authenticate, updateLGU);
-router.delete("/:id", authenticate, deleteLGU);
-router.get("/:id/assessors", getLGUWithAssessors);
-router.get("/:id/smv-process", getLGUWithSMVProcess);
+/**
+ * Protected Routes
+ */
+router.post("/", authenticate, createLGU);    // Add new LGU
+router.put("/:id", authenticate, updateLGU);  // Update LGU
+router.delete("/:id", authenticate, deleteLGU); // Delete LGU
 
 export { router as lguRoutes };

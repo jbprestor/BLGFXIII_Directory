@@ -15,8 +15,9 @@ const router = express.Router();
 // Public routes
 router.get("/", getAllAssessors);
 router.get("/search", searchAssessors);
-router.get("/:id", getAssessorById);
 router.get("/lgu/:lguId", getAssessorsByLGU);
+router.get("/:id", getAssessorById); // keep this last
+
 
 // Protected routes
 router.post("/",  createAssessor);

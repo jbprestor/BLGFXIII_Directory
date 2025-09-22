@@ -76,6 +76,8 @@ export default function Navbar({
     setProfileOpen(false);
     setMobileMenuOpen(false);
     showNotification("Logged out successfully!");
+    window.location.replace("/");
+
   }, [logout, showNotification]);
 
   const handleThemeChange = useCallback(
@@ -285,7 +287,7 @@ export default function Navbar({
                 ✕
               </button>
             </div>
-            
+
             <div className="p-4 overflow-y-auto h-full pb-20">
               {/* Navigation Items */}
               <ul className="menu flex flex-col gap-2">
@@ -308,9 +310,9 @@ export default function Navbar({
                   </li>
                 ))}
               </ul>
-              
+
               <div className="divider my-6"></div>
-              
+
               {/* Theme Selector in Mobile Menu */}
               <div className="px-2 mb-4 sm:hidden">
                 <label className="label">
@@ -326,7 +328,7 @@ export default function Navbar({
                   theme={theme}
                 />
               </div>
-              
+
               {/* Logout Button */}
               <div className="px-2">
                 <button
@@ -343,50 +345,47 @@ export default function Navbar({
 
       <div className="h-16"></div>
 
-      <style jsx>{`
-        /* Custom animations for mobile menu */
-        @keyframes slideIn {
-          from { transform: translateX(-100%); }
-          to { transform: translateX(0); }
-        }
-        
-        .mobile-menu {
-          animation: slideIn 0.3s ease-out;
-        }
-        
-        /* Custom styles for nav items */
-        .nav-item {
-          transition: all 0.2s ease;
-          position: relative;
-        }
-        
-        .nav-item::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 50%;
-          width: 0;
-          height: 2px;
-          background: currentColor;
-          transition: all 0.2s ease;
-          transform: translateX(-50%);
-        }
-        
-        .nav-item:hover::after {
-          width: 70%;
-        }
-        
-        .nav-item.active::after {
-          width: 70%;
-        }
+      <style>{`
+  @keyframes slideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
 
-        /* Ensure nav items are completely hidden on mobile */
-        @media (max-width: 1023px) {
-          .navbar-center {
-            display: none !important;
-          }
-        }
-      `}</style>
+  .mobile-menu {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .nav-item {
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .nav-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: currentColor;
+    transition: all 0.2s ease;
+    transform: translateX(-50%);
+  }
+
+  .nav-item:hover::after {
+    width: 70%;
+  }
+
+  .nav-item.active::after {
+    width: 70%;
+  }
+
+  @media (max-width: 1023px) {
+    .navbar-center {
+      display: none !important;
+    }
+  }
+`}</style>
     </>
   );
 }
