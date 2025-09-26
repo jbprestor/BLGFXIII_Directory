@@ -57,7 +57,7 @@ export default function Navbar({
       { name: "Directory", page: "directory", icon: "📁" },
       { name: "SMV Profiling", page: "smv-profiling", icon: "📊" },
       { name: "QRRPA Submission", page: "qrrpa-submission", icon: "📋" },
-      { name: "Create", page: "create", icon: "➕" },
+      // { name: "Create", page: "create", icon: "➕" },
     ],
     []
   );
