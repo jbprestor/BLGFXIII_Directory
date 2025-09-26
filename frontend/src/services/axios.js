@@ -5,7 +5,7 @@ export default function useApi() {
   const API_BASE_URL =
     import.meta.env.MODE === "development"
       ? "http://localhost:5001/api"
-      : import.meta.env.VITE_CLIENT_API_URL || "/api";
+      : "/api";
 
   // Create axios instance
   const api = axios.create({
