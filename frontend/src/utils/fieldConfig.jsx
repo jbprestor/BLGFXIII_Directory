@@ -5,13 +5,13 @@ export const FIELD_CONFIG = {
   lastName: {
     label: "Last Name",
     type: "text",
-    validation: ["required"],
+    // validation: ["required"],   // ⬅ commented
     placeholder: "Enter last name",
   },
   firstName: {
     label: "First Name",
     type: "text",
-    validation: ["required"],
+    // validation: ["required"],   // ⬅ commented
     placeholder: "Enter first name",
   },
   middleName: {
@@ -22,24 +22,24 @@ export const FIELD_CONFIG = {
   sex: {
     label: "Sex",
     type: "select",
-    validation: ["required"],
+    // validation: ["required"],   // ⬅ commented
     options: ["Male", "Female", "Other"],
   },
   civilStatus: {
     label: "Civil Status",
     type: "select",
-    validation: ["required"],
+    // validation: ["required"],   // ⬅ commented
     options: ["Single", "Married", "Widowed", "Separated", "Other"],
   },
   birthday: {
     label: "Birthday",
     type: "date",
-    validation: ["required", "date"],
+    // validation: ["required", "date"],   // ⬅ commented
   },
   contactNumber: {
     label: "Contact Number",
     type: "text",
-    validation: ["phone"],
+    // validation: ["phone"],   // ⬅ commented
     placeholder: "10-15 digits only",
     maxLength: 15,
   },
@@ -47,64 +47,73 @@ export const FIELD_CONFIG = {
     label: "Office Email",
     type: "email",
     placeholder: "user@blgf.gov.ph",
-    validation: ["email"],
+    // validation: ["email"],   // ⬅ commented
   },
   personalEmail: {
     label: "Personal Email",
     type: "email",
     placeholder: "user@example.com",
-    validation: ["email"],
+    // validation: ["email"],   // ⬅ commented
   },
 
   // Government Information
   region: {
     label: "Region",
     type: "select",
-    validation: ["required"],
-    options: ["Caraga"], // dynamic expansion later
+    // validation: ["required"],   // ⬅ commented
+    options: ["Caraga"],
   },
   province: {
     label: "Province",
     type: "select",
-    validation: ["required"],
-    options: [], // populated dynamically based on region
+    // validation: ["required"],   // ⬅ commented
+    options: [],
   },
   lguName: {
     label: "LGU Name",
     type: "select",
-    validation: ["required"],
-    options: [], // populated dynamically based on province
+    // validation: ["required"],   // ⬅ commented
+    options: [],
   },
   lguType: {
     label: "LGU Type",
-    type: "text", // auto-filled
-    validation: ["required"],
+    type: "text",
+    // validation: ["required"],   // ⬅ commented
     readOnly: true,
     placeholder: "Auto-filled",
   },
   incomeClass: {
     label: "Income Class",
-    type: "text", // auto-filled
-    validation: ["required"],
+    type: "text",
+    // validation: ["required"],   // ⬅ commented
     readOnly: true,
     placeholder: "Auto-filled",
   },
   plantillaPosition: {
     label: "Plantilla Position",
     type: "text",
-    validation: ["required"],
+    // validation: ["required"],   // ⬅ commented
     placeholder: "Enter position title",
   },
+
+  // NEW: officialDesignation (kept separate from plantillaPosition)
+  officialDesignation: {
+    label: "Official Designation",
+    type: "text",
+    // validation: ["required"],   // ⬅ commented
+    placeholder: "Enter official designation (e.g., Officer-in-Charge)",
+  },
+
   statusOfAppointment: {
     label: "Status of Appointment",
     type: "select",
-    validation: ["required"],
+    // validation: ["required"],   // ⬅ commented
     options: ["Permanent", "Temporary", "Casual", "Job Order", "Contractual"],
   },
   dateOfAppointment: {
     label: "Date of Appointment",
     type: "date",
-    validation: ["required", "date"],
+    // validation: ["required", "date"],   // ⬅ commented
   },
   salaryGrade: {
     label: "Salary Grade",
@@ -127,12 +136,12 @@ export const FIELD_CONFIG = {
   dateOfMandatoryRetirement: {
     label: "Date of Mandatory Retirement",
     type: "date",
-    validation: ["date"],
+    // validation: ["date"],   // ⬅ commented
   },
   dateOfCompulsoryRetirement: {
     label: "Date of Compulsory Retirement",
     type: "date",
-    validation: ["date"],
+    // validation: ["date"],   // ⬅ commented
   },
 
   // Education
@@ -178,6 +187,7 @@ export const FIELD_GROUPS = {
     "lguType",
     "incomeClass",
     "plantillaPosition",
+    "officialDesignation", // <-- added here so it shows in the Government Info section
     "statusOfAppointment",
     "dateOfAppointment",
     "salaryGrade",

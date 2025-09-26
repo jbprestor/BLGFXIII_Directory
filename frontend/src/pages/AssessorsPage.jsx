@@ -75,6 +75,7 @@ export default function AssessorsPage() {
         lguName: a.lgu?.name || "N/A",
         lguType: a.lgu?.classification || "N/A",
         region: a.lgu?.region || "N/A",
+        province: a.lgu?.province || "N/A",   // <-- Add this line
       }));
 
       setAssessors(mapped);
@@ -143,11 +144,11 @@ export default function AssessorsPage() {
     try {
       setUpdateLoading(updatedAssessor._id);
       await updateAssessor(updatedAssessor._id, buildPayload(updatedAssessor));
-      toast.success(`${updatedAssessor.fullName} updated successfully`);
+     
       setIsEditModalOpen(false);
       fetchAssessors();
     } catch (err) {
-      toast.error("Failed to update record: " + (err.response?.data?.message || err.message));
+     
     } finally {
       setUpdateLoading(null);
     }

@@ -107,7 +107,7 @@ export default function DetailsModal({
           formatDate={formatDate}
           onClose={onClose}
           onEdit={onEdit}
-        />
+        /> 
       </div>
     </div>
   );

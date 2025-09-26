@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
-import { validateField } from "../../../utils/validationRules.js";
 import {
   FIELD_CONFIG,
   FIELD_GROUPS,
@@ -21,7 +20,6 @@ export default function EditModal({
   const apiRef = useMemo(() => apiInstance, [apiInstance]);
 
   const [formData, setFormData] = useState({});
-  const [errors, setErrors] = useState({});
   const [allLgusFromDb, setAllLgusFromDb] = useState([]);
   const [selectedRegion, setSelectedRegion] = useState("Caraga");
   const [selectedProvince, setSelectedProvince] = useState("");
@@ -48,7 +46,6 @@ export default function EditModal({
       const formatDateForInput = (dateString) =>
         dateString ? new Date(dateString).toISOString().split("T")[0] : "";
 
-      // Match LGU in DB
       const matchedLgu = allLgusFromDb.find(
         (l) =>
           l._id === editingPerson.lgu ||
@@ -59,13 +56,15 @@ export default function EditModal({
       const matchedRegion = matchedLgu?.region || editingPerson.region || "Caraga";
       const matchedLguName = matchedLgu?.name || editingPerson.lguName || "";
 
+      // EXPLICIT: keep plantillaPosition and officialDesignation separate
       setFormData({
         ...editingPerson,
+        plantillaPosition: editingPerson.plantillaPosition || "",
+        officialDesignation: editingPerson.officialDesignation || "",
         birthday: formatDateForInput(editingPerson.birthday),
         dateOfAppointment: formatDateForInput(editingPerson.dateOfAppointment),
         dateOfMandatoryRetirement: formatDateForInput(editingPerson.dateOfMandatoryRetirement),
         dateOfCompulsoryRetirement: formatDateForInput(editingPerson.dateOfCompulsoryRetirement),
-        officialDesignation: editingPerson.officialDesignation || editingPerson.plantillaPosition,
         region: matchedRegion,
         province: matchedProvince,
         lguName: matchedLguName,
@@ -77,7 +76,6 @@ export default function EditModal({
       setSelectedRegion(matchedRegion);
       setSelectedProvince(matchedProvince);
       setSelectedLgu(matchedLguName);
-      setErrors({});
     }
   }, [editingPerson, allLgusFromDb]);
 
@@ -110,7 +108,6 @@ export default function EditModal({
       sanitized = value.toLowerCase().trim();
     if (name === "stepIncrement") sanitized = value.replace(/[^0-9]/g, "");
 
-    setErrors((prev) => ({ ...prev, [name]: validateField(name, sanitized) }));
     setFormData((prev) => ({ ...prev, [name]: sanitized }));
   }, []);
 
@@ -158,40 +155,26 @@ export default function EditModal({
     }));
   };
 
-  const validateForm = useCallback(() => {
-    const newErrors = {};
-    Object.keys(FIELD_CONFIG).forEach((field) => {
-      const err = validateField(field, formData[field]);
-      if (err) newErrors[field] = err;
-    });
-    if (!formData.lgu) newErrors.lgu = "Please select an LGU";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
-
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
-      if (!validateForm()) return toast.error("Fix errors before submitting");
 
       try {
+        // DO NOT override one with the other — keep them separate
         const payload = {
           ...formData,
-          stepIncrement: formData.stepIncrement
-            ? Number(formData.stepIncrement)
-            : 1,
-          birthday: formData.birthday
-            ? new Date(formData.birthday).toISOString()
-            : null,
+          // ensure numeric coercion for stepIncrement if present
+          stepIncrement: formData.stepIncrement ? Number(formData.stepIncrement) : 1,
+          birthday: formData.birthday ? new Date(formData.birthday).toISOString() : null,
           dateOfAppointment: formData.dateOfAppointment
             ? new Date(formData.dateOfAppointment).toISOString()
             : null,
-          officialDesignation:
-            formData.officialDesignation || formData.plantillaPosition,
+          // don't set officialDesignation from plantillaPosition here — they are distinct fields
         };
+
         await onUpdate(payload);
         toast.success(
-          `${payload.firstName} ${payload.lastName} updated successfully`
+          `${payload.firstName || ""} ${payload.lastName || ""} updated successfully`
         );
         onClose();
       } catch (err) {
@@ -199,14 +182,14 @@ export default function EditModal({
         toast.error(err?.response?.data?.message || "Update failed");
       }
     },
-    [formData, validateForm, onUpdate, onClose]
+    [formData, onUpdate, onClose]
   );
 
   const renderField = useCallback(
     (name) => {
       const config = FIELD_CONFIG[name];
-      if (!config) return null;
 
+      // Special handling for region/province/lgu
       if (name === "region")
         return (
           <SelectField
@@ -215,7 +198,6 @@ export default function EditModal({
             value={selectedRegion}
             options={["Caraga"]}
             onChange={handleRegionChange}
-            required
           />
         );
       if (name === "province")
@@ -226,7 +208,6 @@ export default function EditModal({
             value={selectedProvince}
             options={provinces}
             onChange={handleProvinceChange}
-            required
           />
         );
       if (name === "lguName")
@@ -237,76 +218,76 @@ export default function EditModal({
             value={selectedLgu}
             options={lgus}
             onChange={handleLguChange}
-            required
           />
         );
+
+      // read-only fields
       if (["lguType", "incomeClass"].includes(name))
         return (
           <InputField
-            label={config.label}
+            label={config?.label || name}
             name={name}
             value={formData[name] || ""}
             readOnly
           />
         );
 
+      // select groups with extra enum options (include Acting/OIC)
       if (["sex", "statusOfAppointment", "civilStatus"].includes(name)) {
         const options =
           name === "sex"
             ? ["Male", "Female", "Other"]
             : name === "statusOfAppointment"
-            ? ["Permanent", "Temporary", "Contractual", "Casual"]
-            : [
-                "Single",
-                "Married",
-                "Widowed",
-                "Separated",
-                "Divorced",
-                "Others",
-              ];
+            ? ["Permanent", "Temporary", "Contractual", "Casual", "Acting", "OIC"]
+            : ["Single", "Married", "Widowed", "Separated", "Divorced", "Others"];
         return (
           <SelectField
-            label={config.label}
+            label={config?.label || name}
             name={name}
             value={formData[name] || ""}
             options={options}
             onChange={(v) => handleInputChange(v, name)}
-            required
           />
         );
       }
 
-      return config.type === "select" ? (
-        <SelectField
-          label={config.label}
-          name={name}
-          value={formData[name] || ""}
-          options={config.options}
-          onChange={handleInputChange}
-          required
-        />
-      ) : (
-        <InputField
-          label={config.label}
-          name={name}
-          value={formData[name] || ""}
-          onChange={handleInputChange}
-          type={config.type}
-          error={errors[name]}
-          required={config.validation?.includes("required")}
-        />
-      );
+      // Explicitly render officialDesignation even if it's not in FIELD_CONFIG
+      if (name === "officialDesignation") {
+        return (
+          <InputField
+            label={FIELD_CONFIG[name]?.label || "Official Designation"}
+            name="officialDesignation"
+            value={formData.officialDesignation || ""}
+            onChange={handleInputChange}
+            type="text"
+          />
+        );
+      }
+
+      // default rendering using FIELD_CONFIG
+      if (config) {
+        return config.type === "select" ? (
+          <SelectField
+            label={config.label}
+            name={name}
+            value={formData[name] || ""}
+            options={config.options}
+            onChange={handleInputChange}
+          />
+        ) : (
+          <InputField
+            label={config.label}
+            name={name}
+            value={formData[name] || ""}
+            onChange={handleInputChange}
+            type={config.type}
+          />
+        );
+      }
+
+      return null;
     },
-    [
-      formData,
-      errors,
-      selectedRegion,
-      selectedProvince,
-      selectedLgu,
-      provinces,
-      lgus,
-      handleInputChange,
-    ]
+    [formData, selectedRegion, selectedProvince, selectedLgu, provinces, lgus, handleInputChange]
   );
 
   if (!isOpen || !editingPerson) return null;
@@ -329,7 +310,7 @@ export default function EditModal({
               {FIELD_GROUPS.governmentInfo.map((f) => (
                 <div key={f}>{renderField(f)}</div>
               ))}
-            
+
             </div>
           </FormSection>
 
