@@ -41,6 +41,10 @@ export default function AssessorsPage() {
   const [selectedAssessor, setSelectedAssessor] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedLguType, setSelectedLguType] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedSex, setSelectedSex] = useState("all");
+
 
   const itemsPerPage = 10;
 
@@ -103,7 +107,13 @@ export default function AssessorsPage() {
         ["fullName", "lguName", "plantillaPosition", "officeEmail", "region"].some(
           (field) => a[field]?.toLowerCase().includes(searchLower)
         );
-      return searchMatch && (selectedRegion === "all" || a.region === selectedRegion);
+
+      const regionMatch = selectedRegion === "all" || a.region === selectedRegion;
+      const lguTypeMatch = selectedLguType === "all" || a.lguType === selectedLguType;
+      const statusMatch = selectedStatus === "all" || a.statusOfAppointment === selectedStatus;
+      const sexMatch = selectedSex === "all" || a.sex === selectedSex;
+
+      return searchMatch && regionMatch && lguTypeMatch && statusMatch && sexMatch;
     });
 
     if (sortConfig.key) {
@@ -116,7 +126,8 @@ export default function AssessorsPage() {
       });
     }
     return result;
-  }, [assessors, searchTerm, selectedRegion, sortConfig]);
+  }, [assessors, searchTerm, selectedRegion, selectedLguType, selectedStatus, selectedSex, sortConfig]);
+
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const currentItems = useMemo(() => {
@@ -144,11 +155,11 @@ export default function AssessorsPage() {
     try {
       setUpdateLoading(updatedAssessor._id);
       await updateAssessor(updatedAssessor._id, buildPayload(updatedAssessor));
-     
+
       setIsEditModalOpen(false);
       fetchAssessors();
     } catch (err) {
-     
+
     } finally {
       setUpdateLoading(null);
     }
@@ -198,6 +209,12 @@ export default function AssessorsPage() {
         setSelectedRegion={setSelectedRegion}
         uniqueRegions={uniqueRegions}
         resultCount={filteredData.length}
+        selectedLguType={selectedLguType}
+        setSelectedLguType={setSelectedLguType}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        selectedSex={selectedSex}
+        setSelectedSex={setSelectedSex}
       />
 
       <PersonnelTable

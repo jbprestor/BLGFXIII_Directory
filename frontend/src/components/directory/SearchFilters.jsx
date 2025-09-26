@@ -9,22 +9,35 @@ export default function SearchFilters({
   setSelectedStatus,
   selectedRegion,
   setSelectedRegion,
-  selectedSex,        // <-- new
-  setSelectedSex,     // <-- new
+  selectedSex,
+  setSelectedSex,
   uniqueRegions,
-  resultCount
+  resultCount,
 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // 🔹 Reset all filters + search
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedLguType("all");
+    setSelectedStatus("all");
+    setSelectedRegion("all");
+    setSelectedSex("all");
+  };
 
   return (
     <div className="card bg-base-100 shadow-xl border border-base-300">
       <div className="card-body p-4 sm:p-6">
-        <h2 className="card-title mb-2 sm:mb-4 text-lg sm:text-xl">Search & Filter</h2>
+        <h2 className="card-title mb-2 sm:mb-4 text-lg sm:text-xl">
+          Search & Filter
+        </h2>
 
         {/* Always visible search bar */}
         <div className="form-control mb-4">
           <label className="label py-1">
-            <span className="label-text text-xs sm:text-sm">Search Personnel</span>
+            <span className="label-text text-xs sm:text-sm">
+              Search Personnel
+            </span>
           </label>
           <input
             type="text"
@@ -44,7 +57,7 @@ export default function SearchFilters({
           {showAdvanced ? "Hide Advanced Search" : "Show Advanced Search"}
         </button>
 
-        {/* Advanced filters (only show if toggled) */}
+        {/* Advanced filters */}
         {showAdvanced && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-2 sm:gap-4 mb-4">
             {/* LGU Type Filter */}
@@ -64,7 +77,7 @@ export default function SearchFilters({
               </select>
             </div>
 
-            {/* Sex Filter (NEW) */}
+            {/* Sex Filter */}
             <div className="form-control">
               <label className="label py-1">
                 <span className="label-text text-xs sm:text-sm">Sex</span>
@@ -84,7 +97,9 @@ export default function SearchFilters({
             {/* Status Filter */}
             <div className="form-control">
               <label className="label py-1">
-                <span className="label-text text-xs sm:text-sm">Appointment Status</span>
+                <span className="label-text text-xs sm:text-sm">
+                  Appointment Status
+                </span>
               </label>
               <select
                 className="select select-bordered select-sm sm:select-md w-full"
@@ -121,15 +136,24 @@ export default function SearchFilters({
           </div>
         )}
 
-        {/* Results Count & Export */}
+        {/* Results Count & Buttons */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div className="badge badge-neutral badge-sm sm:badge-lg">
             {resultCount} result{resultCount !== 1 ? "s" : ""} found
           </div>
-          <button className="btn btn-outline btn-xs sm:btn-sm">
-            <span>📊</span>
-            Export Results
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="btn btn-outline btn-xs sm:btn-sm"
+              onClick={handleClearFilters}
+            >
+              Clear Filters
+            </button>
+            <button className="btn btn-outline btn-xs sm:btn-sm">
+              <span>📊</span>
+              Export Results
+            </button>
+          </div>
         </div>
       </div>
     </div>
