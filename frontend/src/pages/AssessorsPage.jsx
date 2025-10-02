@@ -16,12 +16,12 @@ import toast from "react-hot-toast";
 
 export default function AssessorsPage() {
   const { user } = useAuth();
-  const { getAllAssessors, createAssessor, updateAssessor, deleteAssessor } =
+  const { getAllAssessors, updateAssessor, deleteAssessor } =
     useApi();
 
-  const canAdd = user?.role === "Admin";
-  const canEdit = user?.role === "Admin";
-  const canDelete = user?.role === "Admin";
+  const canAdd = user?.role === "Admin" || user?.role === "superadmin";
+  const canEdit = user?.role === "Admin" || user?.role === "superadmin";
+  const canDelete = user?.role === "Admin" || user?.role === "superadmin";
 
   const [assessors, setAssessors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,6 @@ export default function AssessorsPage() {
 
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [updateLoading, setUpdateLoading] = useState(null);
-  const [createLoading, setCreateLoading] = useState(false);
 
   const [editingAssessor, setEditingAssessor] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -94,8 +93,14 @@ export default function AssessorsPage() {
 
   useEffect(() => { fetchAssessors(); }, []);
 
+  // Reset pagination when filters or search term change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRegion, selectedLguType, selectedStatus, selectedSex]);
+
   const uniqueRegions = useMemo(
-    () => [...new Set(assessors.map((a) => a.region).filter(Boolean))].sort(),
+    () =>
+      [...new Set(assessors.map((a) => a.region).filter((r) => r && r !== "N/A"))].sort(),
     [assessors]
   );
 
@@ -136,19 +141,7 @@ export default function AssessorsPage() {
   }, [currentPage, filteredData]);
 
   // ----- CRUD Handlers -----
-  const handleCreate = async (formData) => {
-    setCreateLoading(true);
-    try {
-      await createAssessor(buildPayload(formData));
-      toast.success("Assessor added successfully");
-      setIsCreateModalOpen(false);
-      fetchAssessors();
-    } catch (err) {
-      toast.error("Failed to add assessor: " + (err.response?.data?.message || err.message));
-    } finally {
-      setCreateLoading(false);
-    }
-  };
+  
 
   const handleUpdate = async (updatedAssessor) => {
     if (!updatedAssessor) return;
@@ -158,8 +151,9 @@ export default function AssessorsPage() {
 
       setIsEditModalOpen(false);
       fetchAssessors();
+      toast.success("Assessor updated successfully");
     } catch (err) {
-
+      toast.error("Failed to update assessor: " + (err.response?.data?.message || err.message));
     } finally {
       setUpdateLoading(null);
     }
@@ -236,7 +230,13 @@ export default function AssessorsPage() {
         <EmptyState onClearFilters={() => { setSearchTerm(""); setSelectedRegion("all"); setCurrentPage(1); }} />
       )}
 
-      {canAdd && <AddModal isOpen={isCreateModalOpen} onAddPersonnel={handleCreate} onClose={() => setIsCreateModalOpen(false)} loading={createLoading} />}
+      {canAdd && (
+        <AddModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          refreshAssessors={fetchAssessors}
+        />
+      )}
 
       {canEdit && <EditModal
         isOpen={isEditModalOpen}
