@@ -112,6 +112,8 @@ export default function SearchFilters({
                 <option value="Casual">Casual</option>
                 <option value="Job Order">Job Order</option>
                 <option value="Contractual">Contractual</option>
+                <option value="Acting">Acting</option>
+                <option value="OIC">OIC</option>
               </select>
             </div>
 
