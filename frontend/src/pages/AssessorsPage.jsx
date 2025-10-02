@@ -6,7 +6,7 @@ import LoadingSpinner from "../components/common/LoadingSpinner.jsx";
 import ErrorDisplay from "../components/common/ErrorDisplay.jsx";
 import SearchFilters from "../components/directory/SearchFilters.jsx";
 import PersonnelTable from "../components/directory/PersonnelTable.jsx";
-import QuickStats from "../components/directory/QuickStats.jsx";
+import QuickStats from "../components/directory/QuickStats.jsx"; 
 import EmptyState from "../components/common/EmptyState.jsx";
 import EditModal from "../components/modals/assessorsDirectory/EditModal.jsx";
 import DetailsModal from "../components/modals/assessorsDirectory/DetailsModal.jsx";

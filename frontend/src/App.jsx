@@ -7,6 +7,7 @@ import Footer from "./components/layout/Footer";
 import HomePage from "./pages/HomePage";
 import AssessorsPage from "./pages/AssessorsPage";
 import CreatePage from "./pages/CreatePage";
+import LGUPage from "./pages/LGUPage.jsx";
 // import Dashboard from "./pages/Dashboard";
 // import LGUsPage from "./pages/LGUsPage";
 import SMVProcessesPage from "./pages/SMVMonitoringPage.jsx";
@@ -56,6 +57,9 @@ export default function App() {
       case "directory":
         navigate("/directory");
         break;
+      case "lgu-profile":
+        navigate("/lgu-profile");
+        break;
       case "smv-profiling":
         navigate("/smv-processes"); // adjust to your route
         break;
@@ -93,6 +97,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/directory" element={<AssessorsPage />} />
           <Route path="/create" element={<CreatePage />} />
+          <Route path="/lgu-profile" element={<LGUPage />} />
 
           {/* Protected Routes */}
           {/* <Route

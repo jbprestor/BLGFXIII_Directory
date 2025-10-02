@@ -28,6 +28,48 @@ const lguSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Geographic & Demographic Data
+    population: {
+      type: Number,
+      min: 0
+    },
+    landArea: {
+      type: Number, // in square kilometers
+      min: 0
+    },
+    coordinates: {
+      latitude: { type: Number },
+      longitude: { type: Number }
+    },
+
+    // Contact Information
+    contactInfo: {
+      phoneNumber: { type: String, trim: true },
+      faxNumber: { type: String, trim: true },
+      website: { 
+        type: String, 
+        trim: true,
+        match: [/^https?:\/\/.+/, "Invalid URL format"]
+      },
+      socialMedia: {
+        facebook: String,
+        twitter: String
+      }
+    },
+
+    // Administrative Details
+    establishmentDate: {
+      type: Date
+    },
+    zipCode: {
+      type: String,
+      trim: true
+    },
+    mayoralTerm: {
+      startDate: Date,
+      endDate: Date
+    },
+
     // LCE Profile Information
     lce: {
       lastName: { type: String, trim: true, required: true },
@@ -49,6 +91,28 @@ const lguSchema = new mongoose.Schema(
       approvalYear: { type: Number },
       implementationYear: { type: Number },
       conductingRevision2025: { type: Boolean, default: false },
+    },
+
+    // SMV History (for tracking multiple revisions)
+    smvHistory: [{
+      ordinanceNo: String,
+      baseYear: Number,
+      approvalYear: Number,
+      implementationYear: Number,
+      status: String,
+      notes: String,
+      createdAt: { type: Date, default: Date.now }
+    }],
+
+    // Performance Metrics
+    performanceMetrics: {
+      sealOfGoodLocalGovernance: {
+        hasAward: { type: Boolean, default: false },
+        year: Number,
+        level: { type: String, enum: ['Bronze', 'Silver', 'Gold'] }
+      },
+      businessPermitProcessingTime: Number, // in days
+      taxCollectionEfficiency: Number // percentage
     },
 
     // Status Tracking

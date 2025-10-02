@@ -55,6 +55,7 @@ export default function Navbar({
     () => [
       { name: "Home", page: "home", icon: "🏠" },
       { name: "Directory", page: "directory", icon: "📁" },
+      { name: "LGU Profile", page: "lgu-profile", icon: "🏢" },
       { name: "SMV Profiling", page: "smv-profiling", icon: "📊" },
       { name: "QRRPA Submission", page: "qrrpa-submission", icon: "📋" },
       // { name: "Create", page: "create", icon: "➕" },
