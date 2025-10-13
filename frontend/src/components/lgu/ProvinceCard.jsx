@@ -31,8 +31,8 @@ export default React.memo(function ProvinceCard({
       onClick={onOpen}
       aria-label={`Open province ${province}`}
     >
-      <div className="card-body p-4 flex items-center gap-4">
-        <div className="w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden bg-white border flex-shrink-0">
+      <div className="card-body p-3 flex items-center gap-3">
+        <div className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden bg-base-100 border border-base-300 flex-shrink-0">
           <img
             src={candidates[0] || PLACEHOLDER_IMAGE}
             alt={`${province} logo`}
@@ -43,11 +43,11 @@ export default React.memo(function ProvinceCard({
         </div>
 
         <div className="flex-1">
-          <h3 className="font-bold text-lg truncate">{province}</h3>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-sm text-base-content/60">{totalCount} LGU{totalCount !== 1 ? "s" : ""}</span>
+          <h3 className="font-bold text-base truncate">{province}</h3>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-base-content/60">{totalCount} LGU{totalCount !== 1 ? "s" : ""}</span>
           </div>
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2 mt-2">
             <span className="badge badge-xs badge-primary">{citiesCount} {citiesCount === 1 ? "City" : "Cities"}</span>
             <span className="badge badge-xs badge-secondary">{municipalitiesCount} {municipalitiesCount === 1 ? "Municipality" : "Municipalities"}</span>
           </div>

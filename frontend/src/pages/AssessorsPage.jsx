@@ -36,7 +36,7 @@ export default function AssessorsPage() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedSex, setSelectedSex] = useState("all");
 
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "ascending" });
+  const [sortConfig, _setSortConfig] = useState({ key: null, direction: "ascending" });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -63,8 +63,12 @@ export default function AssessorsPage() {
       doctoralDegree: data.doctoralDegree ?? "",
       eligibility: data.eligibility ?? "",
       prcLicenseNumber: data.prcLicenseNumber ?? "",
+      prcLicenseExpiration: data.prcLicenseExpiration || null,
+      officialDesignation: data.officialDesignation ?? "",
       officeEmail: data.officeEmail ?? "",
       personalEmail: data.personalEmail ?? "",
+      contactNumber: data.contactNumber ?? "",
+      mobileNumber: data.mobileNumber ?? "",
       isActive: data.isActive ?? true,
     }),
     []
@@ -96,9 +100,9 @@ export default function AssessorsPage() {
 
       setAssessors(mapped);
       setError(null);
-    } catch (err) {
-      console.error("refreshAssessors error:", err);
-      setError("Failed to load assessors directory: " + (err.response?.data?.message || err.message));
+    } catch (_err) {
+      console.error("refreshAssessors error:", _err);
+      setError("Failed to load assessors directory: " + (_err.response?.data?.message || _err.message));
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
@@ -217,8 +221,8 @@ export default function AssessorsPage() {
       // toast.success("Assessor added successfully");
       setIsCreateModalOpen(false);
       await refreshAssessors();
-    } catch (err) {
-      // toast.error("Failed to add assessor: " + (err.response?.data?.message || err.message));
+    } catch (_err) {
+      console.error("create assessor error:", _err);
     } finally {
       setCreateLoading(false);
     }
@@ -232,8 +236,8 @@ export default function AssessorsPage() {
       // toast.success("Assessor updated");
       setIsEditModalOpen(false);
       await refreshAssessors();
-    } catch (err) {
-      // toast.error("Failed to update: " + (err.response?.data?.message || err.message));
+    } catch (_err) {
+      console.error("update assessor error:", _err);
     } finally {
       setUpdateLoading(null);
     }
@@ -248,8 +252,8 @@ export default function AssessorsPage() {
           await deleteAssessor(assessor._id);
           toast.success(`${assessor.fullName} deleted successfully`);
           await refreshAssessors();
-        } catch (err) {
-          toast.error(`Failed to delete ${assessor.fullName}: ` + (err.response?.data?.message || err.message));
+        } catch (_err) {
+          toast.error(`Failed to delete ${assessor.fullName}: ` + (_err.response?.data?.message || _err.message));
         } finally {
           setDeleteLoading(null);
         }
@@ -273,19 +277,25 @@ export default function AssessorsPage() {
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="text-center sm:text-left">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">Assessors Directory</h1>
-          <p className="text-sm sm:text-lg text-base-content/70 max-w-2xl">
-            Directory of Local Assessors across LGUs in the Philippines.
-          </p>
-        </div>
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+          <div className="text-center sm:text-left min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold mb-1 sm:mb-2">Assessors Directory</h1>
+            <p className="text-xs sm:text-sm lg:text-lg text-base-content/70 max-w-2xl">
+              Directory of Local Assessors across LGUs in the Philippines.
+            </p>
+          </div>
 
-        {canAdd && (
-          <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary btn-lg">
-            + Add Assessor
-          </button>
-        )}
+          {canAdd && (
+            <button 
+              onClick={() => setIsCreateModalOpen(true)} 
+              className="btn btn-primary btn-sm sm:btn-md lg:btn-lg w-full sm:w-auto flex-shrink-0"
+            >
+              <span className="text-sm sm:text-base">+ Add Assessor</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <SearchFilters

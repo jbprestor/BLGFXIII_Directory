@@ -4,7 +4,7 @@ import { User } from "../models/User.js";
 
 // Generate JWT Token
 const generateToken = (userId, role) => {
-  return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
+  return jwt.sign({ _id: userId, role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 };
@@ -46,6 +46,7 @@ export const registerUser = async (req, res) => {
         role: savedUser.role,
         region: savedUser.region,
         isActive: savedUser.isActive,
+        profilePicture: savedUser.profilePicture,
       },
       token,
     });
@@ -86,6 +87,7 @@ export const loginUser = async (req, res) => {
         role: user.role,
         region: user.region,
         isActive: user.isActive,
+        profilePicture: user.profilePicture,
       },
       token,
     });

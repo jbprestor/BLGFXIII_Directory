@@ -43,6 +43,15 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    profilePicture: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -84,6 +93,7 @@ const validate = (data) => {
     role: Joi.string().valid("Admin", "Regional", "Provincial", "Municipal").label("Role"),
     region: Joi.string().label("Region"),
     isActive: Joi.boolean().label("Is Active"),
+    status: Joi.string().valid("pending", "approved", "rejected").label("Status"),
   }).options({ abortEarly: false });
   return schema.validate(data);
 };

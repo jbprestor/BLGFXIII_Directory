@@ -154,7 +154,18 @@ export async function updateSMVMonitoring(req, res) {
 
     res.status(200).json(updated);
   } catch (error) {
-    res.status(400).json({ message: "Error updating SMV monitoring record", error: error.message });
+    console.error("❌ Error updating SMV monitoring:", error);
+    console.error("Request body:", JSON.stringify(req.body, null, 2));
+    
+    // Send detailed error for debugging
+    res.status(400).json({ 
+      message: "Error updating SMV monitoring record", 
+      error: error.message,
+      details: error.errors ? Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      })) : undefined
+    });
   }
 }
 
@@ -179,6 +190,35 @@ export async function updateSMVMonitoringActivity(req, res) {
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: "Error updating SMV monitoring activity", error: error.message });
+  }
+}
+
+// --- UPDATE TIMELINE ---
+export async function updateSMVMonitoringTimeline(req, res) {
+  try {
+    const { id } = req.params;
+    const { timeline } = req.body;
+
+    const monitoring = await SMVMonitoring.findById(id);
+    if (!monitoring) return res.status(404).json({ message: "SMV monitoring record not found" });
+
+    // Update timeline fields
+    if (timeline) {
+      monitoring.timeline = {
+        ...monitoring.timeline,
+        ...timeline
+      };
+    }
+
+    // Recalculate compliance after timeline update
+    monitoring.recalculateProgress();
+    
+    const updated = await monitoring.save();
+    await updated.populate("lguId", "name province region classification incomeClass");
+
+    res.status(200).json(updated);
+  } catch (error) {
+    res.status(400).json({ message: "Error updating SMV monitoring timeline", error: error.message });
   }
 }
 

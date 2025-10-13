@@ -26,23 +26,22 @@ export default function ThemeSelector({
       </button>
       {themeOpen && (
         <ul
-          className="dropdown-content z-[1] menu p-2 shadow-2xl bg-base-100 rounded-box w-64 mt-3"
+          className="dropdown-content z-[1] menu p-2 shadow-2xl bg-base-100 rounded-box w-64 mt-3 border border-base-300"
           style={{
-            border: theme.border,
             boxShadow: theme.shadow,
           }}
           role="menu"
         >
           <li className="menu-title">
-            <span>Choose Theme</span>
+            <span className="text-base-content/80 font-semibold">Choose Theme</span>
           </li>
           {Object.entries(themes).map(([key, themeData]) => (
             <li key={key}>
               <button
                 onClick={() => onThemeChange(key)}
-                className={`justify-between transition-colors duration-300 ${
+                className={`justify-between transition-colors duration-300 text-base-content ${
                   currentTheme === key
-                    ? "active bg-primary/10"
+                    ? "active bg-primary/10 text-primary font-semibold"
                     : "hover:bg-base-200"
                 }`}
                 role="menuitem"
@@ -50,14 +49,14 @@ export default function ThemeSelector({
                 <div className="flex items-center space-x-3">
                   <span className="text-lg">{themeData.icon}</span>
                   <div>
-                    <div className="font-medium">{themeData.name}</div>
+                    <div className="font-medium text-base-content">{themeData.name}</div>
                     <div
                       className={`w-16 h-2 rounded-full bg-gradient-to-r ${themeData.gradient}`}
                     ></div>
                   </div>
                 </div>
                 {currentTheme === key && (
-                  <span className="badge badge-primary">✓</span>
+                  <span className="badge badge-primary badge-sm">✓</span>
                 )}
               </button>
             </li>

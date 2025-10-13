@@ -16,8 +16,7 @@ export default function EditModal({
   onClose,
   formatDate,
 }) {
-  const { api: apiInstance, getAllLgusNoPagination } = useApi();
-  const apiRef = useMemo(() => apiInstance, [apiInstance]);
+  const { api: _apiInstance, getAllLgusNoPagination } = useApi();
 
   const [formData, setFormData] = useState({});
   const [allLgusFromDb, setAllLgusFromDb] = useState([]);
@@ -32,8 +31,8 @@ export default function EditModal({
         const response = await getAllLgusNoPagination();
         const { lgus } = response.data;
         setAllLgusFromDb(Array.isArray(lgus) ? lgus : []);
-      } catch (err) {
-        console.error("Failed to fetch LGUs:", err);
+      } catch (_err) {
+        console.error("Failed to fetch LGUs:", _err);
         setAllLgusFromDb([]);
       }
     }
@@ -63,6 +62,7 @@ export default function EditModal({
         officialDesignation: editingPerson.officialDesignation || "",
         birthday: formatDateForInput(editingPerson.birthday),
         dateOfAppointment: formatDateForInput(editingPerson.dateOfAppointment),
+        prcLicenseExpiration: formatDateForInput(editingPerson.prcLicenseExpiration),
         dateOfMandatoryRetirement: formatDateForInput(editingPerson.dateOfMandatoryRetirement),
         dateOfCompulsoryRetirement: formatDateForInput(editingPerson.dateOfCompulsoryRetirement),
         region: matchedRegion,
@@ -103,7 +103,7 @@ export default function EditModal({
     }
 
     let sanitized = value;
-    if (name === "contactNumber") sanitized = value.replace(/\D/g, "");
+    if (name === "contactNumber" || name === "mobileNumber") sanitized = value.replace(/\D/g, "");
     if (name === "officeEmail" || name === "personalEmail")
       sanitized = value.toLowerCase().trim();
     if (name === "stepIncrement") sanitized = value.replace(/[^0-9]/g, "");
@@ -169,6 +169,15 @@ export default function EditModal({
           dateOfAppointment: formData.dateOfAppointment
             ? new Date(formData.dateOfAppointment).toISOString()
             : null,
+          prcLicenseExpiration: formData.prcLicenseExpiration
+            ? new Date(formData.prcLicenseExpiration).toISOString()
+            : null,
+          dateOfMandatoryRetirement: formData.dateOfMandatoryRetirement
+            ? new Date(formData.dateOfMandatoryRetirement).toISOString()
+            : null,
+          dateOfCompulsoryRetirement: formData.dateOfCompulsoryRetirement
+            ? new Date(formData.dateOfCompulsoryRetirement).toISOString()
+            : null,
           // don't set officialDesignation from plantillaPosition here — they are distinct fields
         };
 
@@ -177,9 +186,9 @@ export default function EditModal({
           `${payload.firstName || ""} ${payload.lastName || ""} updated successfully`
         );
         onClose();
-      } catch (err) {
-        console.error(err);
-        toast.error(err?.response?.data?.message || "Update failed");
+      } catch (_err) {
+        console.error(_err);
+        toast.error(_err?.response?.data?.message || "Update failed");
       }
     },
     [formData, onUpdate, onClose]
@@ -238,7 +247,7 @@ export default function EditModal({
           name === "sex"
             ? ["Male", "Female", "Other"]
             : name === "statusOfAppointment"
-            ? ["Permanent", "Temporary", "Contractual", "Casual", "Acting", "OIC"]
+            ? ["Permanent", "Temporary", "Contractual", "Casual", "Acting", "OIC", "Job Order"]
             : ["Single", "Married", "Widowed", "Separated", "Divorced", "Others"];
         return (
           <SelectField

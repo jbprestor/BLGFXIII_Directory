@@ -7,6 +7,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Building,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import QuickStats from "../components/lgu/quickstats.jsx";
@@ -20,7 +22,7 @@ import { useLGUImages } from "../assets/LguImages.js";
  */
 export default function LGUPage() {
   const RAW_LGU_IMAGES = useLGUImages();
-  const { getAllLgusNoPagination, getLguById, getAllAssessors, getSMVProcesses } = useApi();
+  const { getAllLgusNoPagination, getLguById, getAllAssessors, getSMVProcesses, updateLgu, deleteLgu } = useApi();
 
   // state
   const [lgus, setLgus] = useState([]);
@@ -28,6 +30,10 @@ export default function LGUPage() {
   const [selectedLguId, setSelectedLguId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // UI states
+  const [expandedProvinces, setExpandedProvinces] = useState(() => new Set());
+  const expandedRefs = useRef(new Map());
 
   // filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,9 +76,9 @@ export default function LGUPage() {
               lastRequestTimeRef.current = Date.now();
               toast.dismiss("retry-toast");
               return resolve(res);
-            } catch (err) {
-              const status = err?.response?.status;
-              if (status >= 400 && status < 500 && status !== 429) return reject(err);
+            } catch (_err) {
+              const status = _err?.response?.status;
+              if (status >= 400 && status < 500 && status !== 429) return reject(_err);
 
               if (attempt < MAX_RETRIES && (status === 429 || status >= 500 || !status)) {
                 attempt++;
@@ -83,7 +89,7 @@ export default function LGUPage() {
               }
 
               toast.dismiss("retry-toast");
-              return reject(err);
+              return reject(_err);
             }
           }
         })
@@ -204,9 +210,10 @@ export default function LGUPage() {
   };
 
   // UI
+  // UI - improved card styles for consistent visuals and subtle motion - Mobile Optimized
   const cardBaseClasses =
-    "bg-white rounded-xl border shadow hover:shadow-lg transition cursor-pointer text-center p-6";
-  const cardAccentRing = "ring-2 ring-primary/20";
+    "bg-base-100 rounded-lg sm:rounded-xl border border-base-200 shadow-sm sm:hover:shadow-lg transform sm:hover:scale-105 transition-transform duration-200 cursor-pointer text-center p-3 sm:p-6 flex flex-col items-center justify-center gap-2 sm:gap-3 min-h-[10rem] sm:min-h-[12rem] w-full";
+  const cardAccentRing = "ring-2 ring-primary/20 focus:outline-none";
 
   // handlers
   const handleOpenProvince = (province) => {
@@ -217,6 +224,80 @@ export default function LGUPage() {
 
   const handleOpenLgu = (id) => setSelectedLguId(id);
   const handleCloseDetail = () => setSelectedLguId(null);
+
+  const toggleExpanded = (prov) => {
+    const isExpanded = expandedProvinces.has(prov);
+    const el = expandedRefs.current.get(prov);
+
+    // If no element reference, fallback to state toggle
+    if (!el) {
+      setExpandedProvinces((prev) => {
+        const next = new Set(prev);
+        if (next.has(prov)) next.delete(prov);
+        else next.add(prov);
+        return next;
+      });
+      return;
+    }
+
+    // Ensure transition properties
+    el.style.overflow = 'hidden';
+    el.style.transition = 'max-height 300ms ease, opacity 200ms ease';
+
+    if (isExpanded) {
+      // collapse: set explicit height then animate to 0
+      el.style.maxHeight = `${el.scrollHeight}px`;
+      el.style.opacity = '1';
+      // force reflow
+      void el.offsetHeight;
+      requestAnimationFrame(() => {
+        el.style.maxHeight = '0px';
+        el.style.opacity = '0';
+      });
+      const onEnd = (e) => {
+        if (e.propertyName === 'max-height') {
+          el.style.removeProperty('max-height');
+          el.style.removeProperty('opacity');
+          el.style.removeProperty('transition');
+          el.removeEventListener('transitionend', onEnd);
+        }
+      };
+      el.addEventListener('transitionend', onEnd);
+
+      setExpandedProvinces((prev) => {
+        const next = new Set(prev);
+        next.delete(prov);
+        return next;
+      });
+    } else {
+      // expand: animate from 0 to scrollHeight then clear maxHeight to allow natural growth
+      el.style.maxHeight = '0px';
+      el.style.opacity = '0';
+      // force reflow
+      void el.offsetHeight;
+      const target = `${el.scrollHeight}px`;
+      requestAnimationFrame(() => {
+        el.style.maxHeight = target;
+        el.style.opacity = '1';
+      });
+      const onEnd = (e) => {
+        if (e.propertyName === 'max-height') {
+          // remove max-height to allow dynamic content height
+          el.style.removeProperty('max-height');
+          el.style.removeProperty('opacity');
+          el.style.removeProperty('transition');
+          el.removeEventListener('transitionend', onEnd);
+        }
+      };
+      el.addEventListener('transitionend', onEnd);
+
+      setExpandedProvinces((prev) => {
+        const next = new Set(prev);
+        next.add(prov);
+        return next;
+      });
+    }
+  };
 
   // export
   const exportData = () => {
@@ -240,24 +321,82 @@ export default function LGUPage() {
     toast.success(`Exported ${filteredLgus.length} LGUs`);
   };
 
+  // Get the current LGU name if we're viewing a specific LGU
+  const currentLgu = useMemo(() => {
+    if (!selectedLguId) return null;
+    return lgus.find(lgu => lgu._id === selectedLguId || lgu.id === selectedLguId);
+  }, [selectedLguId, lgus]);
+
   // render
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Provinces</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Browse and search through {Object.keys(provinces).length.toLocaleString()} Provinces
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button className="btn btn-outline btn-sm" onClick={() => fetchLgus(true)} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} /> Refresh
-          </button>
-          <button className="btn btn-primary btn-sm" onClick={exportData} disabled={filteredLgus.length === 0}>
-            <Download className="w-4 h-4" /> Export
-          </button>
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3 space-y-2 sm:space-y-3">
+      {/* Breadcrumb Navigation - Mobile Optimized */}
+      <nav className="text-xs sm:text-sm breadcrumbs">
+        <ul className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+          <li>
+            <button 
+              onClick={() => {
+                setSelectedLguId(null);
+                setSelectedProvince(null);
+                setCurrentPage(1);
+              }}
+              className={`link link-hover inline-flex items-center whitespace-nowrap ${!selectedProvince && !selectedLguId ? 'font-medium text-primary' : 'text-base-content/70'}`}
+              aria-label="View all provinces and cities"
+            >
+              <Building className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden sm:inline">Provinces & Cities</span>
+              <span className="sm:hidden">Home</span>
+            </button>
+          </li>
+
+          {selectedProvince && (
+            <li>
+              <button 
+                onClick={() => {
+                  setSelectedLguId(null);
+                  setCurrentPage(1);
+                }}
+                className={`link link-hover inline-flex items-center whitespace-nowrap ${!selectedLguId ? 'font-medium text-primary' : 'text-base-content/70'}`}
+                aria-label={`Back to ${selectedProvince}`}
+              >
+                <span className="truncate max-w-24 sm:max-w-none">{selectedProvince}</span>
+              </button>
+            </li>
+          )}
+
+          {currentLgu && (
+            <li>
+              <span className="font-medium text-primary truncate max-w-32 sm:max-w-none">{currentLgu.name}</span>
+            </li>
+          )}
+        </ul>
+      </nav>
+
+      {/* header - Mobile Optimized */}
+      <div className="flex flex-col gap-2 sm:gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">
+              {currentLgu ? currentLgu.name :
+               selectedProvince ? `${selectedProvince} LGUs` :
+               'Provinces'}
+            </h1>
+            <p className="text-xs sm:text-sm text-base-content/60 mt-1">
+              {currentLgu ? `${currentLgu.classification} • ${currentLgu.incomeClass}` :
+               selectedProvince ? `Browse ${provinces[selectedProvince]?.length?.toLocaleString() || 0} LGUs in ${selectedProvince}` :
+               `Browse ${Object.keys(provinces).length.toLocaleString()} Provinces`}
+            </p>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <button className="btn btn-outline btn-xs sm:btn-sm" onClick={() => fetchLgus(true)} disabled={isLoading} aria-label="Refresh LGU data">
+              <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isLoading ? "animate-spin" : ""}`} /> 
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+            <button className="btn btn-primary btn-xs sm:btn-sm" onClick={exportData} disabled={filteredLgus.length === 0} aria-label="Export filtered LGU data">
+              <Download className="w-3 h-3 sm:w-4 sm:h-4" /> 
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -289,8 +428,8 @@ export default function LGUPage() {
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           <div className="text-center">
-            <p className="font-medium">Loading Provinces...</p>
-            <p className="text-sm text-gray-500">This may take a moment</p>
+            <p className="font-medium text-base-content">Loading Provinces...</p>
+            <p className="text-sm text-base-content/60">This may take a moment</p>
           </div>
         </div>
       )}
@@ -308,15 +447,14 @@ export default function LGUPage() {
       {/* main */}
       {!isLoading && !error && (
         <>
-          <QuickStats filteredLgus={filteredLgus} />
 
           {!selectedProvince && (
             <>
               {Object.keys(provinces).length === 0 ? (
-                <div className="text-center py-12">
-                  <Building className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Provinces Found</h3>
-                  <p className="text-gray-500 mb-4">Try adjusting your search or filters</p>
+                    <div className="text-center py-12">
+                      <Building className="w-16 h-16 text-base-content/40 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Provinces Found</h3>
+                      <p className="text-base-content/60 mb-4">Try adjusting your search or filters</p>
                   <button
                     className="btn btn-outline"
                     onClick={() => {
@@ -327,60 +465,144 @@ export default function LGUPage() {
                       setSelectedSMVStatus("all");
                       setConducting2025Revision("all");
                     }}
+                    aria-label="Clear all filters"
                   >
                     Clear All Filters
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {Object.keys(provinces)
-                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                    .map((prov) => {
-                      const img = getCandidatesFor(prov)[0];
-                      return (
-                        <div
-                          key={prov}
-                          className={`${cardBaseClasses} ${cardAccentRing}`}
-                          onClick={() => handleOpenProvince(prov)}
-                        >
-                          <img
-                            src={img}
-                            alt={prov}
-                            className="w-24 h-24 mx-auto rounded-full object-cover mb-4 border"
-                          />
-                          <h3 className="text-lg font-semibold">{prov}</h3>
-                          <p className="text-sm text-gray-500">{provinces[prov].length} LGUs</p>
-                        </div>
-                      );
-                    })}
-                </div>
+                <>
+                  {/* Mobile compact list (visible on xs) */}
+                  <div className="sm:hidden space-y-3">
+                    {Object.keys(provinces)
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .map((prov) => {
+                        const img = getCandidatesFor(prov)[0];
+                        const isExpanded = expandedProvinces.has(prov);
+                        return (
+                          <div key={`mobile-${prov}`} className="bg-base-100 border border-base-200 rounded-lg p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-base-200 rounded-full flex items-center justify-center overflow-hidden border border-base-300">
+                                  <img
+                                    src={img}
+                                    alt={`${prov} image`}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = PLACEHOLDER_IMAGE; }}
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-base-content truncate w-40">{prov}</div>
+                                  <div className="text-xs text-base-content/60">{provinces[prov].length.toLocaleString()} LGUs</div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  className="btn btn-ghost btn-xs"
+                                  onClick={() => handleOpenProvince(prov)}
+                                  aria-label={`Open ${prov} province`}
+                                >
+                                  Open
+                                </button>
+                                <button
+                                  className="btn btn-ghost btn-xs"
+                                  onClick={() => toggleExpanded(prov)}
+                                  aria-expanded={isExpanded}
+                                  aria-controls={`prov-exp-${prov}`}
+                                >
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div id={`prov-exp-${prov}`} ref={(el) => { if (el) expandedRefs.current.set(prov, el); else expandedRefs.current.delete(prov); }} className={`mt-3 overflow-hidden`} aria-hidden={!isExpanded}>
+                              <div className={`${cardBaseClasses} ${cardAccentRing} text-left p-4`}>
+                                <div className="flex items-start gap-4 w-full">
+                                  <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                                    <img src={img} alt={`${prov} large`} loading="lazy" decoding="async" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = PLACEHOLDER_IMAGE; }} />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h3 className="text-lg font-semibold">{prov}</h3>
+                                    <p className="text-sm text-base-content/60 mt-1">{provinces[prov].length.toLocaleString()} LGUs</p>
+                                    <div className="mt-3 flex gap-2">
+                                      <button className="btn btn-sm" onClick={() => handleOpenProvince(prov)}>View LGUs</button>
+                                      <button className="btn btn-outline btn-sm" onClick={() => toggleExpanded(prov)}>Collapse</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Desktop / tablet grid (hidden on xs) - Mobile Optimized */}
+                  <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+                    {Object.keys(provinces)
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .map((prov) => {
+                        const img = getCandidatesFor(prov)[0];
+                        return (
+                          <div
+                            key={prov}
+                            role="button"
+                            tabIndex={0}
+                            className={`${cardBaseClasses} ${cardAccentRing}`}
+                            onClick={() => handleOpenProvince(prov)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleOpenProvince(prov); }}
+                            aria-label={`Open ${prov} province details`}
+                          >
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-base-200 rounded-full flex items-center justify-center overflow-hidden border border-base-300 mb-1 sm:mb-2">
+                              <img
+                                src={img}
+                                alt={`${prov} image`}
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-cover"
+                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = PLACEHOLDER_IMAGE; }}
+                              />
+                            </div>
+                            <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-base-content truncate w-full px-1">{prov}</h3>
+                            <p className="text-xs text-base-content/60">{provinces[prov].length.toLocaleString()} LGUs</p>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </>
               )}
 
-              {/* pagination */}
-              <div className="flex items-center justify-center gap-3 mt-6">
+              {/* pagination - Mobile Optimized */}
+              <div className="flex items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
                 <button
-                  className="btn btn-sm btn-ghost"
+                  className="btn btn-xs sm:btn-sm btn-ghost"
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   disabled={currentPage === 1}
+                  aria-label="Previous page"
                 >
-                  <ChevronLeft />
+                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
-                <span className="text-sm">
+                <span className="text-xs sm:text-sm whitespace-nowrap">
                   Page {currentPage} / {Math.max(1, Math.ceil(Object.keys(provinces).length / itemsPerPage))}
                 </span>
                 <button
-                  className="btn btn-sm btn-ghost"
+                  className="btn btn-xs sm:btn-sm btn-ghost"
                   onClick={() =>
                     setCurrentPage((p) => Math.min(p + 1, Math.ceil(Object.keys(provinces).length / itemsPerPage)))
                   }
                   disabled={currentPage === Math.ceil(Object.keys(provinces).length / itemsPerPage)}
+                  aria-label="Next page"
                 >
-                  <ChevronRight />
+                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </>
           )}
-
+   
           {/* province detail */}
           {selectedProvince && !selectedLguId && (
             <ProvinceDetail
@@ -412,8 +634,12 @@ export default function LGUPage() {
               lguCache={lguCache}
               assessorsCache={assessorsCache}
               smvCache={smvCache}
+              updateLgu={updateLgu}
+              deleteLgu={deleteLgu}
             />
           )}
+          <QuickStats filteredLgus={filteredLgus} />
+
         </>
       )}
     </div>

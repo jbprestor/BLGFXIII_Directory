@@ -30,7 +30,7 @@ export const useLGUImages = () => {
             "Prosperidad": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/prosperidad.png",
             "Rosario": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/rosario.png",
             "San Luis": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/san-luis.png",
-            "Santa Josefa": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/santa-josefa.png",
+            "Santa Josefa": "https://agusandelsur.gov.ph/wp-content/uploads/2024/06/sta-josefa.png",
             "Sibagat": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/sibagat.png",
             "Talacogon": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/talacogon.png",
             "Trento": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/trento.png",
@@ -76,7 +76,7 @@ export const useLGUImages = () => {
             "Tandag City": "https://scontent.fcgy1-1.fna.fbcdn.net/v/t39.30808-1/346595875_278122367887514_8838700166032497663_n.jpg?stp=c0.26.947.947a_dst-jpg_s200x200_tt6&_nc_cat=106&ccb=1-7&_nc_sid=f907e8&_nc_ohc=XyIWndp_rMsQ7kNvwHaD-xq&_nc_oc=AdlL--2HKjqJHqCOcyGITFgW9sJmxNY0o3893ImEfFeSjb-yVxteZgCZuBJ6_hOW3RQ&_nc_zt=24&_nc_ht=scontent.fcgy1-1.fna&_nc_gid=jRnNBKnQJ1iOdrughPes5Q&oh=00_AfYFWYSaWjdrxlHzAtRL-2Do41gJsI5CYJbjNvKmY3YFmw&oe=68E29C42",
             "Buenavista": "https://scontent.fcgy1-3.fna.fbcdn.net/v/t39.30808-1/292124776_102695192511743_8588214394287852409_n.png?stp=dst-png_s200x200&_nc_cat=111&ccb=1-7&_nc_sid=f907e8&_nc_ohc=WVFJI7_2C-EQ7kNvwGh2Sdn&_nc_oc=AdnYMRPuZrv2tqIpPr7Sk0S9reEueB0S7GLs2KyCKknfCfXDWsIxnU-jFXCS9PrpNSI&_nc_zt=24&_nc_ht=scontent.fcgy1-3.fna&_nc_gid=TUFaH20Wsr1km1YnDnRDkA&oh=00_AfaeBak5ZzDTCMeLQtYq5k4EMGhVExdThVlUEpxIG08rNg&oe=68E2700E",
             "Butuan City": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Ph_seal_agusan_del_norte_butuan.gif",
-            "San Francisco": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/san-francisco.png",
+            "San Francisco (Agusan Sur)": "https://agusandelsur.gov.ph/wp-content/uploads/2024/03/san-francisco.png",
             "Bislig": "https://surigaodelsur.gov.ph/tourism//img/MUNICIPAL%20PICTURES/icon/bislig.jpg",
             "Tandag": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Flag_of_Tandag%2C_Surigao_del_Sur.png",
             "Surigao City": "https://scontent.fcgy1-1.fna.fbcdn.net/v/t39.30808-1/309880248_518724093592657_6762335454627152539_n.png?stp=dst-png_s200x200&_nc_cat=106&ccb=1-7&_nc_sid=f907e8&_nc_ohc=dHHqE8hNoSQQ7kNvwE7kCFQ&_nc_oc=Adkqk7QQ3nc5NCFvBhDQ7S2jOHAoGzCYBOvGD0HCaK78ybiEhtZjHdkq1V3R-PUBZDs&_nc_zt=24&_nc_ht=scontent.fcgy1-1.fna&_nc_gid=lLrC0xYgmgMwXY9Ea3Dntw&oh=00_AfYhAg1JLpkHD91ZxsPiqh8_JiIFuTDYgr7vZ0NxGid8nA&oe=68E28911"

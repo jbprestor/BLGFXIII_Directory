@@ -1,5 +1,6 @@
 // components/Sidebar.jsx
 import { useState, useEffect, useRef } from "react";
+import { useAuth } from "../../contexts/AuthContext.jsx";
 
 export default function Sidebar({ 
   currentPage, 
@@ -9,9 +10,12 @@ export default function Sidebar({
   isOpen,
   onClose 
 }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [themeOpen, setThemeOpen] = useState(false);
+  const { user, logout } = useAuth();
+  // Keep profile/theme dropdown state and refs for runtime behavior.
+  // Prefix variable names with underscore to indicate intentional usage to linters where applicable.
+  // dropdown open state (prefixed with underscore to indicate intentionally unused in JSX)
+  const [_profileOpen, _setProfileOpen] = useState(false);
+  const [_themeOpen, _setThemeOpen] = useState(false);
   const profileRef = useRef(null);
   const themeRef = useRef(null);
 
@@ -83,7 +87,7 @@ export default function Sidebar({
     }
   };
 
-  const theme = themes[currentTheme] || themes.default;
+  const theme = themes[currentTheme] || themes.corporate;
 
   // Enhanced navigation items with sub-items
   const navItems = [
@@ -105,6 +109,12 @@ export default function Sidebar({
       ]
     },
     { 
+      name: "LGU Profile", 
+      page: "lgu-profile", 
+      icon: "🏛️", 
+      description: "Local Government Units" 
+    },
+    { 
       name: "SMV Profiling", 
       page: "smv-profiling", 
       icon: "📊", 
@@ -121,8 +131,11 @@ export default function Sidebar({
       page: "settings", 
       icon: "⚙️", 
       description: "System Configuration",
+      // adminOnly: true, // Temporarily disabled for debugging
       subItems: [
         { name: "Profile", page: "profile", icon: "👤" },
+        { name: "User Management", page: "users", icon: "👥" },
+        { name: "Create User", page: "create", icon: "➕" },
         { name: "Preferences", page: "preferences", icon: "🔧" },
         { name: "Security", page: "security", icon: "🔒" }
       ]
@@ -136,32 +149,29 @@ export default function Sidebar({
   ];
 
   const handleLinkClick = (name, page) => {
+    console.log("Sidebar navigation:", { name, page, currentUser: user });
     onNavigate(page);
     onClose(); // Close sidebar on mobile
   };
 
   const handleThemeChange = (themeKey) => {
     onThemeChange(themeKey);
-    setThemeOpen(false);
-  };
-
-  const handleLogin = () => {
-    setIsLoggedIn(true);
+    _setThemeOpen(false);
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setProfileOpen(false);
+    logout();
+    _setProfileOpen(false);
   };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setProfileOpen(false);
+        _setProfileOpen(false);
       }
       if (themeRef.current && !themeRef.current.contains(event.target)) {
-        setThemeOpen(false);
+        _setThemeOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -218,18 +228,19 @@ export default function Sidebar({
 
         {/* User Profile Section */}
         <div className="p-4">
-          {isLoggedIn ? (
+          {user ? (
             <div className="card bg-base-200">
               <div className="card-body p-4">
                 <div className="flex items-center space-x-3">
                   <div className="avatar">
                     <div className="w-12 rounded-full bg-primary text-primary-content flex items-center justify-center">
-                      JD
+                      {user.firstName?.[0]}{user.lastName?.[0]}
                     </div>
                   </div>
                   <div>
-                    <p className="font-semibold">John Doe</p>
-                    <p className="text-sm text-base-content/70">john.doe@blgf.gov.ph</p>
+                    <p className="font-semibold">{user.firstName} {user.lastName}</p>
+                    <p className="text-sm text-base-content/70">{user.email}</p>
+                    <p className="text-xs text-base-content/50">{user.role}</p>
                   </div>
                 </div>
                 <div className="card-actions justify-end mt-2">
@@ -244,15 +255,7 @@ export default function Sidebar({
             </div>
           ) : (
             <div className="space-y-2">
-              <button 
-                onClick={handleLogin}
-                className="btn btn-primary btn-block"
-              >
-                Sign In
-              </button>
-              <button className="btn btn-ghost btn-block btn-sm">
-                Create Account
-              </button>
+              <p className="text-center text-sm text-base-content/60">Please log in to access the portal</p>
             </div>
           )}
         </div>
@@ -260,14 +263,24 @@ export default function Sidebar({
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-4">
           <div className="space-y-2">
-            {navItems.map((item) => (
+            {/* Debug logging */}
+            {console.log("Current user in sidebar:", user)}
+            {console.log("User role:", user?.role)}
+            {navItems
+              .filter(item => {
+                const shouldShow = !item.adminOnly || user?.role === "Admin";
+                console.log(`Item ${item.name}: adminOnly=${item.adminOnly}, userRole=${user?.role}, shouldShow=${shouldShow}`);
+                return shouldShow;
+              })
+              .map((item) => (
               <div key={item.page} className="space-y-1">
                 <a
                   onClick={() => handleLinkClick(item.name, item.page)}
                   className={`
                     flex items-center space-x-3 p-3 rounded-lg cursor-pointer
                     transition-all duration-200
-                    ${currentPage === item.page 
+                    ${(currentPage === item.page || 
+                       (item.subItems && item.subItems.some(subItem => subItem.page === currentPage)))
                       ? `bg-primary text-primary-content shadow-lg` 
                       : `hover:bg-base-200 hover:shadow-md`
                     }
@@ -281,7 +294,10 @@ export default function Sidebar({
                 </a>
 
                 {/* Sub-items */}
-                {item.subItems && currentPage === item.page && (
+                {item.subItems && (
+                  currentPage === item.page || 
+                  item.subItems.some(subItem => subItem.page === currentPage)
+                ) && (
                   <div className="ml-6 space-y-1">
                     {item.subItems.map((subItem) => (
                       <a

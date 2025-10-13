@@ -3,12 +3,34 @@ import { LGU } from "../models/LGU.js";
 
 export async function getAllQRRPAMonitorings(req, res) {
   try {
-    const { lguId, period, page = 1, limit = 10, status } = req.query;
+    const { lguId, period, page = 1, limit = 10, status, region } = req.query;
     let filter = {};
-    
+
     if (lguId) filter.lguId = lguId;
     if (period) filter.period = period;
     if (status) filter.status = status;
+
+    // If region is specified, we need to find LGUs in that region
+    if (region) {
+      const lgusInRegion = await LGU.find({ region }).select('_id');
+      if (lgusInRegion.length > 0) {
+        filter.lguId = { $in: lgusInRegion.map(lgu => lgu._id) };
+      } else {
+        // No LGUs found in the specified region, return empty result
+        return res.status(200).json({
+          success: true,
+          data: {
+            monitorings: [],
+            pagination: {
+              totalPages: 0,
+              currentPage: parseInt(page),
+              total: 0,
+              limit: parseInt(limit)
+            }
+          }
+        });
+      }
+    }
     
     const monitorings = await QRRPAMonitoring.find(filter)
       .populate('lguId', 'name province region classification incomeClass')
@@ -140,6 +162,23 @@ export async function createQRRPAMonitoring(req, res) {
       req.body.dateSubmitted = null;
     }
     
+    // If file was uploaded via multer, set attachmentUrl to the served path
+    if (req.file) {
+      // Basic validation: allow common spreadsheet mimetypes
+      const allowed = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel', // .xls, .csv sometimes
+        'text/csv'
+      ];
+      if (!allowed.includes(req.file.mimetype)) {
+        return res.status(400).json({ success: false, message: 'Uploaded file must be an Excel or CSV file.' });
+      }
+
+      // Build accessible URL path (served from /uploads/qrrpa)
+      const filename = req.file.filename;
+      req.body.attachmentUrl = `/uploads/qrrpa/${filename}`;
+    }
+
     const monitoring = new QRRPAMonitoring(req.body);
     const savedMonitoring = await monitoring.save();
     

@@ -32,21 +32,12 @@ export default React.memo(function ProvinceDetail({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <button className="btn btn-ghost btn-sm" onClick={onBack}>
-          <ChevronLeft className="w-4 h-4" /> All Provinces
-        </button>
-
-        <div className="text-sm text-base-content/50">
-          <span className="cursor-pointer hover:underline" onClick={onBack}>All Provinces</span>
-          <span className="mx-2">/</span>
-          <span className="font-semibold">{selectedProvince}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button className="btn btn-ghost btn-sm sm:hidden" onClick={onBack} aria-label="Back to provinces"><ChevronLeft className="w-4 h-4"/></button>
+          <h2 className="text-xl font-bold">{selectedProvince}</h2>
         </div>
-
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold">{selectedProvince}</h2>
-          <p className="text-base-content/60">{provinceLgus.length || 0} LGU{provinceLgus.length !== 1 ? "s" : ""} in this province</p>
-        </div>
+        <div className="text-sm text-base-content/60 hidden sm:block">{provinceLgus.length} LGUs</div>
       </div>
 
       <div className="space-y-6">

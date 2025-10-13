@@ -84,12 +84,12 @@ export const DetailField = ({ label, value }) => {
   return (
     <div className="form-control">
       <label className="label py-1">
-        <span className="label-text font-medium text-gray-700 dark:text-gray-300 text-sm">
+        <span className="label-text font-medium text-base-content text-sm">
           {label}
         </span>
       </label>
-      <div className="p-3 bg-white/80 dark:bg-gray-700/80 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 font-normal backdrop-blur-sm">
-        {value || <span className="text-gray-400 dark:text-gray-500">N/A</span>}
+      <div className="p-3 bg-base-100/80 rounded-lg border border-base-300 text-base-content font-normal backdrop-blur-sm">
+        {value || <span className="text-base-content/50">N/A</span>}
       </div>
     </div>
   );
