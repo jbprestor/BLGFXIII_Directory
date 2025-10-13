@@ -3,7 +3,7 @@ import axios from "axios";
 export default function useApi() {
   // Determine API base URL
   const API_BASE_URL =
-    import.meta.env.MODE === "development"
+    import.meta.env.MODE === "production"
       ? "http://localhost:5001/api"
       : "/api";
 
