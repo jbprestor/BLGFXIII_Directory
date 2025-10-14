@@ -1,11 +1,12 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+// src/pages/AssessorsPage.jsx
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import useApi from "../services/axios.js";
 import LoadingSpinner from "../components/common/LoadingSpinner.jsx";
 import ErrorDisplay from "../components/common/ErrorDisplay.jsx";
 import SearchFilters from "../components/directory/SearchFilters.jsx";
 import PersonnelTable from "../components/directory/PersonnelTable.jsx";
-import QuickStats from "../components/directory/QuickStats.jsx";
+import QuickStats from "../components/directory/QuickStats.jsx"; 
 import EmptyState from "../components/common/EmptyState.jsx";
 import EditModal from "../components/modals/assessorsDirectory/EditModal.jsx";
 import DetailsModal from "../components/modals/assessorsDirectory/DetailsModal.jsx";
@@ -27,28 +28,31 @@ export default function AssessorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Filters / UI state
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("all");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "ascending" });
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedProvince, setSelectedProvince] = useState("all");
+  const [selectedLguType, setSelectedLguType] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedSex, setSelectedSex] = useState("all");
 
+  const [sortConfig, _setSortConfig] = useState({ key: null, direction: "ascending" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Loading flags
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [updateLoading, setUpdateLoading] = useState(null);
   const [createLoading, setCreateLoading] = useState(false);
 
+  // Modals / selected rows
   const [editingAssessor, setEditingAssessor] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedAssessor, setSelectedAssessor] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedLguType, setSelectedLguType] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [selectedSex, setSelectedSex] = useState("all");
 
-
-  const itemsPerPage = 10;
-
-  // Build payload with defaults
+  // Build payload defaults before sending to API
   const buildPayload = useCallback(
     (data) => ({
       ...data,
@@ -59,92 +63,166 @@ export default function AssessorsPage() {
       doctoralDegree: data.doctoralDegree ?? "",
       eligibility: data.eligibility ?? "",
       prcLicenseNumber: data.prcLicenseNumber ?? "",
+      prcLicenseExpiration: data.prcLicenseExpiration || null,
+      officialDesignation: data.officialDesignation ?? "",
       officeEmail: data.officeEmail ?? "",
       personalEmail: data.personalEmail ?? "",
+      contactNumber: data.contactNumber ?? "",
+      mobileNumber: data.mobileNumber ?? "",
       isActive: data.isActive ?? true,
     }),
     []
   );
 
-  // Fetch assessors
-  const fetchAssessors = useCallback(async () => {
+  // Guard for concurrent fetches
+  const isFetchingRef = useRef(false);
+
+  // Stable refresh function used after create/update/delete
+  const refreshAssessors = useCallback(async () => {
+    if (isFetchingRef.current) {
+      console.debug("refreshAssessors: already fetching, skipping");
+      return;
+    }
+    isFetchingRef.current = true;
     setLoading(true);
     try {
       const res = await getAllAssessors();
-      let rawData = Array.isArray(res?.data) ? res.data : [];
+      const rawData = Array.isArray(res?.data) ? res.data : [];
 
       const mapped = rawData.map((a) => ({
         ...a,
         fullName: [a.firstName, a.middleName, a.lastName].filter(Boolean).join(" "),
-        lguName: a.lgu?.name || "N/A",
-        lguType: a.lgu?.classification || "N/A",
-        region: a.lgu?.region || "N/A",
-        province: a.lgu?.province || "N/A",   // <-- Add this line
+        lguName: a.lgu?.name || "",
+        lguType: a.lgu?.classification || "",
+        region: a.lgu?.region || "",
+        province: a.lgu?.province || "",
       }));
 
       setAssessors(mapped);
       setError(null);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load assessors directory: " + (err.response?.data?.message || err.message));
+    } catch (_err) {
+      console.error("refreshAssessors error:", _err);
+      setError("Failed to load assessors directory: " + (_err.response?.data?.message || _err.message));
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [getAllAssessors]);
 
-  useEffect(() => { fetchAssessors(); }, []);
+  // initial load — run once on mount to avoid dependency-driven loops
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!mounted) return;
+      if (isFetchingRef.current) return;
+      isFetchingRef.current = true;
+      setLoading(true);
+      try {
+        const res = await getAllAssessors();
+        const rawData = Array.isArray(res?.data) ? res.data : [];
 
+        const mapped = rawData.map((a) => ({
+          ...a,
+          fullName: [a.firstName, a.middleName, a.lastName].filter(Boolean).join(" "),
+          lguName: a.lgu?.name || "",
+          lguType: a.lgu?.classification || "",
+          region: a.lgu?.region || "",
+          province: a.lgu?.province || "",
+        }));
+
+        setAssessors(mapped);
+        setError(null);
+      } catch (err) {
+        console.error("initial fetchAssessors error:", err);
+        setError("Failed to load assessors directory: " + (err.response?.data?.message || err.message));
+      } finally {
+        setLoading(false);
+        isFetchingRef.current = false;
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, []); // intentionally empty: run only once on mount
+
+  // unique regions for the region dropdown
   const uniqueRegions = useMemo(
     () => [...new Set(assessors.map((a) => a.region).filter(Boolean))].sort(),
     [assessors]
   );
 
+  // unique provinces — dependent on selectedRegion (province list updates when region changes)
+  const uniqueProvinces = useMemo(() => {
+    const provs = assessors
+      .filter((a) => (selectedRegion === "all" ? true : a.region === selectedRegion))
+      .map((a) => a.province)
+      .filter(Boolean);
+    return [...new Set(provs)].sort();
+  }, [assessors, selectedRegion]);
+
+  // Whenever region changes reset selectedProvince to "all" to avoid inconsistent filters
+  useEffect(() => {
+    setSelectedProvince("all");
+  }, [selectedRegion]);
+
+  // Filter + search + sort logic (result that will be shown and exported)
   const filteredData = useMemo(() => {
-    const searchLower = searchTerm.toLowerCase();
+    const searchLower = searchTerm.trim().toLowerCase();
+
     let result = assessors.filter((a) => {
       const searchMatch =
-        !searchTerm ||
+        !searchLower ||
         ["fullName", "lguName", "plantillaPosition", "officeEmail", "region"].some(
-          (field) => a[field]?.toLowerCase().includes(searchLower)
+          (field) => (a[field] || "").toLowerCase().includes(searchLower)
         );
 
       const regionMatch = selectedRegion === "all" || a.region === selectedRegion;
+      const provinceMatch = selectedProvince === "all" || a.province === selectedProvince;
       const lguTypeMatch = selectedLguType === "all" || a.lguType === selectedLguType;
       const statusMatch = selectedStatus === "all" || a.statusOfAppointment === selectedStatus;
       const sexMatch = selectedSex === "all" || a.sex === selectedSex;
 
-      return searchMatch && regionMatch && lguTypeMatch && statusMatch && sexMatch;
+      return searchMatch && regionMatch && provinceMatch && lguTypeMatch && statusMatch && sexMatch;
     });
 
     if (sortConfig.key) {
       result.sort((a, b) => {
-        const aVal = a[sortConfig.key] ?? "";
-        const bVal = b[sortConfig.key] ?? "";
+        const aVal = (a[sortConfig.key] ?? "").toString().toLowerCase();
+        const bVal = (b[sortConfig.key] ?? "").toString().toLowerCase();
         if (aVal < bVal) return sortConfig.direction === "ascending" ? -1 : 1;
         if (aVal > bVal) return sortConfig.direction === "ascending" ? 1 : -1;
         return 0;
       });
     }
+
     return result;
-  }, [assessors, searchTerm, selectedRegion, selectedLguType, selectedStatus, selectedSex, sortConfig]);
+  }, [
+    assessors,
+    searchTerm,
+    selectedRegion,
+    selectedProvince,
+    selectedLguType,
+    selectedStatus,
+    selectedSex,
+    sortConfig,
+  ]);
 
-
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  // pagination
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
   const currentItems = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredData.slice(start, start + itemsPerPage);
   }, [currentPage, filteredData]);
 
-  // ----- CRUD Handlers -----
+  // ----- CRUD handlers -----
   const handleCreate = async (formData) => {
     setCreateLoading(true);
     try {
       await createAssessor(buildPayload(formData));
-      toast.success("Assessor added successfully");
+      // toast.success("Assessor added successfully");
       setIsCreateModalOpen(false);
-      fetchAssessors();
-    } catch (err) {
-      toast.error("Failed to add assessor: " + (err.response?.data?.message || err.message));
+      await refreshAssessors();
+    } catch (_err) {
+      console.error("create assessor error:", _err);
     } finally {
       setCreateLoading(false);
     }
@@ -155,11 +233,11 @@ export default function AssessorsPage() {
     try {
       setUpdateLoading(updatedAssessor._id);
       await updateAssessor(updatedAssessor._id, buildPayload(updatedAssessor));
-
+      // toast.success("Assessor updated");
       setIsEditModalOpen(false);
-      fetchAssessors();
-    } catch (err) {
-
+      await refreshAssessors();
+    } catch (_err) {
+      console.error("update assessor error:", _err);
     } finally {
       setUpdateLoading(null);
     }
@@ -173,9 +251,9 @@ export default function AssessorsPage() {
         try {
           await deleteAssessor(assessor._id);
           toast.success(`${assessor.fullName} deleted successfully`);
-          fetchAssessors();
-        } catch (err) {
-          toast.error(`Failed to delete ${assessor.fullName}: ` + (err.response?.data?.message || err.message));
+          await refreshAssessors();
+        } catch (_err) {
+          toast.error(`Failed to delete ${assessor.fullName}: ` + (_err.response?.data?.message || _err.message));
         } finally {
           setDeleteLoading(null);
         }
@@ -183,43 +261,68 @@ export default function AssessorsPage() {
     );
   };
 
+  // Clear filters helper (used by SearchFilters and EmptyState)
+  const clearAllFilters = useCallback(() => {
+    setSearchTerm("");
+    setSelectedRegion("all");
+    setSelectedProvince("all");
+    setSelectedLguType("all");
+    setSelectedStatus("all");
+    setSelectedSex("all");
+    setCurrentPage(1);
+  }, []);
+
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorDisplay error={error} onRetry={fetchAssessors} />;
+  if (error) return <ErrorDisplay error={error} onRetry={refreshAssessors} />;
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="text-center sm:text-left">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">Assessors Directory</h1>
-          <p className="text-sm sm:text-lg text-base-content/70 max-w-2xl">
-            Directory of Local Assessors across LGUs in the Philippines.
-          </p>
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+          <div className="text-center sm:text-left min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold mb-1 sm:mb-2">Assessors Directory</h1>
+            <p className="text-xs sm:text-sm lg:text-lg text-base-content/70 max-w-2xl">
+              Directory of Local Assessors across LGUs in the Philippines.
+            </p>
+          </div>
+
+          {canAdd && (
+            <button 
+              onClick={() => setIsCreateModalOpen(true)} 
+              className="btn btn-primary btn-sm sm:btn-md lg:btn-lg w-full sm:w-auto flex-shrink-0"
+            >
+              <span className="text-sm sm:text-base">+ Add Assessor</span>
+            </button>
+          )}
         </div>
-        {canAdd && (
-          <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary btn-lg">
-            + Add Assessor
-          </button>
-        )}
       </div>
 
       <SearchFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
-        selectedRegion={selectedRegion}
-        setSelectedRegion={setSelectedRegion}
-        uniqueRegions={uniqueRegions}
-        resultCount={filteredData.length}
         selectedLguType={selectedLguType}
         setSelectedLguType={setSelectedLguType}
         selectedStatus={selectedStatus}
         setSelectedStatus={setSelectedStatus}
+        selectedRegion={selectedRegion}
+        setSelectedRegion={setSelectedRegion}
+        selectedProvince={selectedProvince}
+        setSelectedProvince={setSelectedProvince}
         selectedSex={selectedSex}
         setSelectedSex={setSelectedSex}
+        uniqueRegions={uniqueRegions}
+        uniqueProvinces={uniqueProvinces}
+        resultCount={filteredData.length}
+        exportData={filteredData} // pass filtered rows so export matches visible results
       />
 
       <PersonnelTable
         data={currentItems}
-        onViewDetails={(a) => { setSelectedAssessor(a); setIsDetailsModalOpen(true); }}
+        onViewDetails={(a) => {
+          setSelectedAssessor(a);
+          setIsDetailsModalOpen(true);
+        }}
         onEdit={canEdit ? (a) => { setEditingAssessor(a); setIsEditModalOpen(true); } : undefined}
         onDelete={canDelete ? handleDelete : undefined}
         deleteLoading={deleteLoading}
@@ -233,20 +336,29 @@ export default function AssessorsPage() {
       <QuickStats directory={assessors} />
 
       {filteredData.length === 0 && !loading && (
-        <EmptyState onClearFilters={() => { setSearchTerm(""); setSelectedRegion("all"); setCurrentPage(1); }} />
+        <EmptyState onClearFilters={clearAllFilters} />
       )}
 
-      {canAdd && <AddModal isOpen={isCreateModalOpen} onAddPersonnel={handleCreate} onClose={() => setIsCreateModalOpen(false)} loading={createLoading} />}
+      {canAdd && (
+        <AddModal
+          isOpen={isCreateModalOpen}
+          onAddPersonnel={handleCreate}
+          onClose={() => setIsCreateModalOpen(false)}
+          loading={createLoading}
+        />
+      )}
 
-      {canEdit && <EditModal
-        isOpen={isEditModalOpen}
-        editingPerson={editingAssessor}
-        updateLoading={updateLoading}
-        onInputChange={(e) => setEditingAssessor(prev => ({ ...prev, [e.target.name]: e.target.value }))}
-        onUpdate={handleUpdate}
-        onClose={() => setIsEditModalOpen(false)}
-        formatDate={formatDate}
-      />}
+      {canEdit && (
+        <EditModal
+          isOpen={isEditModalOpen}
+          editingPerson={editingAssessor}
+          updateLoading={updateLoading}
+          onInputChange={(e) => setEditingAssessor(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+          onUpdate={handleUpdate}
+          onClose={() => setIsEditModalOpen(false)}
+          formatDate={formatDate}
+        />
+      )}
 
       <DetailsModal
         isOpen={isDetailsModalOpen}

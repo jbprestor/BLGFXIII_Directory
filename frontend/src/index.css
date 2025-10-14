@@ -1,2 +1,104 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+/* Enhanced dropdown readability for all themes */
+.dropdown-content.menu {
+  background-color: hsl(var(--b1)) !important;
+  border: 1px solid hsl(var(--bc) / 0.2) !important;
+}
+
+/* Force text color in dropdowns - prevent white on white */
+.dropdown-content.menu li button,
+.dropdown-content.menu li a,
+.dropdown-content.menu .font-medium,
+.dropdown-content.menu div:not(.badge):not(.w-16) {
+  color: hsl(var(--bc)) !important;
+}
+
+.dropdown-content.menu .menu-title span {
+  color: hsl(var(--bc) / 0.7) !important;
+  font-weight: 600;
+}
+
+/* Hover states - ensure text stays visible */
+.dropdown-content.menu li button:hover,
+.dropdown-content.menu li a:hover {
+  background-color: hsl(var(--b2)) !important;
+  color: hsl(var(--bc)) !important;
+}
+
+/* Active state */
+.dropdown-content.menu li button.active {
+  background-color: hsl(var(--p) / 0.15) !important;
+  color: hsl(var(--p)) !important;
+}
+
+/* Dark themes specific fixes */
+[data-theme="synthwave"] .dropdown-content.menu,
+[data-theme="cyberpunk"] .dropdown-content.menu {
+  background-color: #1a1a2e !important;
+}
+
+[data-theme="synthwave"] .dropdown-content.menu li button,
+[data-theme="synthwave"] .dropdown-content.menu li a,
+[data-theme="synthwave"] .dropdown-content.menu .font-medium,
+[data-theme="synthwave"] .dropdown-content.menu div:not(.badge):not(.w-16),
+[data-theme="cyberpunk"] .dropdown-content.menu li button,
+[data-theme="cyberpunk"] .dropdown-content.menu li a,
+[data-theme="cyberpunk"] .dropdown-content.menu .font-medium,
+[data-theme="cyberpunk"] .dropdown-content.menu div:not(.badge):not(.w-16) {
+  color: #ffffff !important;
+}
+
+[data-theme="synthwave"] .dropdown-content.menu li button:hover,
+[data-theme="synthwave"] .dropdown-content.menu li a:hover,
+[data-theme="cyberpunk"] .dropdown-content.menu li button:hover,
+[data-theme="cyberpunk"] .dropdown-content.menu li a:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+/* Light themes specific fixes */
+[data-theme="corporate"] .dropdown-content.menu,
+[data-theme="valentine"] .dropdown-content.menu {
+  background-color: #ffffff !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme="corporate"] .dropdown-content.menu li button,
+[data-theme="corporate"] .dropdown-content.menu li a,
+[data-theme="corporate"] .dropdown-content.menu .font-medium,
+[data-theme="corporate"] .dropdown-content.menu div:not(.badge):not(.w-16),
+[data-theme="valentine"] .dropdown-content.menu li button,
+[data-theme="valentine"] .dropdown-content.menu li a,
+[data-theme="valentine"] .dropdown-content.menu .font-medium,
+[data-theme="valentine"] .dropdown-content.menu div:not(.badge):not(.w-16) {
+  color: #1a1a2e !important;
+  font-weight: 500 !important;
+}
+
+[data-theme="corporate"] .dropdown-content.menu .menu-title span,
+[data-theme="valentine"] .dropdown-content.menu .menu-title span {
+  color: #4a4a4a !important;
+  font-weight: 600 !important;
+}
+
+[data-theme="corporate"] .dropdown-content.menu li button:hover,
+[data-theme="corporate"] .dropdown-content.menu li a:hover,
+[data-theme="valentine"] .dropdown-content.menu li button:hover,
+[data-theme="valentine"] .dropdown-content.menu li a:hover {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Let DaisyUI handle text colors naturally - minimal overrides */
+.label-text {
+  font-weight: 600;
+}
+
+/* CLEAN SOLUTION: Let text-primary-content work as designed by DaisyUI */
+/* Only ensure it's not overridden by other rules */
+.text-primary-content {
+  color: hsl(var(--pc));
+}

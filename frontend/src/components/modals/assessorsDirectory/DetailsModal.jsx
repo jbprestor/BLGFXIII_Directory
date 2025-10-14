@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React from "react";
 import { DetailField } from "../../common/FormFields.jsx";
 import {
   FIELD_CONFIG,
@@ -53,7 +53,7 @@ export default function DetailsModal({
                   key={fieldName}
                   label={FIELD_CONFIG[fieldName].label}
                   value={
-                    fieldName.includes("date") && selectedPerson[fieldName]
+                    (fieldName.includes("date") || fieldName.includes("Expiration")) && selectedPerson[fieldName]
                       ? formatDate(selectedPerson[fieldName])
                       : selectedPerson[fieldName]
                   }

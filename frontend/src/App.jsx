@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router";
 import { useAuth } from "./contexts/AuthContext.jsx";
 
 import Navbar from "./components/layout/Navbar/Navbar.jsx";
@@ -7,28 +7,59 @@ import Footer from "./components/layout/Footer";
 import HomePage from "./pages/HomePage";
 import AssessorsPage from "./pages/AssessorsPage";
 import CreatePage from "./pages/CreatePage";
+import LGUPage from "./pages/LGUPage.jsx";
+import UsersPage from "./pages/UsersPage.jsx";
+import SettingsPage from "./pages/SettingsPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
 // import Dashboard from "./pages/Dashboard";
 // import LGUsPage from "./pages/LGUsPage";
 import SMVProcessesPage from "./pages/SMVMonitoringPage.jsx";
-// import LAOEMonitoringPage from "./pages/LAOEMonitoringPage";
-// import QRRPAMonitoringPage from "./pages/QRRPAMonitoringPage";
+import QRRPAMonitoringPage from "./pages/QRRPAMonitoringPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
-  const [currentTheme, setCurrentTheme] = useState("default");
+  const [currentTheme, setCurrentTheme] = useState("synthwave");
   const { user, loading } = useAuth();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine current page based on URL path
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    switch (path) {
+      case "/":
+        return "home";
+      case "/directory":
+        return "directory";
+      case "/lgu-profile":
+        return "lgu-profile";
+      case "/smv-processes":
+        return "smv-profiling";
+      case "/qrrpa-monitoring":
+        return "qrrpa-submission"; // Map monitoring page to submission nav item
+      case "/create":
+        return "create";
+      case "/users":
+        return "users";
+      case "/settings":
+        return "settings";
+      case "/profile":
+        return "profile";
+      default:
+        return "home";
+    }
+  };
+
+  const currentPage = getCurrentPage();
 
   // Apply DaisyUI theme to document
   useEffect(() => {
     const themes = {
-      default: "corporate",
-      emerald: "emerald",
-      sunset: "sunset",
+      corporate: "corporate",
       synthwave: "synthwave",
-      retro: "retro",
       cyberpunk: "cyberpunk",
       valentine: "valentine",
-      aqua: "aqua",
     };
     document.documentElement.setAttribute(
       "data-theme",
@@ -46,8 +77,6 @@ export default function App() {
     );
   }
 
-  const navigate = useNavigate();
-
   const handleNavigate = (page) => {
     switch (page) {
       case "home":
@@ -55,6 +84,9 @@ export default function App() {
         break;
       case "directory":
         navigate("/directory");
+        break;
+      case "lgu-profile":
+        navigate("/lgu-profile");
         break;
       case "smv-profiling":
         navigate("/smv-processes"); // adjust to your route
@@ -64,6 +96,15 @@ export default function App() {
         break;
       case "create":
         navigate("/create");
+        break;
+      case "users":
+        navigate("/users");
+        break;
+      case "settings":
+        navigate("/settings");
+        break;
+      case "profile":
+        navigate("/profile");
         break;
       default:
         navigate("/");
@@ -80,19 +121,21 @@ export default function App() {
 
       {/* Navigation */}
       <Navbar
+        currentPage={currentPage}
         currentTheme={currentTheme}
         onThemeChange={handleThemeChange}
         user={user}
         onNavigate={handleNavigate}
       />
 
-      {/* Main Content */}
-      <main className="flex-grow">
+      {/* Main Content - Mobile Optimized */}
+      <main className="flex-grow pt-14 pb-2 px-2 sm:px-3 lg:px-4">
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/directory" element={<AssessorsPage />} />
           <Route path="/create" element={<CreatePage />} />
+          <Route path="/lgu-profile" element={<LGUPage />} />
 
           {/* Protected Routes */}
           {/* <Route
@@ -109,7 +152,6 @@ export default function App() {
               <ProtectedRoute>
                 <LGUsPage />
               </ProtectedRoute>
-            }
           /> */}
           <Route
             path="/assessors"
@@ -142,6 +184,38 @@ export default function App() {
                 <QRRPAMonitoringPage />
               </ProtectedRoute>
             }/> */}
+          <Route
+            path="/qrrpa-monitoring"
+            element={
+              <ProtectedRoute>
+                <QRRPAMonitoringPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <UsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Redirect unknown routes to home */}
           <Route path="*" element={<Navigate to="/" replace />} />

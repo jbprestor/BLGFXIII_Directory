@@ -41,11 +41,14 @@ export default function DirectoryPage() {
   const fetchDirectory = useCallback(async () => {
     try {
       const res = await api.get();
-      console.log("Fetched directory:", res.data);
+      // Only log in development mode
+      if (import.meta.env.MODE === "development") {
+        console.log("Fetched directory: [DATA REDACTED]");
+      }
       setDirectory(Array.isArray(res.data) ? res.data : []);
 
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
+      console.error(_err);
       setError("Failed to load directory");
     } finally {
       setLoading(false);
@@ -196,7 +199,11 @@ export default function DirectoryPage() {
 
         const payload = buildPayload(editingPerson);
         const res = await api.put(`/${editingPerson._id}`, payload);
-        console.log(res);
+        
+        // Only log success in development mode
+        if (import.meta.env.MODE === "development") {
+          console.log("Directory update successful");
+        }
 
         setDirectory((prev) =>
           prev.map((person) =>

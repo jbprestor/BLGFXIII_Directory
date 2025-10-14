@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
 import { validateField } from "../../../utils/validationRules.js";
 import {
@@ -10,12 +10,7 @@ import { InputField, SelectField } from "../../common/FormFields.jsx";
 import useApi from "../../../services/axios.js";
 
 export default function AddModal({ isOpen, onClose, refreshAssessors }) {
-  const { api: apiInstance, getAllLgusNoPagination, createAssessor } = useApi(); // ✅ FIX: also grab helper
-  const apiRef = useRef(apiInstance);
-
-  useEffect(() => {
-    apiRef.current = apiInstance;
-  }, [apiInstance]);
+  const { api: _apiInstance, getAllLgusNoPagination, createAssessor } = useApi(); // ✅ FIX: also grab helper
 
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
@@ -32,20 +27,20 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
 
   // Fetch ALL LGUs (no pagination now)
   useEffect(() => {
-    let isMounted = true;
+  let _isMounted = true;
     const fetchLgus = async () => {
       try {
         const response = await getAllLgusNoPagination(); // ✅ FIX: no stray "/"
         const { lgus } = response.data;
         setAllLgusFromDb(Array.isArray(lgus) ? lgus : []);
-      } catch (err) {
-        console.error("Failed to fetch LGUs:", err);
+      } catch (_err) {
+        console.error("Failed to fetch LGUs:", _err);
         setAllLgusFromDb([]);
       }
     };
     fetchLgus();
     return () => {
-      isMounted = false; // cleanup to prevent race conditions
+      _isMounted = false; // cleanup to prevent race conditions
     };
   }, []);
 
@@ -97,7 +92,7 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
 
     let sanitized = value;
 
-    if (name === "contactNumber") sanitized = value.replace(/\D/g, "");
+    if (name === "contactNumber" || name === "mobileNumber") sanitized = value.replace(/\D/g, "");
     if (name === "officeEmail" || name === "personalEmail")
       sanitized = value.toLowerCase().trim();
     if (name === "stepIncrement") sanitized = value.replace(/[^0-9]/g, "");
@@ -196,12 +191,21 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
         // Build payload with safe defaults
         const payload = {
           ...formData,
-          officialDesignation: formData.plantillaPosition, // or provide actual designation
+          officialDesignation: formData.officialDesignation || "", // use actual field, not plantillaPosition
           birthday: formData.birthday
             ? new Date(formData.birthday).toISOString()
             : null,
           dateOfAppointment: formData.dateOfAppointment
             ? new Date(formData.dateOfAppointment).toISOString()
+            : null,
+          prcLicenseExpiration: formData.prcLicenseExpiration
+            ? new Date(formData.prcLicenseExpiration).toISOString()
+            : null,
+          dateOfMandatoryRetirement: formData.dateOfMandatoryRetirement
+            ? new Date(formData.dateOfMandatoryRetirement).toISOString()
+            : null,
+          dateOfCompulsoryRetirement: formData.dateOfCompulsoryRetirement
+            ? new Date(formData.dateOfCompulsoryRetirement).toISOString()
             : null,
           lgu: formData.lgu, // must be valid ObjectId
           stepIncrement: formData.stepIncrement
@@ -210,12 +214,22 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
           officeEmail: formData.officeEmail || "",
           personalEmail: formData.personalEmail || "",
           contactNumber: formData.contactNumber || "",
+          mobileNumber: formData.mobileNumber || "",
           salaryGrade: formData.salaryGrade || "",
         };
 
-        console.log("Submitting Assessor Payload:", payload);
+        // Only log in development mode and redact sensitive data
+        if (import.meta.env.MODE === "development") {
+          console.log("Submitting Assessor Payload:", {
+            ...payload,
+            personalEmail: "[REDACTED]",
+            officeEmail: "[REDACTED]",
+            contactNumber: "[REDACTED]",
+            mobileNumber: "[REDACTED]"
+          });
+        }
 
-        const res = await createAssessor(payload);
+  const _res = await createAssessor(payload);
 
         toast.success(
           `${payload.firstName} ${payload.lastName} added successfully`
@@ -223,9 +237,9 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
 
         if (refreshAssessors) await refreshAssessors();
         onClose();
-      } catch (err) {
-        console.error("Backend Error Response:", err.response?.data || err);
-        toast.error(err?.response?.data?.message || "Failed to add personnel");
+      } catch (_err) {
+        console.error("Backend Error Response:", _err.response?.data || _err);
+        toast.error(_err?.response?.data?.message || "Failed to add personnel");
       } finally {
         setSubmitting(false);
       }
@@ -315,7 +329,7 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
             label="Employment Status"
             name="statusOfAppointment"
             value={formData.statusOfAppointment || ""}
-            options={["Permanent", "Temporary", "Contractual", "Casual"]}
+            options={["Permanent", "Temporary", "Contractual", "Casual", "Acting", "OIC", "Job Order"]}
             onChange={(value) =>
               handleInputChange(value, "statusOfAppointment")
             }

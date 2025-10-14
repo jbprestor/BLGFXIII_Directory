@@ -55,9 +55,11 @@ export default function Navbar({
     () => [
       { name: "Home", page: "home", icon: "🏠" },
       { name: "Directory", page: "directory", icon: "📁" },
+      { name: "LGU Profile", page: "lgu-profile", icon: "🏢" },
       { name: "SMV Profiling", page: "smv-profiling", icon: "📊" },
       { name: "QRRPA Submission", page: "qrrpa-submission", icon: "📋" },
-      { name: "Create", page: "create", icon: "➕" },
+      //{ name: "Settings", page: "settings", icon: "⚙️" },
+      // { name: "Create", page: "create", icon: "➕" },
     ],
     []
   );
@@ -101,15 +103,11 @@ export default function Navbar({
         role: userData.role,
         region: userData.region,
       };
-      await registerUser(payload);
+      const result = await registerUser(payload);
       setUserCreateOpen(false);
-      toast.success("User created successfully!");
+      return result; // Return result for modal to handle success
     } catch (error) {
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to create user"
-      );
+      // Just re-throw error for modal to handle
       throw error;
     } finally {
       setCreateUserLoading(false);
@@ -177,7 +175,7 @@ export default function Navbar({
           {isLoggedIn && (
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className={`btn btn-ghost btn-circle lg:hidden ${
+              className={`hamburger-menu btn btn-ghost btn-circle ${
                 isScrolled ? "" : "text-white"
               }`}
             >
@@ -212,12 +210,12 @@ export default function Navbar({
                 <li key={item.page}>
                   <a
                     onClick={() => onNavigate(item.page)}
-                    className={`flex items-center py-2 px-4 rounded-lg transition-all duration-200 ${
+                    className={`nav-item flex items-center py-2 px-4 rounded-lg transition-all duration-300 cursor-pointer ${
                       currentPage === item.page
-                        ? "bg-primary text-primary-content shadow-md"
+                        ? "active bg-primary text-primary-content shadow-lg border-2 border-primary-focus transform scale-105"
                         : isScrolled
-                        ? "text-base-content hover:bg-base-200/80"
-                        : "text-white hover:bg-white/20"
+                        ? "text-base-content hover:bg-base-200/80 hover:shadow-md"
+                        : "text-white hover:bg-white/20 hover:shadow-md"
                     }`}
                   >
                     <span className="mr-2 text-lg">{item.icon}</span>
@@ -276,21 +274,36 @@ export default function Navbar({
           <div className="fixed inset-0 z-30 bg-black bg-opacity-50 transition-opacity duration-300"></div>
           <div
             ref={mobileMenuRef}
-            className="fixed top-0 left-0 h-full w-80 max-w-full bg-base-100 shadow-xl z-40 transform transition-transform duration-300 ease-in-out"
+            className="fixed top-0 left-0 h-full w-72 max-w-[85vw] bg-base-100 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out"
           >
-            <div className="flex items-center justify-between p-4 border-b border-base-300">
-              <h2 className="text-xl font-bold">Menu</h2>
+            {/* Header */}
+            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary to-primary-focus text-primary-content border-b border-base-300">
+              <div className="flex items-center gap-3">
+                <div className="avatar">
+                  <div className="w-10 h-10 rounded-full ring-2 ring-white/20">
+                    <img
+                      src="https://blgf.gov.ph/wp-content/uploads/2022/05/BLGF-Seal-HD-768x768.png"
+                      alt="BLGF Logo"
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <h2 className="text-sm font-bold leading-tight">BLGF</h2>
+                  <span className="text-xs opacity-90">Caraga</span>
+                </div>
+              </div>
               <button
-                className="btn btn-ghost btn-circle"
+                className="btn btn-ghost btn-circle btn-sm text-primary-content hover:bg-white/20"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-4 overflow-y-auto h-full pb-20">
+            <div className="p-3 overflow-y-auto h-full pb-20 bg-base-50">
               {/* Navigation Items */}
-              <ul className="menu flex flex-col gap-2">
+              <ul className="menu flex flex-col gap-1">
                 {navItems.map((item) => (
                   <li key={item.page}>
                     <a
@@ -298,43 +311,83 @@ export default function Navbar({
                         onNavigate(item.page);
                         setMobileMenuOpen(false);
                       }}
-                      className={`flex items-center py-4 px-4 rounded-lg transition-all duration-200 text-lg ${
+                      className={`mobile-nav-item flex items-center py-3 px-3 rounded-xl transition-all duration-300 text-base cursor-pointer ${
                         currentPage === item.page
-                          ? "bg-primary text-primary-content shadow-md"
-                          : "text-base-content hover:bg-base-200"
+                          ? "active bg-primary text-primary-content shadow-lg font-medium border-l-4 border-primary-focus"
+                          : "text-base-content hover:bg-base-200/70 hover:shadow-sm hover:translate-x-1"
                       }`}
                     >
-                      <span className="mr-3 text-xl">{item.icon}</span>
-                      {item.name}
+                      <span className="mr-3 text-lg opacity-80">{item.icon}</span>
+                      <span className="flex-1">{item.name}</span>
+                      {currentPage === item.page && (
+                        <span className="text-xs opacity-75">●</span>
+                      )}
                     </a>
                   </li>
                 ))}
               </ul>
 
-              <div className="divider my-6"></div>
+              <div className="divider my-4 opacity-30"></div>
 
               {/* Theme Selector in Mobile Menu */}
-              <div className="px-2 mb-4 sm:hidden">
-                <label className="label">
-                  <span className="label-text font-medium">Theme</span>
+              <div className="px-2 mb-4">
+                <label className="label py-2">
+                  <span className="label-text font-semibold text-sm text-base-content">🎨 Theme</span>
                 </label>
-                <ThemeSelector
-                  currentTheme={currentTheme}
-                  onThemeChange={handleThemeChange}
-                  isScrolled={true}
-                  themeRef={themeRef}
-                  themeOpen={themeOpen}
-                  setThemeOpen={setThemeOpen}
-                  theme={theme}
-                />
+                <div className="dropdown dropdown-end w-full">
+                  <button
+                    onClick={() => setThemeOpen(!themeOpen)}
+                    className="btn btn-outline w-full justify-between text-base-content"
+                    aria-label="Change theme"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{themes[currentTheme]?.icon}</span>
+                      <span className="text-sm">{themes[currentTheme]?.name}</span>
+                    </div>
+                    <span className={`transition-transform duration-200 ${themeOpen ? 'rotate-180' : ''}`}>
+                      ▼
+                    </span>
+                  </button>
+                  {themeOpen && (
+                    <ul className="dropdown-content z-[1] menu p-2 shadow-2xl bg-base-100 rounded-box w-full mt-2 border border-base-300">
+                      <li className="menu-title">
+                        <span className="text-base-content/80 font-semibold text-xs">Choose Theme</span>
+                      </li>
+                      {Object.entries(themes).map(([key, themeData]) => (
+                        <li key={key}>
+                          <button
+                            onClick={() => {
+                              handleThemeChange(key);
+                              setThemeOpen(false);
+                            }}
+                            className={`justify-between transition-colors duration-300 ${
+                              currentTheme === key
+                                ? "active bg-primary text-primary-content font-semibold"
+                                : "hover:bg-base-200 text-base-content"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <span className="text-lg">{themeData.icon}</span>
+                              <span className="text-sm font-medium">{themeData.name}</span>
+                            </div>
+                            {currentTheme === key && (
+                              <span className="badge badge-success badge-sm">✓</span>
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
 
               {/* Logout Button */}
-              <div className="px-2">
+              <div className="px-2 mt-6">
                 <button
                   onClick={handleLogout}
-                  className="btn btn-outline btn-error w-full"
+                  className="btn btn-outline btn-error w-full gap-2 rounded-xl"
                 >
+                  <span className="text-sm">🚪</span>
                   Logout
                 </button>
               </div>
@@ -351,37 +404,81 @@ export default function Navbar({
     to { transform: translateX(0); }
   }
 
+  @keyframes activeGlow {
+    0% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+    100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+  }
+
   .mobile-menu {
     animation: slideIn 0.3s ease-out;
   }
 
   .nav-item {
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     position: relative;
   }
 
   .nav-item::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    bottom: -2px;
     left: 50%;
     width: 0;
-    height: 2px;
+    height: 3px;
     background: currentColor;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     transform: translateX(-50%);
+    border-radius: 2px;
   }
 
   .nav-item:hover::after {
-    width: 70%;
+    width: 80%;
   }
 
   .nav-item.active::after {
-    width: 70%;
+    width: 90%;
+    background: var(--p);
+  }
+
+  /* Active navigation item glowing effect */
+  .nav-item.active {
+    animation: activeGlow 2s ease-in-out infinite;
+  }
+
+  /* Mobile active item styling */
+  .mobile-nav-item.active {
+    position: relative;
+    background: linear-gradient(135deg, var(--p) 0%, var(--pf) 100%);
+  }
+
+  .mobile-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--pc);
+    border-radius: 0 4px 4px 0;
+  }
+
+  .mobile-nav-item:hover {
+    transform: translateX(2px);
+  }
+
+  .mobile-nav-item.active:hover {
+    transform: none;
   }
 
   @media (max-width: 1023px) {
     .navbar-center {
+      display: none !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .hamburger-menu {
       display: none !important;
     }
   }

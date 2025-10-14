@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/jbprestor/BLGFXIII_Directory/issues"
   },
-  "homepage": "https://github.com/jbprestor/BLGFXIII_Directory#readme"
+  "homepage": "https://github.com/jbprestor/BLGFXIII_Directory#readme",
+  "dependencies": {
+    "lucide-react": "^0.544.0"
+  }
 }

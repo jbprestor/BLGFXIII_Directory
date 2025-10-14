@@ -108,7 +108,7 @@ export const FIELD_CONFIG = {
     label: "Status of Appointment",
     type: "select",
     // validation: ["required"],   // ⬅ commented
-    options: ["Permanent", "Temporary", "Casual", "Job Order", "Contractual"],
+    options: ["Permanent", "Temporary", "Casual", "Job Order", "Contractual", "Acting", "OIC"],
   },
   dateOfAppointment: {
     label: "Date of Appointment",
@@ -130,6 +130,17 @@ export const FIELD_CONFIG = {
     label: "PRC License Number",
     type: "text",
     placeholder: "Enter PRC license number",
+  },
+  prcLicenseExpiration: {
+    label: "PRC License Expiration",
+    type: "date",
+    placeholder: "Select expiration date",
+  },
+  mobileNumber: {
+    label: "Mobile Number",
+    type: "text",
+    placeholder: "10-15 digits only",
+    maxLength: 15,
   },
 
   // Important Dates
@@ -177,6 +188,7 @@ export const FIELD_GROUPS = {
     "civilStatus",
     "birthday",
     "contactNumber",
+    "mobileNumber",
     "officeEmail",
     "personalEmail",
   ],
@@ -193,6 +205,7 @@ export const FIELD_GROUPS = {
     "salaryGrade",
     "stepIncrement",
     "prcLicenseNumber",
+    "prcLicenseExpiration",
   ],
   importantDates: ["dateOfMandatoryRetirement", "dateOfCompulsoryRetirement"],
   education: [

@@ -46,8 +46,8 @@ function getColor(key) {
     case "municipalities": return "text-accent";
     case "provinces": return "text-warning";
     case "male": return "text-info";
-    case "female": return "text-pink-500";
-    case "other": return "text-purple-500";
+    case "female": return "text-secondary";
+    case "other": return "text-accent";
     default: return "text-base-content";
   }
 }

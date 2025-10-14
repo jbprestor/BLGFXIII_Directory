@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/components/common/ConfirmToast.js
 import toast from "react-hot-toast";
 import { useEffect, useState } from "react";

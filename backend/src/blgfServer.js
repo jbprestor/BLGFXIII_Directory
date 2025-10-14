@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { connectDB } from "./config/db.js";
 import { rateLimiter, authRateLimiter } from "./middleware/rateLimiter.js";
 import path from "path";
+import fs from "fs";
 
 // Import all route files
 import { userRoutes } from "./routes/usersRoutes.js"; 
@@ -27,17 +28,32 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// CORS configuration
+// CORS configuration - Must be before static files for browser requests
 if (process.env.NODE_ENV !== "production") {
   console.log("CORS enabled for development");
   app.use(cors({
-    origin: process.env.VITE_CLIENT_API_URL_LOCAL,
+    origin: [
+      process.env.VITE_CLIENT_API_URL_LOCAL,
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000'
+    ],
     credentials: true
   }));
 }
 
-// Apply rate limiting to all routes
-app.use(rateLimiter);
+// Serve static files BEFORE rate limiting (images shouldn't be rate limited)
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
+console.log("Static files served from:", uploadsDir);
+
+// Ensure qrrpa subfolder exists
+const qrrpaDir = path.join(uploadsDir, 'qrrpa');
+if (!fs.existsSync(qrrpaDir)) fs.mkdirSync(qrrpaDir, { recursive: true });
+
+// Apply rate limiting to API routes only (not static files)
+app.use('/api', rateLimiter);
 
 // API routes - organized by resource
 app.use("/api/users", userRoutes);

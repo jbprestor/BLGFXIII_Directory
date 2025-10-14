@@ -166,6 +166,10 @@ export default function PersonnelTable({
                             {person.contactNumber || "N/A"}
                           </div>
                           <div>
+                            <strong>Mobile:</strong>{" "}
+                            {person.mobileNumber || "N/A"}
+                          </div>
+                          <div>
                             <strong>LGU:</strong> {person.lguName || "N/A"}
                           </div>
                           <div>
@@ -173,8 +177,28 @@ export default function PersonnelTable({
                             {person.statusOfAppointment || "N/A"}
                           </div>
                           <div>
+                            <strong>Plantilla Position:</strong>{" "}
+                            {person.plantillaPosition || "N/A"}
+                          </div>
+                          <div>
+                            <strong>Official Designation:</strong>{" "}
+                            {person.officialDesignation || "N/A"}
+                          </div>
+                          <div>
                             <strong>Salary Grade:</strong>{" "}
                             {person.salaryGrade || "N/A"}
+                          </div>
+                          <div>
+                            <strong>PRC License:</strong>{" "}
+                            {person.prcLicenseNumber || "N/A"}
+                          </div>
+                          <div>
+                            <strong>PRC Expiry:</strong>{" "}
+                            {person.prcLicenseExpiration
+                              ? new Date(
+                                  person.prcLicenseExpiration
+                                ).toLocaleDateString()
+                              : "N/A"}
                           </div>
                           <div>
                             <strong>Appointment Date:</strong>{" "}

@@ -42,6 +42,7 @@ export const FIELD_CONFIG = {
     },
     birthday: { label: "Birthday", type: "date", validation: ["required", "date"] },
     contactNumber: { label: "Contact Number", type: "text", validation: ["phone"] },
+    mobileNumber: { label: "Mobile Number", type: "text", validation: ["phone"] },
     emailAddress: { label: "Email Address", type: "email", validation: ["email"] },
     lguType: {
         label: "LGU Type",
@@ -56,12 +57,14 @@ export const FIELD_CONFIG = {
         label: "Status of Appointment",
         type: "select",
         validation: ["required"],
-        options: ["Permanent", "Temporary", "Casual", "Job Order", "Contractual"]
+        options: ["Permanent", "Temporary", "Casual", "Job Order", "Contractual", "Acting", "OIC"]
     },
     dateOfAppointment: { label: "Date of Appointment", type: "date", validation: ["required", "date"] },
     salaryGrade: { label: "Salary Grade", type: "text" },
     stepIncrement: { label: "Step Increment", type: "number", validation: ["number"] },
     prcLicenseNumber: { label: "PRC License Number", type: "text" },
+    prcLicenseExpiration: { label: "PRC License Expiration", type: "date", validation: ["date"] },
+    officialDesignation: { label: "Official Designation", type: "text" },
     dateOfMandatoryRetirement: { label: "Date of Mandatory Retirement", type: "date", validation: ["date"] },
     dateOfCompulsoryRetirement: { label: "Date of Compulsory Retirement", type: "date", validation: ["date"] },
     bachelorDegree: { label: "Bachelor Degree", type: "text" },
