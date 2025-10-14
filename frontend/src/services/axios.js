@@ -6,7 +6,7 @@ export default function useApi() {
   if (_cachedApi) return _cachedApi;
   // Determine API base URL
   const API_BASE_URL =
-    import.meta.env.MODE === "production"
+    import.meta.env.MODE === "development"
       ? "http://localhost:5001/api"
       : "/api";
 
