@@ -11,7 +11,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import QuickStats from "../components/lgu/quickstats.jsx";
+import QuickStats from "../components/lgu/QuickStats.jsx";
 import SearchFilters from "../components/lgu/SearchFilter.jsx";
 import ProvinceDetail from "../components/lgu/ProvinceDetail.jsx";
 import LGUDetail from "../components/lgu/LGUDetails.jsx";
