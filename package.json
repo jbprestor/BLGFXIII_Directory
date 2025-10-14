@@ -4,7 +4,7 @@
   "description": "This is all about BLGF XIII work \r Disclaimer, Not for use of Everyone!!! Exclusively for BLGF Caraga!\r ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/jbprestor/BLGFXIII_Directory?utm_source=oss&utm_medium=github&utm_campaign=jbprestor%2FBLGFXIII_Directory&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)",
   "main": "index.js",
   "scripts": {
-    "build": "npm install --prefix backend && npm install --include=dev --prefix frontend && npm install --save lucide-react@0.344.0 --prefix frontend && npm run build --prefix frontend",
+    "build": "npm install --prefix backend && npm install --include=dev --prefix frontend && npm install --save lucide-react@0.344.0 --legacy-peer-deps --prefix frontend && npm run build --prefix frontend",
     "start": "npm run start --prefix backend"
   },
   "repository": {
