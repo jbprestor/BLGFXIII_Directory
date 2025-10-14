@@ -1,72 +1,91 @@
-# BLGFXIII_Directory — Quick AI onboarding
+# Frontend Build Optimization: Large Chunk Handling
 
-This repo is a MERN-style app split into `frontend/` (React + Vite + DaisyUI) and `backend/` (Express + Mongoose). The guidance below highlights project-specific patterns, integration points, and dev commands so an AI agent can be productive quickly.
+If you see warnings about chunks larger than 500 kB after minification:
 
-## Big picture
-- Frontend calls backend APIs under `/api/*` via centralized `useApi()` hooks in `frontend/src/services/axios.js`
-- Backend entry: `backend/src/blgfServer.js` - In production serves `../frontend/dist` and mounts API routers under `/api`
-- **DaisyUI themes with dynamic switching** via `data-theme` attribute on `<html>` element - **DEFAULT: synthwave**
-- JWT auth with localStorage persistence and axios request interceptors
-- Rate limiting on all routes (50 req/min) via Upstash Redis, with stricter limits for auth endpoints
-- React Router for SPA navigation with protected routes using `ProtectedRoute.jsx`
+- Use dynamic imports (React.lazy + import()) for large components/pages to enable code-splitting:
+  ```js
+  const MyComponent = React.lazy(() => import('./MyComponent'));
+  ```
+- In `vite.config.js`, use manual chunking to split vendor libraries or large dependencies:
+  ```js
+  export default {
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'axios']
+          }
+        }
+      }
+    }
+  }
+  ```
+- To silence the warning, increase the chunk size limit in `vite.config.js`:
+  ```js
+  build: {
+    chunkSizeWarningLimit: 1000 // (in kB)
+  }
+  ```
 
-## High-value files to inspect
-- Backend: `backend/src/routes/*`, `controllers/*`, `models/*` - example LGU flows in `lguRoutes.js`, `lguController.js`, `LGU.js`
-- Middleware: `backend/src/middleware/authMiddleware.js` (JWT), `rateLimiter.js` (Upstash Redis rate limits)
-- Frontend services: `frontend/src/services/axios.js` (central API client), `frontend/src/contexts/AuthContext.jsx` (auth state)
-- Key pages: `LGUPage.jsx` (caching + normalization patterns), `QRRPAMonitoringPage.jsx` (form handling), `DirectoryPage.jsx` (filtering)
-- Navigation: `Sidebar.jsx` (hierarchical nav + themes), `Navbar.jsx` (responsive + mobile menu)
+Optimizing chunk size improves load performance for users. Use code-splitting and manual chunking for best results.
 
-## Project-specific patterns & examples
-- API additions: Always add route → controller → model on backend. Mirror new endpoints in `frontend/src/services/axios.js` using `useApi()` hook shape (e.g., `getAllLgus`, `createAssessor`)
-- Rate-sensitive UI: `LGUPage.jsx` implements `enqueueRequest(fn, context)` which serializes requests, enforces MIN_INTERVAL_MS, and retries 429/5xx with exponential backoff. Reuse for list operations
-- Response normalization: Client code expects different list shapes. Use `normalizeListResponse` from `LGUPage.jsx` (handles `res.data.lgus`, `res.data`, single objects)
-- Client caching: Use established listCache (useRef with TTL) and entity Maps (`lguCache`, `assessorsCache`, `smvCache`) pattern in `LGUPage.jsx` for frequently-read lists
-- Custom hooks: Domain-specific hooks like `useQrrpa` encapsulate API calls + state management; follow this pattern for new features
-- Error handling: Backend uses global error middleware in `blgfServer.js`. Frontend displays toasts via react-hot-toast, see `AssessorsPage.jsx`
-- File uploads: Backend handles in `uploads/` dir with type-specific subfolders (e.g., `qrrpa/`, `profile/`). Frontend sends multipart/form-data. Multer configured in routes (see `qrrpaMonitoringRoutes.js`, `usersRoutes.js`)
-- Profile pictures: User model has `profilePicture` field; uploads to `uploads/profile/` with validation (5MB, images only). See `PROFILE_PICTURE_IMPLEMENTATION.md` for full flow
-- Mobile-first UI: Components like `QRRPAMonitoringPage.jsx` use responsive design with iPhone 12 optimization - flex layouts, collapsible tabs, touch-friendly sizing
-- Status mapping: Components like `QRRPAMonitoringPage.jsx` map UI display values to backend enum values using lookup objects
-- Cascading filters: Use `getRegions()`, `getProvinces(region)` from axios.js for location-based filtering
-- **Theme system & Readability (CRITICAL)**: 
-  - Default theme: **synthwave** (set in App.jsx useState)
-  - Available themes: corporate, emerald, sunset, synthwave, retro, cyberpunk, valentine, aqua
-  - **ALWAYS use DaisyUI semantic classes** for theme compatibility:
-    - Backgrounds: `bg-base-100`, `bg-base-200`, `bg-base-300` (never fixed colors like `bg-blue-500`)
-    - Text: `text-base-content`, `text-primary-content`, `text-secondary-content` (auto-adjusts for readability)
-    - Borders: `border-base-300`, `border-primary` (theme-aware)
-    - Cards: `bg-primary`, `bg-secondary`, `bg-accent` with `text-primary-content` etc.
-    - Gradients: Use `bg-gradient-to-r from-primary to-primary-focus` (DaisyUI vars adapt to theme)
-  - **NEVER hardcode colors** (e.g., `text-gray-900`, `bg-white`) - they break on dark themes
-  - **Test readability**: Ensure sufficient contrast (text vs background) across all themes
-  - **Buttons**: Use `btn-primary`, `btn-secondary`, `btn-accent` (not `bg-blue-500`)
-  - **Alerts**: Use `alert-info`, `alert-success`, `alert-warning`, `alert-error` (theme-aware)
-- Hierarchical navigation: `Sidebar.jsx` supports sub-items with expand/collapse behavior; use `subItems` array for nested menus
-- Auth updates: AuthContext has `updateUser()` function to sync user data changes (profile edits, picture uploads) across app and localStorage
+# BLGFXIII_Directory — AI Agent Coding Guide
 
-## Dev & debug commands
-- Root build (installs + builds frontend): `npm run build`
-- Backend dev (hot reload): `npm run dev --prefix backend` OR `cd backend && npm run dev`
-- Frontend dev (Vite): `npm run dev --prefix frontend` OR `cd frontend && npm run dev` 
-- Start backend (production): `npm run start --prefix backend` OR `npm run start`
+This repo is a MERN-style app with React (Vite + DaisyUI) frontend and Express/Mongoose backend. Use this guide for immediate productivity as an AI coding agent.
+
+## Architecture Overview
+- **Frontend**: React SPA in `frontend/` using DaisyUI themes. API calls centralized via `useApi()` hooks in `src/services/axios.js`.
+- **Backend**: Express server in `backend/src/blgfServer.js` serves static frontend and mounts API routers under `/api`. Data models in `backend/src/models/`.
+- **Auth**: JWT-based, persisted in localStorage. Axios interceptors handle tokens. Protected routes via `ProtectedRoute.jsx`.
+- **Rate Limiting**: All backend routes use Upstash Redis (see `rateLimiter.js`). Auth endpoints have stricter limits.
+- **Themes**: DaisyUI themes switch via `data-theme` on `<html>`. Default: synthwave. Always use DaisyUI semantic classes for colors/contrast.
+
+## Key Files & Patterns
+- **Backend**:
+  - API: `routes/*`, `controllers/*`, `models/*` (e.g., LGU: `lguRoutes.js`, `lguController.js`, `LGU.js`)
+  - Middleware: `authMiddleware.js` (JWT), `rateLimiter.js` (Upstash)
+  - Error handling: global middleware in `blgfServer.js`
+- **Frontend**:
+  - API client: `src/services/axios.js` (all endpoints via hooks)
+  - Auth: `src/contexts/AuthContext.jsx` (state, updateUser)
+  - Pages: `LGUPage.jsx` (caching, normalization), `QRRPAMonitoringPage.jsx` (forms), `DirectoryPage.jsx` (filters)
+  - Navigation: `Sidebar.jsx` (hierarchy, theme), `Navbar.jsx` (responsive)
+
+## Project-Specific Conventions
+- **API Additions**: Always update backend route → controller → model. Mirror in frontend `axios.js` as a hook (e.g., `getAllLgus`).
+- **Rate-sensitive UI**: Use `enqueueRequest(fn, context)` (see `LGUPage.jsx`) for list ops; handles retries, backoff, and serialization.
+- **Response Normalization**: Use `normalizeListResponse` (see `LGUPage.jsx`) for list shapes (`res.data.lgus`, `res.data`, single obj).
+- **Client Caching**: Use `listCache` (TTL via useRef) and entity Maps (`lguCache`, etc.) for frequent lists.
+- **Custom Hooks**: Encapsulate domain logic (e.g., `useQrrpa`).
+- **File Uploads**: Backend stores in `uploads/{type}/`; frontend sends multipart/form-data. Multer config in routes.
+- **Profile Pictures**: See `PROFILE_PICTURE_IMPLEMENTATION.md` for flow. User model has `profilePicture` field.
+- **Mobile-first UI**: Use DaisyUI flex layouts, collapsible tabs, touch sizing (see `QRRPAMonitoringPage.jsx`).
+- **Status Mapping**: Map UI values to backend enums via lookup objects.
+- **Cascading Filters**: Use `getRegions()`, `getProvinces(region)` from `axios.js` for location filters.
+- **Theme System**: Only use DaisyUI semantic classes (`bg-base-100`, `text-base-content`, etc.). Never hardcode colors. Test contrast in synthwave + 2 other themes.
+- **Navigation**: Use `subItems` for nested menus in `Sidebar.jsx`. Theme dropdowns use useRef for click-outside.
+- **Auth Updates**: Use `updateUser()` in AuthContext to sync profile changes.
+
+## Dev & Debug Commands
+- Install & build all: `npm run build`
+- Backend dev: `npm run dev --prefix backend` or `cd backend && npm run dev`
+- Frontend dev: `npm run dev --prefix frontend` or `cd frontend && npm run dev`
+- Backend prod: `npm run start --prefix backend`
 - Lint frontend: `npm run lint --prefix frontend`
 
-## Integration gotchas
-- Keep axios `baseURL` and Vite envs in sync with backend `/api` base path
-- Backend has rate limiting; client-side `enqueueRequest` is tuned for it - prefer serialized retries vs parallel bursts
-- Backend sets `app.set('trust proxy', 1)` - be mindful when testing behind proxies/containers
-- File upload routes expect multipart/form-data with files in `uploads/` subfolders by type
-- Toast notifications use react-hot-toast globally configured in `main.jsx` - prefer `toast.success()`/`toast.error()` over console logs
-- DaisyUI themes applied via `data-theme` attribute on html element (see `Theme.jsx` context)
-- Navigation state: Both `Sidebar.jsx` and `Navbar.jsx` manage their own theme dropdowns with useRef patterns for click-outside behavior
-- Auth context: User state persisted in localStorage; logout forces `window.location.replace("/")` to clear all state; use `updateUser()` to sync profile changes
-- Image paths: Backend serves static files from `uploads/` at `/uploads/*`; frontend accesses via `http://localhost:5001/uploads/{type}/{filename}` in dev mode
+## Integration Notes
+- Keep axios `baseURL` and Vite envs in sync with backend `/api` path.
+- Backend rate limits: use serialized requests, not parallel bursts.
+- Backend sets `app.set('trust proxy', 1)` for proxy/container support.
+- File uploads: multipart/form-data, files in `uploads/{type}/`.
+- Toasts: Use `toast.success()`/`toast.error()` (see `main.jsx`).
+- Auth: localStorage persistence, logout triggers `window.location.replace('/')`.
+- Static files: Backend serves `/uploads/*`; frontend uses `http://localhost:5001/uploads/{type}/{filename}` in dev.
 
-## Quick PR checklist
-1. Update backend route → controller → model, test route with backend dev server
-2. Add/modify frontend API helper in `frontend/src/services/axios.js`; follow `useApi()` naming
-3. For list endpoints reuse `enqueueRequest`, `normalizeListResponse`, client cache patterns 
-4. Verify JWT flows (localStorage + axios interceptor + `authMiddleware`)
-5. **Theme readability check**: Test component in synthwave theme (default) and at least 2 other themes - verify text is readable, sufficient contrast, no hardcoded colors
-6. Smoke-test: run frontend dev + backend dev, verify UI loads without console errors
+## PR Checklist
+1. Update backend route → controller → model; test with backend dev server
+2. Add/modify frontend API hook in `axios.js`
+3. For lists, reuse `enqueueRequest`, `normalizeListResponse`, and cache patterns
+4. Verify JWT flows (localStorage, axios interceptor, `authMiddleware`)
+5. Theme readability: test in synthwave + 2 other themes, no hardcoded colors
+6. Smoke-test: run frontend + backend dev, verify UI loads without errors
