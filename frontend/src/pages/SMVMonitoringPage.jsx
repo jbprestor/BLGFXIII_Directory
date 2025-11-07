@@ -26,6 +26,7 @@ export default function SMVMonitoringPage() {
   const [progressFilter, setProgressFilter] = useState("all");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState("table");
+  const [viewMode, setViewMode] = useState("detailed"); // 'detailed' or 'simple'
   
   // Timeline modal state
   const [timelineModalOpen, setTimelineModalOpen] = useState(false);
@@ -75,15 +76,27 @@ export default function SMVMonitoringPage() {
       const res = await getSMVProcesses({ all: true, year: selectedYear });
       const allMonitorings = Array.isArray(res.data) ? res.data : res.data?.monitoringList || [];
       
+      console.log(`📊 Fetched ${allMonitorings.length} monitoring records for year ${selectedYear}`);
+      
+      // Log each monitoring record to debug Surigao del Sur issue
+      allMonitorings.forEach(m => {
+        const lguName = m.lguId?.name || 'Unknown';
+        const lguId = m.lguId?._id || m.lguId;
+        console.log(`  - ${lguName} (LGU ID: ${lguId}, Monitoring ID: ${m._id})`);
+      });
+      
       // Filter by selected year
       const filteredByYear = allMonitorings.filter(m => 
         m.referenceYear === selectedYear || 
         new Date(m.createdAt).getFullYear() === selectedYear
       );
       
+      console.log(`✅ After year filter: ${filteredByYear.length} records`);
+      
       setMonitorings(filteredByYear);
       setError(null);
-    } catch {
+    } catch (error) {
+      console.error('❌ Error fetching monitorings:', error);
       setMonitorings([]);
       setError("Failed to load SMV monitorings");
       toast.error("Failed to fetch SMV monitoring");
@@ -113,8 +126,18 @@ export default function SMVMonitoringPage() {
   // Merge LGUs with monitoring data
   const tableData = useMemo(() => {
     return filteredLGUs.map((lgu) => {
-      const monitoring =
-        monitorings.find((m) => m.lguId?._id === lgu._id) || {};
+      // Find monitoring - handle both populated (m.lguId._id) and unpopulated (m.lguId as string) cases
+      const monitoring = monitorings.find((m) => {
+        const monitoringLguId = m.lguId?._id || m.lguId; // Handle both populated and string ID
+        return monitoringLguId === lgu._id || monitoringLguId === lgu._id.toString();
+      }) || {};
+      
+      console.log(`🔍 Matching for ${lgu.name}:`, {
+        lguId: lgu._id,
+        foundMonitoring: !!monitoring._id,
+        monitoringId: monitoring._id,
+        monitoringLguId: monitoring.lguId
+      });
       
       // Try to use saved stageMap first, otherwise construct from activities
       let stageMap;
@@ -324,8 +347,22 @@ export default function SMVMonitoringPage() {
 
   // Handle opening timeline modal
   const handleSetTimeline = (rowData) => {
-    console.log('handleSetTimeline received rowData:', rowData);
-    console.log('rowData.stageMap:', rowData.stageMap);
+    console.log('🎯 handleSetTimeline received rowData:', {
+      lguName: rowData.lguName,
+      lguId: rowData.lguId,
+      monitoringId: rowData.monitoringId,
+      hasTimeline: !!rowData.timeline,
+      timelineKeys: rowData.timeline ? Object.keys(rowData.timeline) : [],
+      hasStageMap: !!rowData.stageMap,
+      stageMapKeys: rowData.stageMap ? Object.keys(rowData.stageMap) : []
+    });
+    
+    if (rowData.monitoringId) {
+      console.log('✅ Monitoring exists in database with ID:', rowData.monitoringId);
+    } else {
+      console.log('⚠️ No monitoring ID - will check database or create new');
+    }
+    
     setSelectedLguForTimeline(rowData);
     setTimelineModalOpen(true);
   };
@@ -337,17 +374,58 @@ export default function SMVMonitoringPage() {
     try {
       let monitoringId = selectedLguForTimeline?.monitoringId;
 
-      // If no monitoring exists, create one first
+      // If no monitoring ID, check database first before creating
       if (!monitoringId) {
-        const createRes = await api.post("/smv-processes", {
-          lguId: selectedLguForTimeline.lguId,
-          referenceYear: selectedYear,
-          valuationDate: new Date(selectedYear, 0, 1),
-          createdBy: user._id,
-        });
-        
-        monitoringId = createRes.data._id;
-        setMonitorings((prev) => [...prev, createRes.data]);
+        try {
+          // First, check if monitoring already exists in DB
+          const existingCheck = await api.get("/smv-processes", {
+            params: { lguId: selectedLguForTimeline.lguId, year: selectedYear },
+          });
+          
+          const existing = existingCheck.data?.monitoringList?.[0];
+          if (existing) {
+            // Found existing monitoring, use it
+            monitoringId = existing._id;
+            setMonitorings((prev) => {
+              const alreadyExists = prev.some(m => m._id === existing._id);
+              return alreadyExists ? prev : [...prev, existing];
+            });
+            console.log("✅ Found existing monitoring for", selectedLguForTimeline.lguName);
+          } else {
+            // No existing monitoring, create new one
+            const createRes = await api.post("/smv-processes", {
+              lguId: selectedLguForTimeline.lguId,
+              referenceYear: selectedYear,
+              valuationDate: new Date(selectedYear, 0, 1),
+              createdBy: user._id,
+            });
+            
+            monitoringId = createRes.data._id;
+            setMonitorings((prev) => [...prev, createRes.data]);
+            console.log("✅ Created new monitoring for", selectedLguForTimeline.lguName);
+          }
+        } catch (checkError) {
+          // If check fails, try to create (might get 409 if exists)
+          if (checkError.response?.status === 409) {
+            // 409 means it exists, fetch it
+            const existingRes = await api.get("/smv-processes", {
+              params: { lguId: selectedLguForTimeline.lguId, year: selectedYear },
+            });
+            const existing = existingRes.data?.monitoringList?.[0];
+            if (existing) {
+              monitoringId = existing._id;
+              setMonitorings((prev) => {
+                const alreadyExists = prev.some(m => m._id === existing._id);
+                return alreadyExists ? prev : [...prev, existing];
+              });
+              console.log("✅ Found existing monitoring after 409");
+            } else {
+              throw new Error("Monitoring exists but couldn't fetch it");
+            }
+          } else {
+            throw checkError;
+          }
+        }
       }
 
       // Prepare the update data
@@ -476,135 +554,10 @@ export default function SMVMonitoringPage() {
     } catch (error) {
       toast.dismiss(loadingToastId);
       
-      if (error.response?.status === 409) {
-        // Monitoring already exists for this year, try to fetch and update it
-        try {
-          const existing = await api.get(`/smv-processes`, {
-            params: { lguId: selectedLguForTimeline.lguId, year: selectedYear },
-          });
-          const monitoring = existing.data?.monitoringList?.[0];
-          if (monitoring) {
-            setMonitorings((prev) => [...prev, monitoring]);
-            
-            // Prepare the update data (same as above)
-            const updateData = {};
-            
-            if (allData.timeline) {
-              const timeline = {};
-              Object.keys(allData.timeline).forEach(key => {
-                if (allData.timeline[key]) {
-                  const value = allData.timeline[key];
-                  timeline[key] = value.includes('T') ? value : new Date(value).toISOString();
-                }
-              });
-              updateData.timeline = timeline;
-            }
-            
-            if (allData.stageMap) {
-              // Clean stageMap - remove MongoDB-specific fields and placeholders
-              const cleanedStageMap = {};
-              Object.keys(allData.stageMap).forEach(stage => {
-                const stageActivities = allData.stageMap[stage];
-                if (Array.isArray(stageActivities)) {
-                  cleanedStageMap[stage] = stageActivities
-                    .filter(activity => !activity.placeholder)
-                    .map(activity => ({
-                      name: activity.name,
-                      status: activity.status || 'Not Started',
-                      dateCompleted: activity.dateCompleted || '',
-                      remarks: activity.remarks || ''
-                    }));
-                }
-              });
-              updateData.stageMap = cleanedStageMap;
-              
-              // Convert stageMap to activities array
-              // Map frontend stage names to backend enum values
-              const stageNameMap = {
-                "Finalization of Proposed SMV": "Finalization",
-                // Add other mappings if needed
-              };
-              
-              const activitiesArray = [];
-              Object.keys(allData.stageMap).forEach(stage => {
-                const stageActivities = allData.stageMap[stage];
-                if (Array.isArray(stageActivities)) {
-                  stageActivities.forEach(activity => {
-                    if (!activity.placeholder) {
-                      // Map stage name to backend enum value
-                      const backendCategory = stageNameMap[stage] || stage;
-                      
-                      const activityData = {
-                        name: activity.name,
-                        category: backendCategory,
-                        status: activity.status || 'Not Started',
-                        remarks: activity.remarks || ''
-                      };
-                      
-                      // Only include dateCompleted if it has a valid value
-                      if (activity.dateCompleted && activity.dateCompleted !== '') {
-                        const dateObj = new Date(activity.dateCompleted);
-                        // Only add if it's a valid date
-                        if (!isNaN(dateObj.getTime())) {
-                          activityData.dateCompleted = dateObj;
-                        }
-                      }
-                      
-                      activitiesArray.push(activityData);
-                    }
-                  });
-                }
-              });
-              updateData.activities = activitiesArray;
-            }
-            
-            // Handle proposed publication activities - clean data
-            if (allData.proposedPublicationActivities) {
-              updateData.proposedPublicationActivities = allData.proposedPublicationActivities.map(activity => ({
-                name: activity.name,
-                status: activity.status || 'Not Completed',
-                dateCompleted: activity.dateCompleted || '',
-                remarks: activity.remarks || '',
-                isHeader: activity.isHeader || false,
-                isNote: activity.isNote || false
-              }));
-            }
-            
-            // Handle review publication activities - clean data
-            if (allData.reviewPublicationActivities) {
-              updateData.reviewPublicationActivities = allData.reviewPublicationActivities.map(activity => ({
-                name: activity.name,
-                status: activity.status || 'Not Completed',
-                dateCompleted: activity.dateCompleted || '',
-                remarks: activity.remarks || ''
-              }));
-            }
-            
-            // Try to update the existing monitoring
-            const res = await api.put(`/smv-processes/${monitoring._id}`, updateData);
-            setMonitorings((prev) =>
-              prev.map((m) => (m._id === monitoring._id ? res.data : m))
-            );
-            
-            // IMPORTANT: Update selectedLguForTimeline with fresh data
-            setSelectedLguForTimeline(res.data);
-            console.log("🔄 SMVMonitoringPage: Updated selectedLguForTimeline with fresh data (409 recovery)");
-            
-            // Success toast now handled by modal component
-            // Modal stays open for continued editing
-            return;
-          }
-        } catch (fetchError) {
-          console.error("Error fetching existing monitoring:", fetchError);
-          toast.error("Failed to update existing monitoring record. Please try again.");
-          return;
-        }
-      }
-      
-      // Show error toast for other errors
+      // Show error toast
       const errorMessage = error.response?.data?.message || error.message || "Failed to save timeline";
       toast.error(`Error: ${errorMessage}`);
-      console.error("Save timeline error:", error);
+      console.error("❌ Save timeline error:", error);
       console.error("Backend error response:", error.response?.data);
       console.error("Status code:", error.response?.status);
     }
@@ -616,47 +569,53 @@ export default function SMVMonitoringPage() {
   return (
     <div className="min-h-screen bg-base-200/30">
       {/* Tab Navigation - Like QRRPA */}
-      <div className="px-2 pt-2 pb-3 sm:px-4">
-        <div className="flex bg-base-100 rounded-xl p-1 shadow-lg border border-base-300/50 max-w-sm mx-auto sm:max-w-4xl backdrop-blur-sm">
-          <button 
-            className={`flex-1 py-3 px-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
-              activeTab === "dashboard" 
-                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]" 
+      <div className="px-3 pt-3 pb-4 sm:px-6">
+        <div className="flex bg-base-100 rounded-xl p-1 shadow-lg border border-base-300/50 w-full max-w-4xl mx-auto backdrop-blur-sm" role="tablist" aria-label="SMV Tabs">
+          <button
+            role="tab"
+            aria-selected={activeTab === "dashboard"}
+            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
+              activeTab === "dashboard"
+                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
                 : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
-            }`} 
+            }`}
             onClick={() => setActiveTab("dashboard")}
           >
-            <div className="flex flex-col items-center gap-1 sm:flex-row sm:justify-center sm:gap-2">
+            <div className="flex items-center justify-center gap-2">
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               <span>Dashboard</span>
             </div>
           </button>
-          <button 
-            className={`flex-1 py-3 px-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
-              activeTab === "table" 
-                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]" 
+          <button
+            role="tab"
+            aria-selected={activeTab === "table"}
+            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
+              activeTab === "table"
+                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
                 : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
-            }`} 
+            }`}
             onClick={() => setActiveTab("table")}
           >
-            <div className="flex flex-col items-center gap-1 sm:flex-row sm:justify-center sm:gap-2">
+            <div className="flex items-center justify-center gap-2">
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
               <span>Table View</span>
             </div>
           </button>
-          <button 
-            className={`flex-1 py-3 px-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
-              activeTab === "analytics" 
-                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]" 
+          <button
+            role="tab"
+            aria-selected={activeTab === "analytics"}
+            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
+              activeTab === "analytics"
+                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
                 : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
-            }`} 
+            }`}
             onClick={() => setActiveTab("analytics")}
           >
-            <div className="flex flex-col items-center gap-1 sm:flex-row sm:justify-center sm:gap-2">
+            <div className="flex items-center justify-center gap-2">
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
@@ -668,7 +627,7 @@ export default function SMVMonitoringPage() {
 
       {/* Tab Content */}
       <div className="px-2 pb-4 sm:px-4">
-        <div className="bg-base-100/95 backdrop-blur-sm rounded-xl shadow-xl border border-base-300/50 min-h-[calc(100vh-200px)] max-w-sm mx-auto sm:max-w-7xl overflow-hidden">
+  <div className="bg-base-100/95 backdrop-blur-sm rounded-xl shadow-xl border border-base-300/50 min-h-[calc(100vh-180px)] w-full max-w-7xl mx-auto overflow-hidden">
           
           {/* Dashboard Tab */}
           {activeTab === "dashboard" && (
@@ -693,84 +652,38 @@ export default function SMVMonitoringPage() {
             </section>
           )}
 
-          {/* Table View Tab */}
+          {/* Table View Tab - Simplified */}
           {activeTab === "table" && (
             <section className="p-3 sm:p-4 lg:p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg sm:text-xl font-bold text-base-content">SMV Monitoring Table</h3>
-                  <p className="text-sm text-base-content/60">Detailed progress tracking by stage</p>
-                </div>
-                <div className="badge badge-primary badge-lg">{filteredTableData.length} LGUs</div>
-              </div>
-
-              {/* RA 12001 Timeline Info Banner */}
-              <div className="alert bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30 mb-4">
-                <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 text-primary shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div className="flex-1 text-xs sm:text-sm">
-                    <p className="font-bold text-primary mb-1">📋 RA 12001 Timeline Tracking</p>
-                    <p className="text-base-content/80 leading-relaxed">
-                      <span className="font-semibold text-primary">Day 0</span> starts when BLGF Central Office issues the notice to prepare SMV 
-                      (e.g., <span className="font-semibold">April 14, 2025</span>). The <span className="font-semibold text-warning">"Days"</span> column shows:
-                    </p>
-                    <ul className="list-disc list-inside mt-2 space-y-1 text-base-content/70">
-                      <li><span className="font-semibold">Day X</span> = Days since BLGF Notice received</li>
-                      <li><span className="font-semibold text-success">Green countdown</span> = Days until next deadline (30+ days)</li>
-                      <li><span className="font-semibold text-warning">Yellow countdown</span> = Urgent deadline (&lt;30 days)</li>
-                      <li><span className="font-semibold text-error">Red ⏰</span> = Overdue deadline</li>
-                    </ul>
-                    <p className="text-base-content/60 text-[10px] mt-2">
-                      💡 Click any row to expand and view detailed timeline milestones (RO Submission, Publication, Sanggunian, etc.)
+              {/* Enhanced Header with Count */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-primary/10 rounded-xl">
+                    <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-base-content">
+                      LGU Monitoring
+                    </h3>
+                    <p className="text-xs text-base-content/60 font-medium">
+                      Track SMV development progress across all LGUs
                     </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Year Selector - SMV is every 3 years */}
-              <div className="mb-4 p-4 bg-base-200/50 rounded-lg border border-base-300">
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <label className="label-text font-semibold text-base-content block">
-                        📅 SMV Reference Year
-                      </label>
-                      <p className="text-xs text-base-content/60">SMV is conducted every 3 years</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(Number(e.target.value))}
-                      className="select select-bordered select-sm w-32 font-semibold"
-                    >
-                      {availableYears.map(year => (
-                        <option key={year} value={year}>
-                          {year}
-                          {year === new Date().getFullYear() && ' (Current)'}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="badge badge-primary badge-lg">
-                      {monitorings.length} Records
+                <div className="flex items-center gap-2">
+                  <div className="stats shadow-md bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                    <div className="stat py-3 px-4">
+                      <div className="stat-title text-[10px] font-bold uppercase tracking-wide">Total</div>
+                      <div className="stat-value text-2xl text-primary">{filteredTableData.length}</div>
+                      <div className="stat-desc text-[10px] font-medium">{filteredTableData.length === 1 ? 'LGU' : 'LGUs'}</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Filters */}
+              {/* Search and Filters Only */}
               <SMVFilters
                 selectedRegion={selectedRegion}
                 setSelectedRegion={setSelectedRegion}
@@ -781,12 +694,15 @@ export default function SMVMonitoringPage() {
                 setComplianceFilter={setComplianceFilter}
                 progressFilter={progressFilter}
                 setProgressFilter={setProgressFilter}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
               />
 
               {/* Summary Table - Dashboard Card Style */}
               <SMVSummaryTable
                 filteredTableData={filteredTableData}
                 stages={stages}
+                viewMode={viewMode}
                 isAdmin={isAdmin}
                 onSetTimeline={handleSetTimeline}
               />

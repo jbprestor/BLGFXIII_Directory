@@ -164,19 +164,21 @@ export default function Navbar({
       )}
 
       {/* Navbar */}
-      <div
+      <header
+        role="banner"
         className={`navbar ${
           isScrolled
             ? "bg-base-100/95 backdrop-blur-md shadow-xl"
             : `bg-gradient-to-r ${theme.gradient}`
-        } fixed top-0 z-40 transition-all duration-500 px-4 sm:px-6 lg:px-8`}
+        } fixed top-0 z-40 transition-all duration-500 px-3 sm:px-6 lg:px-8`}
       >
         <div className="navbar-start">
           {isLoggedIn && (
             <button
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open navigation menu"
               className={`hamburger-menu btn btn-ghost btn-circle ${
-                isScrolled ? "" : "text-white"
+                isScrolled ? "text-base-content" : "text-white"
               }`}
             >
               <svg
@@ -227,7 +229,7 @@ export default function Navbar({
           </div>
         )}
 
-        <div className="navbar-end gap-2">
+  <nav aria-label="User controls" className="navbar-end gap-2">
           {/* Theme Selector - Always visible but responsive */}
           <div className="hidden sm:block">
             <ThemeSelector
@@ -255,6 +257,7 @@ export default function Navbar({
           ) : (
             <button
               onClick={handleLoginOpen}
+              aria-label="Open login dialog"
               className={`btn btn-primary text-sm px-3 sm:text-base sm:px-4 ${
                 isScrolled
                   ? ""
@@ -265,8 +268,8 @@ export default function Navbar({
               <span className="sm:hidden">Login</span>
             </button>
           )}
-        </div>
-      </div>
+        </nav>
+      </header>
 
       {/* Mobile Menu - Enhanced with theme selector */}
       {isLoggedIn && mobileMenuOpen && (

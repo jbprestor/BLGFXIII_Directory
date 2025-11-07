@@ -1,4 +1,4 @@
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X } from "../common/Icon";
 import toast from "react-hot-toast";
 
 export default function SearchFilters({

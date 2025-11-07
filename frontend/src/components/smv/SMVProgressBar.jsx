@@ -42,52 +42,84 @@ export default function SMVProgressBar({
   };
 
   return (
-    <div className="flex flex-col gap-1 w-full">
+    <div className="flex flex-col gap-2 w-full">
       {/* Main Progress Bar */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <progress 
-          className={`progress ${getProgressColor(overallProgress)} w-full h-2`}
+          className={`progress ${getProgressColor(overallProgress)} w-full h-3`}
           value={overallProgress} 
           max="100"
         ></progress>
-        <span className="text-sm font-bold text-base-content min-w-[3rem] text-right">
+        <span className="text-base font-bold text-base-content min-w-[3.5rem] text-right">
           {overallProgress}%
         </span>
       </div>
 
-      {/* 4 Mini Segments (Tab Progress Indicators) */}
-      <div 
-        className="flex gap-0.5 w-full"
-        title={`Timeline: ${tab1Progress}% | Dev: ${tab2Progress}% | Proposed: ${tab3Progress}% | Review: ${tab4Progress}%`}
-      >
-        {/* Tab 1: Timeline */}
+      {/* Enhanced Segmented Progress Indicators */}
+      <div className="flex gap-1 w-full">
+        {/* Tab 1: Timeline (10% weight) */}
         <div 
-          className={`h-1 flex-[1] rounded-full transition-all ${getSegmentColor(tab1Progress)}`}
-          title={`Timeline: ${tab1Progress}%`}
-        />
-        
-        {/* Tab 2: Development */}
-        <div 
-          className={`h-1 flex-[6] rounded-full transition-all ${getSegmentColor(tab2Progress)}`}
-          title={`Development: ${tab2Progress}%`}
-        />
-        
-        {/* Tab 3: Proposed Publication */}
-        <div 
-          className={`h-1 flex-[2] rounded-full transition-all ${getSegmentColor(tab3Progress)}`}
-          title={`Proposed Publication: ${tab3Progress}%`}
-        />
-        
-        {/* Tab 4: Review & Publication */}
-        <div 
-          className={`h-1 flex-[1] rounded-full transition-all ${getSegmentColor(tab4Progress)}`}
-          title={`Review & Publication: ${tab4Progress}%`}
-        />
-      </div>
+          className="flex-[1] group cursor-help"
+          title="Timeline: 10% weight - BLGF Notice Date"
+        >
+          <div className={`h-6 rounded-lg transition-all border-2 border-base-content/10 ${getSegmentColor(tab1Progress)} flex items-center justify-center overflow-hidden relative group-hover:border-base-content/30`}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+            <span className="text-[9px] font-bold text-base-100 relative z-10 drop-shadow-sm">
+              {tab1Progress}%
+            </span>
+          </div>
+          <div className="text-[10px] text-center text-base-content/70 font-medium mt-1 truncate">
+            Timeline
+          </div>
+        </div>
 
-      {/* Hover Details Tooltip (optional, visible on hover) */}
-      <div className="text-[9px] text-base-content/50 hidden group-hover:block">
-        T:{tab1Progress}% | D:{tab2Progress}% | P:{tab3Progress}% | R:{tab4Progress}%
+        {/* Tab 2: Development (60% weight) */}
+        <div 
+          className="flex-[6] group cursor-help"
+          title="Development: 60% weight - Main work activities"
+        >
+          <div className={`h-6 rounded-lg transition-all border-2 border-base-content/10 ${getSegmentColor(tab2Progress)} flex items-center justify-center overflow-hidden relative group-hover:border-base-content/30`}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+            <span className="text-xs font-bold text-base-100 relative z-10 drop-shadow-sm">
+              {tab2Progress}%
+            </span>
+          </div>
+          <div className="text-[10px] text-center text-base-content/70 font-medium mt-1 truncate">
+            Development
+          </div>
+        </div>
+
+        {/* Tab 3: Proposed Publication (20% weight) */}
+        <div 
+          className="flex-[2] group cursor-help"
+          title="Publication: 20% weight - Publication activities"
+        >
+          <div className={`h-6 rounded-lg transition-all border-2 border-base-content/10 ${getSegmentColor(tab3Progress)} flex items-center justify-center overflow-hidden relative group-hover:border-base-content/30`}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+            <span className="text-[10px] font-bold text-base-100 relative z-10 drop-shadow-sm">
+              {tab3Progress}%
+            </span>
+          </div>
+          <div className="text-[10px] text-center text-base-content/70 font-medium mt-1 truncate">
+            Publication
+          </div>
+        </div>
+
+        {/* Tab 4: Review & Publication (10% weight) */}
+        <div 
+          className="flex-[1] group cursor-help"
+          title="Review: 10% weight - Review process"
+        >
+          <div className={`h-6 rounded-lg transition-all border-2 border-base-content/10 ${getSegmentColor(tab4Progress)} flex items-center justify-center overflow-hidden relative group-hover:border-base-content/30`}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+            <span className="text-[9px] font-bold text-base-100 relative z-10 drop-shadow-sm">
+              {tab4Progress}%
+            </span>
+          </div>
+          <div className="text-[10px] text-center text-base-content/70 font-medium mt-1 truncate">
+            Review
+          </div>
+        </div>
       </div>
     </div>
   );

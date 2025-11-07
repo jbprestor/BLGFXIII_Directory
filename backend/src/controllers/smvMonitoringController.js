@@ -14,20 +14,32 @@ const RPVARStages = [
 // --- GET ALL MONITORING ---
 export async function getAllSMVMonitoring(req, res) {
   try {
-    const { page = 1, limit = 10, lguId, year, status } = req.query;
+    const { page = 1, limit = 10, lguId, year, status, all } = req.query;
     let query = {};
 
     if (lguId) query.lguId = lguId;
     if (year) query.referenceYear = year;
     if (status) query.overallStatus = status;
 
-    const monitoringList = await SMVMonitoring.find(query)
+    // If 'all' param is true, don't apply pagination
+    const queryBuilder = SMVMonitoring.find(query)
       .populate("lguId", "name province region classification incomeClass")
-      .sort({ referenceYear: -1, createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
+      .sort({ referenceYear: -1, createdAt: -1 });
+    
+    // Only apply limit/skip if not requesting all records
+    if (!all || all === 'false') {
+      queryBuilder.limit(limit * 1).skip((page - 1) * limit);
+    }
+    
+    const monitoringList = await queryBuilder;
     const total = await SMVMonitoring.countDocuments(query);
+
+    console.log(`🗄️ Backend: Fetched ${monitoringList.length} SMV monitoring records (year: ${year || 'all'}, all: ${all})`);
+    monitoringList.forEach(m => {
+      const lguName = m.lguId?.name || 'Unknown';
+      const lguId = m.lguId?._id || m.lguId;
+      console.log(`  - ${lguName} (LGU ID: ${lguId}, Monitoring ID: ${m._id})`);
+    });
 
     res.status(200).json({
       monitoringList,
@@ -146,12 +158,50 @@ export async function updateSMVMonitoring(req, res) {
     const monitoring = await SMVMonitoring.findById(req.params.id);
     if (!monitoring) return res.status(404).json({ message: "SMV monitoring record not found" });
 
-    Object.assign(monitoring, req.body);
+    // Handle nested objects properly - merge instead of replace
+    if (req.body.timeline) {
+      monitoring.timeline = {
+        ...monitoring.timeline?.toObject?.() || monitoring.timeline || {},
+        ...req.body.timeline
+      };
+    }
+
+    // Handle stageMap
+    if (req.body.stageMap) {
+      monitoring.stageMap = req.body.stageMap;
+      monitoring.markModified('stageMap'); // Important for Mixed type
+    }
+
+    // Handle proposed publication activities
+    if (req.body.proposedPublicationActivities) {
+      monitoring.proposedPublicationActivities = req.body.proposedPublicationActivities;
+    }
+
+    // Handle review publication activities
+    if (req.body.reviewPublicationActivities) {
+      monitoring.reviewPublicationActivities = req.body.reviewPublicationActivities;
+    }
+
+    // Handle activities array
+    if (req.body.activities) {
+      monitoring.activities = req.body.activities;
+    }
+
+    // Handle other simple fields
+    const simpleFields = ['referenceYear', 'valuationDate', 'overallStatus', 'lastUpdatedBy'];
+    simpleFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        monitoring[field] = req.body[field];
+      }
+    });
+
+    // Recalculate progress (this also runs in pre-save hook)
     monitoring.recalculateProgress();
 
     const updated = await monitoring.save();
     await updated.populate("lguId", "name province region classification incomeClass");
 
+    console.log("✅ SMV Monitoring updated successfully for:", updated.lguId?.name);
     res.status(200).json(updated);
   } catch (error) {
     console.error("❌ Error updating SMV monitoring:", error);

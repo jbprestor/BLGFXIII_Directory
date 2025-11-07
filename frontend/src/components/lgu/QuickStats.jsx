@@ -1,4 +1,4 @@
-import { Building, MapPin, TrendingUp, Calendar } from "lucide-react";
+import { Building, MapPin, TrendingUp, Calendar } from "../common/Icon";
 
 export default function QuickStats({ filteredLgus }) {
   const stats = {

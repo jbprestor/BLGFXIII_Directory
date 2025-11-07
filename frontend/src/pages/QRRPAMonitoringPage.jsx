@@ -3,6 +3,7 @@ import useQrrpa from "../hooks/useQrrpa";
 import QrrpaList from "../components/qrrpa/QrrpaList";
 import QrrpaOverview from "../components/qrrpa/QrrpaOverview";
 import QrrpaChecklist from "../components/qrrpa/QrrpaChecklist";
+import QrrpaBatchReviewer from "../components/qrrpa/QrrpaBatchReviewer";
 
 export default function QRRPAMonitoringPage() {
   const { loading, records, lgus, error, fetchData } = useQrrpa();
@@ -74,6 +75,21 @@ export default function QRRPAMonitoringPage() {
               <span>Analytics</span>
             </div>
           </button>
+          <button 
+            className={`flex-1 py-3 px-2 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
+              tab === "reviewer" 
+                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]" 
+                : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
+            }`} 
+            onClick={() => setTab("reviewer")}
+          >
+            <div className="flex flex-col items-center gap-1 sm:flex-row sm:justify-center sm:gap-2">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+              <span>Reviewer</span>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -127,6 +143,25 @@ export default function QRRPAMonitoringPage() {
               </div>
               <div className="bg-base-100 text-base-content rounded-lg">
                 <QrrpaOverview records={records} />
+              </div>
+            </section>
+          )}
+
+          {tab === "reviewer" && (
+            <section className="p-3 sm:p-4 lg:p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-bold text-base-content">QRRPA Batch Reviewer</h3>
+                  <p className="text-sm text-base-content/60">Process multiple QRRPA files and generate compilation report</p>
+                </div>
+              </div>
+              <div className="bg-base-100 text-base-content rounded-lg">
+                <QrrpaBatchReviewer />
               </div>
             </section>
           )}

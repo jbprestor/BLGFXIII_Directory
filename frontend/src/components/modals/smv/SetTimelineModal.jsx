@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import useEscapeKey from "../../../hooks/useEscapeKey.js";
 import useBodyScrollLock from "../../../hooks/useBodyScrollLock.js";
 import toast from "react-hot-toast";
+import { useLGUImages } from "../../../assets/LguImages.js";
 
 // Helper function to format date as "January 21, 2025"
 const formatDateLong = (dateString) => {
@@ -106,6 +107,9 @@ export default function SetTimelineModal({
 }) {
   useEscapeKey(onClose);
   useBodyScrollLock(isOpen);
+  
+  // Get LGU images mapping
+  const lguImages = useLGUImages();
 
   const [activeTab, setActiveTab] = useState("timeline"); // timeline, activities, or publication
 
@@ -384,6 +388,89 @@ export default function SetTimelineModal({
     // Clear errors for this field
     setErrors(prev => ({ ...prev, [name]: "" }));
     
+    // AUTO-UPDATE TAB 3 & TAB 4: Update activity dates when timeline changes
+    if (value) {
+      // Update Tab 3 (Proposed Publication Activities) based on timeline dates
+      if (name === 'firstPublicationDate' || name === 'secondPublicationDate') {
+        setProposedPublicationActivities(prev => prev.map(activity => {
+          if (name === 'firstPublicationDate' && activity.name === "Official website of the province/city") {
+            return { ...activity, dateCompleted: value };
+          }
+          if (name === 'secondPublicationDate' && activity.name === "Two (2) conspicuous public places or principal office") {
+            return { ...activity, dateCompleted: value };
+          }
+          return activity;
+        }));
+      }
+      
+      if (name === 'firstPublicConsultationDate') {
+        setProposedPublicationActivities(prev => prev.map(activity => {
+          if (activity.name === "1st public consultation- Online (Zoom live in FB)") {
+            return { ...activity, dateCompleted: value };
+          }
+          return activity;
+        }));
+      }
+      
+      if (name === 'secondPublicConsultationDate') {
+        setProposedPublicationActivities(prev => prev.map(activity => {
+          if (activity.name === "2nd public consultation (face to face)") {
+            return { ...activity, dateCompleted: value };
+          }
+          return activity;
+        }));
+      }
+      
+      // Update Tab 4 (Review & Publication Activities) based on timeline dates
+      if (name === 'regionalOfficeSubmissionDeadline') {
+        // Update RO Submission activity
+        setReviewPublicationActivities(prev => prev.map(activity => {
+          if (activity.name === "Submission to Regional Office (Within 12 months upon receipt of the Notice)") {
+            return { ...activity, dateCompleted: value };
+          }
+          return activity;
+        }));
+        
+        // Auto-calculate and set RO Review date (RO Submission + 45 days)
+        if (value) {
+          const roDate = new Date(value);
+          roDate.setDate(roDate.getDate() + 45);
+          const roReviewDate = roDate.toISOString().split('T')[0];
+          
+          setReviewPublicationActivities(prev => prev.map(activity => {
+            if (activity.name === "Regional Office Review (45 days) - BLGF RO") {
+              return { ...activity, dateCompleted: roReviewDate };
+            }
+            return activity;
+          }));
+          
+          // Auto-calculate BLGF CO Review (RO Review + 30 days)
+          const coDate = new Date(roDate);
+          coDate.setDate(coDate.getDate() + 30);
+          const coReviewDate = coDate.toISOString().split('T')[0];
+          
+          setReviewPublicationActivities(prev => prev.map(activity => {
+            if (activity.name === "Central Office Review (30 days) - BLGF CO") {
+              return { ...activity, dateCompleted: coReviewDate };
+            }
+            return activity;
+          }));
+          
+          // Auto-calculate SOF Certification (BLGF CO + 30 days)
+          const sofDate = new Date(coDate);
+          sofDate.setDate(sofDate.getDate() + 30);
+          const sofCertDate = sofDate.toISOString().split('T')[0];
+          
+          setReviewPublicationActivities(prev => prev.map(activity => {
+            if (activity.name === "Indorsement / Certification to SOF (30 days) - BLGF CO") {
+              return { ...activity, dateCompleted: sofCertDate };
+            }
+            return activity;
+          }));
+        }
+      }
+    }
+    
     // VALIDATION 1: 1st Public Consultation must be at least 2 weeks after 1st Publication AND not before 2nd Publication
     if (name === 'firstPublicConsultationDate' && value) {
       const firstConsDate = new Date(value);
@@ -620,21 +707,51 @@ export default function SetTimelineModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-base-100 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-slideUp">
         {/* Header - Sticky at top */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-primary to-secondary p-4 rounded-t-xl">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <div className="flex-shrink-0 bg-gradient-to-r from-primary to-secondary p-4 rounded-t-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              {/* LGU Logo */}
+              <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center border-2 border-white/50 shadow-xl overflow-hidden">
+                {lguImages[lguData?.lguName] ? (
+                  <img 
+                    src={lguImages[lguData?.lguName]} 
+                    alt={`${lguData?.lguName} logo`}
+                    className="w-full h-full object-contain p-1.5"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <svg 
+                  className="w-7 h-7 text-primary" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  style={{ display: lguImages[lguData?.lguName] ? 'none' : 'block' }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
-                SMV Monitoring Details
-              </h2>
-              <p className="text-sm text-primary/80 mt-1">
-                {lguData?.lguName} - {lguData?.region || "Caraga Region"}
-              </p>
+              </div>
+              
+              <div>
+                <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-0.5">
+                  SMV Monitoring Details
+                </div>
+                <h2 className="text-xl font-bold text-secondary tracking-tight leading-tight">
+                  {lguData?.lguName}
+                </h2>
+                <p className="text-[11px] text-primary-100/70 mt-0.5 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {lguData?.region || "Caraga Region"}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -660,17 +777,17 @@ export default function SetTimelineModal({
           </div>
 
           {/* Tab Navigation - 4 tabs with locking logic */}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {/* Tab 1: Timeline - Always accessible */}
             <button
               type="button"
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === "timeline"
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${activeTab === "timeline"
                 ? "bg-base-100 text-base-content shadow-lg"
                 : "text-primary/70 hover:text-primary hover:bg-white/10"
                 }`}
               onClick={() => setActiveTab("timeline")}
             >
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-1.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -683,7 +800,7 @@ export default function SetTimelineModal({
               <button
                 type="button"
                 disabled={!formData.blgfNoticeDate}
-                className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
+                className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
                   ? "opacity-50 cursor-not-allowed bg-base-300 text-base-content/40"
                   : activeTab === "development"
                     ? "bg-base-100 text-base-content shadow-lg"
@@ -691,7 +808,7 @@ export default function SetTimelineModal({
                   }`}
                 onClick={() => formData.blgfNoticeDate && setActiveTab("development")}
               >
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-1.5">
                   {!formData.blgfNoticeDate && (
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -720,7 +837,7 @@ export default function SetTimelineModal({
               <button
                 type="button"
                 disabled={!formData.blgfNoticeDate}
-                className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
+                className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
                   ? "opacity-50 cursor-not-allowed bg-base-300 text-base-content/40"
                   : activeTab === "proposed-publication"
                     ? "bg-base-100 text-base-content shadow-lg"
@@ -728,7 +845,7 @@ export default function SetTimelineModal({
                   }`}
                 onClick={() => formData.blgfNoticeDate && setActiveTab("proposed-publication")}
               >
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-1.5">
                   {!formData.blgfNoticeDate && (
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -757,7 +874,7 @@ export default function SetTimelineModal({
               <button
                 type="button"
                 disabled={!formData.blgfNoticeDate}
-                className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
+                className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
                   ? "opacity-50 cursor-not-allowed bg-base-300 text-base-content/40"
                   : activeTab === "review-publication"
                     ? "bg-base-100 text-base-content shadow-lg"
@@ -765,7 +882,7 @@ export default function SetTimelineModal({
                   }`}
                 onClick={() => formData.blgfNoticeDate && setActiveTab("review-publication")}
               >
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-1.5">
                   {!formData.blgfNoticeDate && (
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -792,10 +909,10 @@ export default function SetTimelineModal({
         </div>
 
         {/* Scrollable Content Area */}
-        <div className={`flex-1 overflow-y-auto ${activeTab === "review-publication" ? "" : "p-6"}`}>
+        <div className={`flex-1 overflow-y-auto ${activeTab === "review-publication" ? "" : "p-5"}`}>
           {/* Timeline Tab Content */}
           {activeTab === "timeline" && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Info Banner */}
               <div className="alert alert-info text-xs">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -829,7 +946,7 @@ export default function SetTimelineModal({
               </div>
 
               {/* Other Timeline Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Publication */}
                 <div className="form-control">
                   <label className="label">
@@ -1154,34 +1271,36 @@ export default function SetTimelineModal({
 
           {/* Development of Proposed SMV Tab Content - EDITABLE */}
           {activeTab === "development" && (
-            <div className="p-6">
-              {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="stat bg-base-200 rounded-lg p-3">
-                  <div className="stat-title text-xs text-base-content">Total Activities</div>
-                  <div className="stat-value text-lg text-base-content">{Object.values(activities).flat().length}</div>
+            <div className="p-5">
+              {/* Summary Stats - Compact Design */}
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <div className="bg-gradient-to-br from-base-200 to-base-300/50 rounded-lg p-2 border border-base-300/50 shadow-sm">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Total</div>
+                  <div className="text-xl font-bold text-base-content">{Object.values(activities).flat().length}</div>
                 </div>
-                <div className="stat bg-success/10 rounded-lg p-3">
-                  <div className="stat-title text-xs text-base-content">Completed</div>
-                  <div className="stat-value text-lg text-success">
+                <div className="bg-gradient-to-br from-success/10 to-success/5 rounded-lg p-2 border border-success/20 shadow-sm">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Completed</div>
+                  <div className="text-xl font-bold text-success">
                     {Object.values(activities).flat().filter(a => a.status === "Completed").length}
                   </div>
                 </div>
-                <div className="stat bg-primary/10 rounded-lg p-3">
-                  <div className="stat-title text-xs text-base-content">Progress</div>
-                  <div className="stat-value text-lg text-primary">
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-2 border border-primary/20 shadow-sm">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Progress</div>
+                  <div className="text-xl font-bold text-primary">
                     {Math.round((Object.values(activities).flat().filter(a => a.status === "Completed").length / Object.values(activities).flat().length) * 100)}%
                   </div>
                 </div>
               </div>
 
-              {/* Activity Details by Stage - EDITABLE */}
-              <div className="space-y-4 max-h-[500px] overflow-y-auto">
+              {/* Activity Details by Stage - EDITABLE with Collapsible Sections */}
+              <div className="space-y-2 max-h-[500px] overflow-y-auto smooth-scroll">
                 {Object.entries(activities).map(([stageName, stageActivities]) => (
-                  <div key={stageName} className="border border-base-300 rounded-lg overflow-hidden">
+                  <div key={stageName} className="collapse collapse-arrow border border-base-300 rounded-xl bg-base-100 hover:shadow-md transition-all">
+                    <input type="checkbox" defaultChecked />
+                    
                     {/* Stage Header */}
-                    <div className="bg-primary/10 p-3 border-b border-base-300">
-                      <h4 className="font-bold text-sm text-base-content flex items-center justify-between">
+                    <div className="collapse-title bg-primary/10 p-2.5 border-b border-base-300 min-h-0 py-2.5">
+                      <h4 className="font-bold text-sm text-base-content flex items-center justify-between pr-8">
                         <span className="flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1195,7 +1314,8 @@ export default function SetTimelineModal({
                     </div>
 
                     {/* Activity Table - EDITABLE */}
-                    <div className="overflow-x-auto">
+                    <div className="collapse-content p-0">
+                      <div className="overflow-x-auto">
                       <table className="table table-xs w-full">
                         <thead className="bg-base-200">
                           <tr>
@@ -1244,6 +1364,7 @@ export default function SetTimelineModal({
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1255,9 +1376,9 @@ export default function SetTimelineModal({
 
           {/* Tab 3: Publication of Proposed SMV (Pre-submission) */}
           {activeTab === "proposed-publication" && (
-            <div className="p-6">
+            <div className="p-5">
               {/* Info Banner */}
-              <div className="alert alert-info text-sm mb-4">
+              <div className="alert alert-info text-sm mb-3">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -1267,104 +1388,134 @@ export default function SetTimelineModal({
                 </div>
               </div>
 
-              {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="stat bg-base-200 rounded-lg p-3">
-                  <div className="stat-title text-xs text-base-content">Total Activities</div>
-                  <div className="stat-value text-lg text-base-content">{proposedPublicationActivities.filter(a => !a.isHeader && !a.isNote).length}</div>
+              {/* Summary Stats - Compact Design */}
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <div className="bg-gradient-to-br from-base-200 to-base-300/50 rounded-lg p-2 border border-base-300/50 shadow-sm">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Total</div>
+                  <div className="text-xl font-bold text-base-content">{proposedPublicationActivities.filter(a => !a.isHeader && !a.isNote).length}</div>
                 </div>
-                <div className="stat bg-success/10 rounded-lg p-3">
-                  <div className="stat-title text-xs text-base-content">Completed</div>
-                  <div className="stat-value text-lg text-success">
+                <div className="bg-gradient-to-br from-success/10 to-success/5 rounded-lg p-2 border border-success/20 shadow-sm">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Completed</div>
+                  <div className="text-xl font-bold text-success">
                     {proposedPublicationActivities.filter(a => !a.isHeader && !a.isNote && a.status === "Completed").length}
                   </div>
                 </div>
-                <div className="stat bg-primary/10 rounded-lg p-3">
-                  <div className="stat-title text-xs text-base-content">Progress</div>
-                  <div className="stat-value text-lg text-primary">
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-2 border border-primary/20 shadow-sm">
+                  <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Progress</div>
+                  <div className="text-xl font-bold text-primary">
                     {Math.round((proposedPublicationActivities.filter(a => !a.isHeader && !a.isNote && a.status === "Completed").length / proposedPublicationActivities.filter(a => !a.isHeader && !a.isNote).length) * 100)}%
                   </div>
                 </div>
               </div>
 
-              {/* Publication Activities Table */}
-              <div className="border border-base-300 rounded-lg overflow-hidden">
-                <div className="bg-primary/10 p-3 border-b border-base-300">
-                  <h4 className="font-bold text-sm text-base-content flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Publication of Proposed SMV & Public Consultation
-                  </h4>
-                </div>
+              {/* Publication Activities - Collapsible Sections */}
+              <div className="space-y-2">
+                {(() => {
+                  // Group activities by headers
+                  const groups = [];
+                  let currentGroup = null;
 
-                <div className="overflow-x-auto">
-                  <table className="table table-sm w-full">
-                    <thead className="bg-base-200">
-                      <tr>
-                        <th className="text-base-content">Activity</th>
-                        <th className="text-center w-48 text-base-content">Status (Completed / Not Completed)</th>
-                        <th className="text-center w-48 text-base-content">Date Completed</th>
-                        <th className="w-64 text-base-content">Remarks</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {proposedPublicationActivities.map((activity, idx) => {
-                        // Header rows
-                        if (activity.isHeader) {
-                          return (
-                            <tr key={idx} className="bg-base-200">
-                              <td colSpan="4" className="font-bold text-sm text-base-content">{activity.name}</td>
-                            </tr>
-                          );
-                        }
-                        // Note rows
-                        if (activity.isNote) {
-                          return (
-                            <tr key={idx} className="bg-warning/10">
-                              <td colSpan="4" className="text-sm italic text-base-content">{activity.name}</td>
-                            </tr>
-                          );
-                        }
-                        // Regular activity rows
-                        return (
-                          <tr key={idx} className="hover:bg-base-200/50">
-                            <td className="text-sm text-base-content">{activity.name}</td>
-                            <td className="text-center">
-                              <select
-                                value={activity.status}
-                                onChange={(e) => handleProposedPublicationChange(idx, 'status', e.target.value)}
-                                className="select select-sm select-bordered w-full text-base-content"
-                              >
-                                <option value="Not Started">Not Started</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                              </select>
-                            </td>
-                            <td className="text-center">
-                              <input
-                                type="text"
-                                value={activity.dateCompleted || ''}
-                                onChange={(e) => handleProposedPublicationChange(idx, 'dateCompleted', e.target.value)}
-                                placeholder="Date or date range"
-                                className="input input-sm input-bordered w-full text-base-content"
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={activity.remarks || ''}
-                                onChange={(e) => handleProposedPublicationChange(idx, 'remarks', e.target.value)}
-                                placeholder="Add remarks..."
-                                className="input input-sm input-bordered w-full text-base-content"
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                  proposedPublicationActivities.forEach((activity, idx) => {
+                    if (activity.isHeader) {
+                      // Start new group
+                      if (currentGroup) groups.push(currentGroup);
+                      currentGroup = { header: activity, activities: [], startIdx: idx };
+                    } else if (currentGroup) {
+                      // Add to current group
+                      currentGroup.activities.push({ ...activity, originalIdx: idx });
+                    }
+                  });
+                  if (currentGroup) groups.push(currentGroup);
+
+                  return groups.map((group, groupIdx) => {
+                    const completedCount = group.activities.filter(a => !a.isNote && a.status === "Completed").length;
+                    const totalCount = group.activities.filter(a => !a.isNote).length;
+
+                    return (
+                      <div key={groupIdx} className="collapse collapse-arrow border border-base-300 rounded-lg bg-base-100">
+                        <input type="checkbox" defaultChecked />
+                        
+                        {/* Group Header */}
+                        <div className="collapse-title bg-primary/10 p-2.5 border-b border-base-300 min-h-0 py-2.5">
+                          <h4 className="font-bold text-sm text-base-content flex items-center justify-between pr-8">
+                            <span className="flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              {group.header.name.replace(':', '')}
+                            </span>
+                            <span className="badge badge-sm badge-primary">
+                              {completedCount} / {totalCount}
+                            </span>
+                          </h4>
+                        </div>
+
+                        {/* Activities Table */}
+                        <div className="collapse-content p-0">
+                          <div className="overflow-x-auto">
+                            <table className="table table-sm w-full">
+                              <thead className="bg-base-200">
+                                <tr>
+                                  <th className="text-base-content">Activity</th>
+                                  <th className="text-center w-48 text-base-content">Status</th>
+                                  <th className="text-center w-48 text-base-content">Date Completed</th>
+                                  <th className="w-64 text-base-content">Remarks</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.activities.map((activity) => {
+                                  // Note rows
+                                  if (activity.isNote) {
+                                    return (
+                                      <tr key={activity.originalIdx} className="bg-warning/10">
+                                        <td colSpan="4" className="text-sm italic text-base-content">{activity.name}</td>
+                                      </tr>
+                                    );
+                                  }
+                                  // Regular activity rows
+                                  return (
+                                    <tr key={activity.originalIdx} className="hover:bg-base-200/50">
+                                      <td className="text-sm text-base-content">{activity.name}</td>
+                                      <td className="text-center">
+                                        <select
+                                          value={activity.status}
+                                          onChange={(e) => handleProposedPublicationChange(activity.originalIdx, 'status', e.target.value)}
+                                          className="select select-sm select-bordered w-full text-base-content"
+                                        >
+                                          <option value="Not Started">Not Started</option>
+                                          <option value="In Progress">In Progress</option>
+                                          <option value="Completed">Completed</option>
+                                        </select>
+                                      </td>
+                                      <td className="text-center">
+                                        <input
+                                          type="text"
+                                          value={activity.dateCompleted || ''}
+                                          onChange={(e) => handleProposedPublicationChange(activity.originalIdx, 'dateCompleted', e.target.value)}
+                                          placeholder="Date or date range"
+                                          className="input input-sm input-bordered w-full text-base-content"
+                                        />
+                                      </td>
+                                      <td>
+                                        <input
+                                          type="text"
+                                          value={activity.remarks || ''}
+                                          onChange={(e) => handleProposedPublicationChange(activity.originalIdx, 'remarks', e.target.value)}
+                                          placeholder="Add remarks..."
+                                          className="input input-sm input-bordered w-full text-base-content"
+                                        />
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
 
             </div>
@@ -1374,9 +1525,9 @@ export default function SetTimelineModal({
           {activeTab === "review-publication" && (
             <div>
               {/* Sticky Header Section */}
-              <div className="sticky top-0 z-10 bg-base-100 p-6 pb-4 border-b border-base-300">
+              <div className="sticky top-0 z-10 bg-base-100 p-5 pb-3 border-b border-base-300">
                 {/* Info Banner */}
-                <div className="alert alert-info text-sm mb-4">
+                <div className="alert alert-info text-sm mb-3">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -1386,21 +1537,21 @@ export default function SetTimelineModal({
                   </div>
                 </div>
 
-                {/* Summary Stats */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="stat bg-base-200 rounded-lg p-3">
-                    <div className="stat-title text-xs text-base-content">Total Activities</div>
-                    <div className="stat-value text-lg text-base-content">{reviewPublicationActivities.length}</div>
+                {/* Summary Stats - Compact Design */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-gradient-to-br from-base-200 to-base-300/50 rounded-lg p-2 border border-base-300/50 shadow-sm">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Total</div>
+                    <div className="text-xl font-bold text-base-content">{reviewPublicationActivities.length}</div>
                   </div>
-                  <div className="stat bg-success/10 rounded-lg p-3">
-                    <div className="stat-title text-xs text-base-content">Completed</div>
-                    <div className="stat-value text-lg text-success">
+                  <div className="bg-gradient-to-br from-success/10 to-success/5 rounded-lg p-2 border border-success/20 shadow-sm">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Completed</div>
+                    <div className="text-xl font-bold text-success">
                       {reviewPublicationActivities.filter(a => a.status === "Completed").length}
                     </div>
                   </div>
-                  <div className="stat bg-primary/10 rounded-lg p-3">
-                    <div className="stat-title text-xs text-base-content">Progress</div>
-                    <div className="stat-value text-lg text-primary">
+                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-2 border border-primary/20 shadow-sm">
+                    <div className="text-[9px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">Progress</div>
+                    <div className="text-xl font-bold text-primary">
                       {Math.round((reviewPublicationActivities.filter(a => a.status === "Completed").length / reviewPublicationActivities.length) * 100)}%
                     </div>
                   </div>
@@ -1408,66 +1559,116 @@ export default function SetTimelineModal({
               </div>
 
               {/* Scrollable Table Content */}
-              <div className="p-6 pt-4">
-                {/* Review & Publication Activities Table */}
-                <div className="border border-base-300 rounded-lg overflow-hidden">
-                  <div className="bg-primary/10 p-3 border-b border-base-300">
-                    <h4 className="font-bold text-sm text-base-content flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Review, Certification & Publication of Certified SMV
-                    </h4>
-                  </div>
+              <div className="p-5 pt-3">
+                {/* Review & Publication Activities - Collapsible Sections */}
+                <div className="space-y-2">
+                  {(() => {
+                    // Define logical groups for Tab 4 activities
+                    const groups = [
+                      { 
+                        title: "Submission to Regional Office",
+                        startIdx: 0,
+                        endIdx: 1
+                      },
+                      {
+                        title: "BLGF Review Process",
+                        startIdx: 1,
+                        endIdx: 4
+                      },
+                      {
+                        title: "Publication of Certified SMV",
+                        startIdx: 4,
+                        endIdx: 8
+                      },
+                      {
+                        title: "Post-Publication Activities",
+                        startIdx: 8,
+                        endIdx: reviewPublicationActivities.length
+                      }
+                    ];
 
-                  <div className="overflow-x-auto">
-                    <table className="table table-sm w-full">
-                      <thead className="bg-base-200">
-                        <tr>
-                          <th className="text-base-content">Activity</th>
-                          <th className="text-center w-48 text-base-content">Status (Completed / Not Completed)</th>
-                          <th className="text-center w-48 text-base-content">Date Completed</th>
-                          <th className="w-64 text-base-content">Remarks</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reviewPublicationActivities.map((activity, idx) => (
-                          <tr key={idx} className="hover:bg-base-200/50">
-                            <td className="text-sm text-base-content">{activity.name}</td>
-                            <td className="text-center">
-                              <select
-                                value={activity.status}
-                                onChange={(e) => handleReviewPublicationChange(idx, 'status', e.target.value)}
-                                className="select select-sm select-bordered w-full text-base-content"
-                              >
-                                <option value="Not Started">Not Started</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                              </select>
-                            </td>
-                            <td className="text-center">
-                              <DateInput
-                                name={`review-publication-${idx}`}
-                                value={activity.dateCompleted || ''}
-                                onChange={(e) => handleReviewPublicationChange(idx, 'dateCompleted', e.target.value)}
-                                className="input input-sm input-bordered w-full text-base-content"
-                                placeholder="Select date..."
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={activity.remarks || ''}
-                                onChange={(e) => handleReviewPublicationChange(idx, 'remarks', e.target.value)}
-                                placeholder="Add remarks..."
-                                className="input input-sm input-bordered w-full text-base-content"
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                    return groups.map((group, groupIdx) => {
+                      const groupActivities = reviewPublicationActivities.slice(group.startIdx, group.endIdx);
+                      const completedCount = groupActivities.filter(a => a.status === "Completed").length;
+                      const totalCount = groupActivities.length;
+
+                      return (
+                        <div key={groupIdx} className="collapse collapse-arrow border border-base-300 rounded-lg bg-base-100">
+                          <input type="checkbox" defaultChecked />
+                          
+                          {/* Group Header */}
+                          <div className="collapse-title bg-primary/10 p-2.5 border-b border-base-300 min-h-0 py-2.5">
+                            <h4 className="font-bold text-sm text-base-content flex items-center justify-between pr-8">
+                              <span className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {group.title}
+                              </span>
+                              <span className="badge badge-sm badge-primary">
+                                {completedCount} / {totalCount}
+                              </span>
+                            </h4>
+                          </div>
+
+                          {/* Activities Table */}
+                          <div className="collapse-content p-0">
+                            <div className="overflow-x-auto">
+                              <table className="table table-sm w-full">
+                                <thead className="bg-base-200">
+                                  <tr>
+                                    <th className="text-base-content">Activity</th>
+                                    <th className="text-center w-48 text-base-content">Status</th>
+                                    <th className="text-center w-48 text-base-content">Date Completed</th>
+                                    <th className="w-64 text-base-content">Remarks</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {groupActivities.map((activity, relIdx) => {
+                                    const idx = group.startIdx + relIdx;
+                                    return (
+                                      <tr key={idx} className="hover:bg-base-200/50">
+                                        <td className="text-sm text-base-content">{activity.name}</td>
+                                        <td className="text-center">
+                                          <select
+                                            value={activity.status}
+                                            onChange={(e) => handleReviewPublicationChange(idx, 'status', e.target.value)}
+                                            className="select select-sm select-bordered w-full text-base-content"
+                                          >
+                                            <option value="Not Started">Not Started</option>
+                                            <option value="In Progress">In Progress</option>
+                                            <option value="Completed">Completed</option>
+                                          </select>
+                                        </td>
+                                        <td className="text-center">
+                                          <DateInput
+                                            name={`review-publication-${idx}`}
+                                            value={activity.dateCompleted || ''}
+                                            onChange={(e) => handleReviewPublicationChange(idx, 'dateCompleted', e.target.value)}
+                                            className="input input-sm input-bordered w-full text-base-content"
+                                            placeholder="Select date..."
+                                          />
+                                        </td>
+                                        <td>
+                                          <input
+                                            type="text"
+                                            value={activity.remarks || ''}
+                                            onChange={(e) => handleReviewPublicationChange(idx, 'remarks', e.target.value)}
+                                            placeholder="Add remarks..."
+                                            className="input input-sm input-bordered w-full text-base-content"
+                                          />
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>
@@ -1476,8 +1677,8 @@ export default function SetTimelineModal({
 
         {/* Sticky Footer - Only show when changes made */}
         {hasChanges && (
-          <div className="flex-shrink-0 border-t border-base-300 bg-base-100 p-4 rounded-b-xl shadow-lg">
-            <div className="flex items-center justify-between gap-4">
+          <div className="flex-shrink-0 border-t border-base-300 bg-base-100 p-3 rounded-b-xl shadow-lg">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-warning">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

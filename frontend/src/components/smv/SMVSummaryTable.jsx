@@ -1,28 +1,18 @@
-import React, { useState } from "react";
+import React from "react";
 import SMVProgressBar from "./SMVProgressBar";
 
 /**
- * SMV Summary Table - Dashboard Card Style (Option 4)
- * Clean, scannable summary focusing on compliance status and timeline tracking.
- * Detailed editing done through SetTimelineModal (4-tab modal).
+ * SMV Summary Table - Simplified & Polished
+ * Clean card-based list view with essential information
+ * Click to edit timeline for detailed work
  */
 export default function SMVSummaryTable({ 
   filteredTableData, 
   stages, 
   isAdmin, 
-  onSetTimeline 
+  onSetTimeline,
+  viewMode = "detailed" 
 }) {
-  const [expandedRows, setExpandedRows] = useState(new Set());
-
-  const toggleRow = (lguId) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(lguId)) {
-      newExpanded.delete(lguId);
-    } else {
-      newExpanded.add(lguId);
-    }
-    setExpandedRows(newExpanded);
-  };
 
   // Calculate days from BLGF Notice (Day 0)
   const calculateDaysFromNotice = (timeline) => {
@@ -116,397 +106,292 @@ export default function SMVSummaryTable({
     );
   }
 
-  return (
-    <div className="space-y-3">
-      {/* Table Header - Sticky */}
-      <div className="sticky top-0 z-10 bg-base-200 rounded-lg p-3 shadow-sm border border-base-300">
-        <div className="grid grid-cols-10 gap-3 items-center text-xs font-bold text-base-content/70">
-          <div className="col-span-2 flex items-center gap-2">
-            <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            LGU
-          </div>
-          <div className="col-span-7">
-            <div className="flex items-center gap-1">
-              <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Progress & Stage
-            </div>
-          </div>
-          <div className="col-span-1 text-center">Actions</div>
-        </div>
-      </div>
+  // Simple View - Compact list
+  if (viewMode === "simple") {
+    return (
+      <div className="space-y-2 mt-6">
+        {filteredTableData.map((row, index) => {
+          const colorSchemes = [
+            'border-l-primary',
+            'border-l-secondary',
+            'border-l-accent',
+            'border-l-info',
+          ];
+          const colorScheme = colorSchemes[index % colorSchemes.length];
 
-      {/* Table Rows - Card Style with Alternating Colors */}
+          return (
+            <div
+              key={row.lguId}
+              className={`group bg-base-100 rounded-lg border-2 border-base-300 border-l-4 ${colorScheme} hover:shadow-lg hover:scale-[1.005] transition-all duration-200 overflow-hidden`}
+            >
+              <div className="p-4 flex items-center gap-4">
+                {/* LGU Name */}
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-base font-bold text-base-content truncate">
+                    {row.lguName}
+                  </h4>
+                  <p className="text-xs text-base-content/50">Caraga Region</p>
+                </div>
+
+                {/* Progress Bar - Compact */}
+                <div className="flex-[2] min-w-0">
+                  <SMVProgressBar
+                    tab1Progress={row.tab1Progress || 0}
+                    tab2Progress={row.tab2Progress || 0}
+                    tab3Progress={row.tab3Progress || 0}
+                    tab4Progress={row.tab4Progress || 0}
+                  />
+                </div>
+
+                {/* Edit Button */}
+                {isAdmin && onSetTimeline && (
+                  <button
+                    className="btn btn-primary btn-sm rounded-lg gap-2"
+                    title="Edit Timeline & Activities"
+                    onClick={() => onSetTimeline(row)}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span className="hidden sm:inline">Edit</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Detailed View - Full cards
+  return (
+    <div className="space-y-4 mt-6">
+      {/* LGU Cards - Simplified & Polished with Color Emphasis */}
       {filteredTableData.map((row, index) => {
-        const isExpanded = expandedRows.has(row.lguId);
-        const badge = getComplianceBadge(row.complianceStatus);
         const daysSinceNotice = calculateDaysFromNotice(row.timeline);
         const nextDeadline = getNextDeadline(row.timeline);
-        const currentStage = getCurrentStage(row.stageMap);
+
+        // Alternating color scheme for visual distinction
+        const colorSchemes = [
+          'bg-primary/5 border-primary/30 hover:border-primary hover:bg-primary/10',
+          'bg-secondary/5 border-secondary/30 hover:border-secondary hover:bg-secondary/10',
+          'bg-accent/5 border-accent/30 hover:border-accent hover:bg-accent/10',
+          'bg-info/5 border-info/30 hover:border-info hover:bg-info/10',
+        ];
+        const colorScheme = colorSchemes[index % colorSchemes.length];
 
         return (
           <div 
             key={row.lguId}
-            className={`rounded-lg shadow-sm border border-base-300 hover:shadow-md transition-all duration-200 ${
-              index % 2 === 0 ? 'bg-base-100' : 'bg-base-200/30'
-            }`}
+            className={`group rounded-2xl border-2 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 overflow-hidden ${colorScheme}`}
           >
-            {/* Main Row */}
-            <div className="p-3">
-              <div className="grid grid-cols-10 gap-3 items-center">
+            {/* Colored accent bar at top */}
+            <div className={`h-2 ${
+              index % 4 === 0 ? 'bg-gradient-to-r from-primary to-primary/50' :
+              index % 4 === 1 ? 'bg-gradient-to-r from-secondary to-secondary/50' :
+              index % 4 === 2 ? 'bg-gradient-to-r from-accent to-accent/50' :
+              'bg-gradient-to-r from-info to-info/50'
+            }`}></div>
+
+            <div className="p-5 sm:p-6">
+              {/* Header: LGU Name + Progress Percentage */}
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2.5 mb-1.5">
+                    {/* Color indicator dot with pulse effect */}
+                    <div className={`w-3 h-3 rounded-full animate-pulse ${
+                      index % 4 === 0 ? 'bg-primary' :
+                      index % 4 === 1 ? 'bg-secondary' :
+                      index % 4 === 2 ? 'bg-accent' :
+                      'bg-info'
+                    }`}></div>
+                    <h4 className="text-xl font-bold text-base-content tracking-tight">
+                      {row.lguName}
+                    </h4>
+                  </div>
+                  <p className="text-xs text-base-content/60 ml-[1.25rem] font-medium flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Caraga Region
+                  </p>
+                </div>
+                {isAdmin && onSetTimeline && (
+                  <button 
+                    className="btn btn-primary btn-sm h-10 px-5 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 gap-2"
+                    title="Edit Timeline & Activities"
+                    aria-label="Edit timeline and activities"
+                    onClick={() => onSetTimeline(row)}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span className="hidden sm:inline font-medium">Edit Timeline</span>
+                    <span className="sm:hidden font-medium">Edit</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mb-5">
+                <SMVProgressBar
+                  tab1Progress={row.tab1Progress || 0}
+                  tab2Progress={row.tab2Progress || 0}
+                  tab3Progress={row.tab3Progress || 0}
+                  tab4Progress={row.tab4Progress || 0}
+                />
+              </div>
+
+              {/* Stage Checklist - Compact Grid with Color Coding */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                {/* Timeline */}
+                <div className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 min-h-[2.75rem] shadow-sm transition-all duration-200 ${
+                  row.tab1Progress === 100 
+                    ? 'bg-success/10 border-success/30' 
+                    : 'bg-base-200/70 border-base-300'
+                }`}>
+                  {row.tab1Progress === 100 ? (
+                    <span className="text-success text-sm font-bold">✅</span>
+                  ) : (
+                    <span className="text-base-content/40 text-sm">⏳</span>
+                  )}
+                  <span className={`text-xs font-semibold ${
+                    row.tab1Progress === 100 ? 'text-success' : 'text-base-content/70'
+                  }`}>
+                    Timeline
+                  </span>
+                </div>
                 
-                {/* LGU Name + Region - REDUCED */}
-                <div className="col-span-2">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => toggleRow(row.lguId)}
-                      className="btn btn-ghost btn-xs btn-circle flex-shrink-0"
-                    >
-                      <svg 
-                        className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                    <div className="flex-1">
-                      <div className="font-bold text-sm text-base-content">{row.lguName}</div>
-                      <div className="text-xs text-base-content/60">Caraga Region</div>
-                    </div>
-                  </div>
+                {/* Development */}
+                <div className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 min-h-[2.75rem] shadow-sm transition-all duration-200 ${
+                  row.tab2Progress === 100 ? 'bg-success/10 border-success/30' :
+                  row.tab2Progress > 0 ? 'bg-warning/10 border-warning/30' :
+                  'bg-base-200/70 border-base-300'
+                }`}>
+                  {row.tab2Progress === 100 ? (
+                    <span className="text-success text-sm font-bold">✅</span>
+                  ) : row.tab2Progress > 0 ? (
+                    <span className="text-warning text-sm font-bold">🔄</span>
+                  ) : (
+                    <span className="text-base-content/40 text-sm">⏳</span>
+                  )}
+                  <span className={`text-xs font-semibold ${
+                    row.tab2Progress === 100 ? 'text-success' :
+                    row.tab2Progress > 0 ? 'text-warning' :
+                    'text-base-content/70'
+                  }`}>
+                    Development
+                  </span>
                 </div>
+                
+                {/* Publication */}
+                <div className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 min-h-[2.75rem] shadow-sm transition-all duration-200 ${
+                  row.tab3Progress === 100 ? 'bg-success/10 border-success/30' :
+                  row.tab3Progress > 0 ? 'bg-warning/10 border-warning/30' :
+                  'bg-base-200/70 border-base-300'
+                }`}>
+                  {row.tab3Progress === 100 ? (
+                    <span className="text-success text-sm font-bold">✅</span>
+                  ) : row.tab3Progress > 0 ? (
+                    <span className="text-warning text-sm font-bold">🔄</span>
+                  ) : (
+                    <span className="text-base-content/40 text-sm">⏳</span>
+                  )}
+                  <span className={`text-xs font-semibold ${
+                    row.tab3Progress === 100 ? 'text-success' :
+                    row.tab3Progress > 0 ? 'text-warning' :
+                    'text-base-content/70'
+                  }`}>
+                    Publication
+                  </span>
+                </div>
+                
+                {/* Review */}
+                <div className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 min-h-[2.75rem] shadow-sm transition-all duration-200 ${
+                  row.tab4Progress === 100 ? 'bg-success/10 border-success/30' :
+                  row.tab4Progress > 0 ? 'bg-warning/10 border-warning/30' :
+                  'bg-base-200/70 border-base-300'
+                }`}>
+                  {row.tab4Progress === 100 ? (
+                    <span className="text-success text-sm font-bold">✅</span>
+                  ) : row.tab4Progress > 0 ? (
+                    <span className="text-warning text-sm font-bold">🔄</span>
+                  ) : (
+                    <span className="text-base-content/40 text-sm">⏳</span>
+                  )}
+                  <span className={`text-xs font-semibold ${
+                    row.tab4Progress === 100 ? 'text-success' :
+                    row.tab4Progress > 0 ? 'text-warning' :
+                    'text-base-content/70'
+                  }`}>
+                    Review
+                  </span>
+                </div>
+              </div>
 
-                {/* EXPANDED Progress & Stage Column */}
-                <div className="col-span-7">
-                  <div className="space-y-2">
-                    {/* Overall Progress with Percentage */}
+              {/* Footer: Current Stage + Timeline with Enhanced Styling */}
+              <div className={`flex flex-wrap items-center gap-x-6 gap-y-3 pt-5 mt-5 border-t-2 ${
+                index % 4 === 0 ? 'border-primary/20' :
+                index % 4 === 1 ? 'border-secondary/20' :
+                index % 4 === 2 ? 'border-accent/20' :
+                'border-info/20'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-base-content/60 font-medium">Status:</span>
+                  <span className={`badge badge-sm font-semibold ${
+                    index % 4 === 0 ? 'badge-primary' :
+                    index % 4 === 1 ? 'badge-secondary' :
+                    index % 4 === 2 ? 'badge-accent' :
+                    'badge-info'
+                  }`}>
+                    {row.currentStage || "Timeline Setup"}
+                  </span>
+                </div>
+                
+                {daysSinceNotice !== null ? (
+                  <>
                     <div className="flex items-center gap-2">
-                      <span className="text-base font-bold text-base-content min-w-[2.5rem]">
-                        {row.overallProgress || 0}%
-                      </span>
-                      <div className="flex-1">
-                        <SMVProgressBar
-                          tab1Progress={row.tab1Progress || 0}
-                          tab2Progress={row.tab2Progress || 0}
-                          tab3Progress={row.tab3Progress || 0}
-                          tab4Progress={row.tab4Progress || 0}
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Stage Milestones Checklist */}
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
-                      {/* Timeline */}
-                      <div className="flex items-center gap-2">
-                        {row.tab1Progress === 100 ? (
-                          <span className="text-success">✅</span>
-                        ) : (
-                          <span className="text-base-content/30">⏳</span>
-                        )}
-                        <span className={row.tab1Progress === 100 ? 'text-base-content font-medium' : 'text-base-content/60'}>
-                          Timeline Complete
-                        </span>
-                      </div>
-                      
-                      {/* Development */}
-                      <div className="flex items-center gap-2">
-                        {row.tab2Progress === 100 ? (
-                          <span className="text-success">✅</span>
-                        ) : row.tab2Progress > 0 ? (
-                          <span className="text-info">🔄</span>
-                        ) : (
-                          <span className="text-base-content/30">⏳</span>
-                        )}
-                        <span className={
-                          row.tab2Progress === 100 ? 'text-base-content font-medium' : 
-                          row.tab2Progress > 0 ? 'text-info font-medium' : 
-                          'text-base-content/60'
-                        }>
-                          Development {row.tab2Progress > 0 && `(${row.tab2Progress}%)`}
-                        </span>
-                      </div>
-                      
-                      {/* Publication */}
-                      <div className="flex items-center gap-2">
-                        {row.tab3Progress === 100 ? (
-                          <span className="text-success">✅</span>
-                        ) : row.tab3Progress > 0 ? (
-                          <span className="text-info">🔄</span>
-                        ) : (
-                          <span className="text-base-content/30">⏳</span>
-                        )}
-                        <span className={
-                          row.tab3Progress === 100 ? 'text-base-content font-medium' : 
-                          row.tab3Progress > 0 ? 'text-info font-medium' : 
-                          'text-base-content/60'
-                        }>
-                          Publication {row.tab3Progress > 0 && `(${row.tab3Progress}%)`}
-                        </span>
-                      </div>
-                      
-                      {/* Review */}
-                      <div className="flex items-center gap-2">
-                        {row.tab4Progress === 100 ? (
-                          <span className="text-success">✅</span>
-                        ) : row.tab4Progress > 0 ? (
-                          <span className="text-info">🔄</span>
-                        ) : (
-                          <span className="text-base-content/30">⏳</span>
-                        )}
-                        <span className={
-                          row.tab4Progress === 100 ? 'text-base-content font-medium' : 
-                          row.tab4Progress > 0 ? 'text-info font-medium' : 
-                          'text-base-content/60'
-                        }>
-                          Review & Approval {row.tab4Progress > 0 && `(${row.tab4Progress}%)`}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Current Stage Indicator */}
-                    <div className="flex items-center gap-2 pt-1.5 border-t border-base-300/50">
-                      <span className="text-[10px] text-base-content/60">Working On:</span>
-                      <span className="text-xs font-semibold text-primary">
-                        {row.currentStage || "Timeline Setup"}
+                      <span className="text-xs text-base-content/60 font-medium">Day:</span>
+                      <span className={`badge badge-sm font-bold ${
+                        index % 4 === 0 ? 'badge-primary badge-outline' :
+                        index % 4 === 1 ? 'badge-secondary badge-outline' :
+                        index % 4 === 2 ? 'badge-accent badge-outline' :
+                        'badge-info badge-outline'
+                      }`}>
+                        {daysSinceNotice}
                       </span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Actions - REDUCED */}
-                <div className="col-span-1">
-                  <div className="flex flex-col gap-1 items-center">
-                    {isAdmin && onSetTimeline && (
-                      <button 
-                        className="btn btn-primary btn-sm btn-circle"
-                        title="Set Timeline & Activities"
-                        onClick={() => onSetTimeline(row)}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </button>
+                    {nextDeadline && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-base-content/60 font-medium">Next Deadline:</span>
+                        <span className={`badge badge-sm font-semibold ${
+                          nextDeadline.daysUntil < 0 ? 'badge-error' :
+                          nextDeadline.daysUntil < 30 ? 'badge-warning' :
+                          'badge-success'
+                        }`}>
+                          {nextDeadline.name} — {nextDeadline.daysUntil < 0 ? 
+                            `${Math.abs(nextDeadline.daysUntil)}d overdue` :
+                            `${nextDeadline.daysUntil}d left`
+                          }
+                        </span>
+                      </div>
                     )}
-                    <button 
-                      className="btn btn-ghost btn-sm btn-circle"
-                      title="View Details"
-                      onClick={() => toggleRow(row.lguId)}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </button>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 bg-warning/10 px-3 py-1.5 rounded-lg border border-warning/30">
+                    <span className="text-sm">⚠️</span>
+                    <span className="text-xs text-warning font-semibold">
+                      Set BLGF Notice Date
+                    </span>
                   </div>
-                </div>
-
+                )}
               </div>
             </div>
-
-            {/* Expanded Details */}
-            {isExpanded && (
-              <div className="border-t border-base-300 bg-base-200/30 p-4">
-                {/* RA 12001 Timeline Details */}
-                {row.timeline && Object.keys(row.timeline).length > 1 && (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-bold mb-3 flex items-center gap-2 text-primary">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                      </svg>
-                      RA 12001 Compliance Timeline
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {/* BLGF Notice Date (Day 0) */}
-                      {row.timeline.blgfNoticeDate && (
-                        <div className="bg-base-100 p-3 rounded-lg border-l-4 border-primary">
-                          <div className="text-[10px] text-primary font-bold mb-1">🔔 BLGF NOTICE (DAY 0)</div>
-                          <div className="font-semibold text-sm text-base-content">
-                            {new Date(row.timeline.blgfNoticeDate).toLocaleDateString('en-US', { 
-                              month: 'short', day: 'numeric', year: 'numeric' 
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Regional Office Submission */}
-                      {row.timeline.regionalOfficeSubmissionDeadline && (
-                        <div className="bg-base-100 p-3 rounded-lg border-l-4 border-warning">
-                          <div className="text-[10px] text-warning font-bold mb-1">📤 RO SUBMISSION</div>
-                          <div className="font-semibold text-sm text-base-content">
-                            {new Date(row.timeline.regionalOfficeSubmissionDeadline).toLocaleDateString('en-US', { 
-                              month: 'short', day: 'numeric', year: 'numeric' 
-                            })}
-                          </div>
-                          <div className="text-[9px] text-base-content/60 mt-1">Within 12 months</div>
-                        </div>
-                      )}
-
-                      {/* Publication Deadline */}
-                      {row.timeline.publicationDeadline && (
-                        <div className="bg-base-100 p-3 rounded-lg border-l-4 border-info">
-                          <div className="text-[10px] text-info font-bold mb-1">📰 PUBLICATION</div>
-                          <div className="font-semibold text-sm text-base-content">
-                            {new Date(row.timeline.publicationDeadline).toLocaleDateString('en-US', { 
-                              month: 'short', day: 'numeric', year: 'numeric' 
-                            })}
-                          </div>
-                          <div className="text-[9px] text-base-content/60 mt-1">2 weeks before consultation</div>
-                        </div>
-                      )}
-
-                      {/* Public Consultation */}
-                      {row.timeline.publicConsultationDeadline && (
-                        <div className="bg-base-100 p-3 rounded-lg border-l-4 border-secondary">
-                          <div className="text-[10px] text-secondary font-bold mb-1">👥 PUBLIC CONSULTATION</div>
-                          <div className="font-semibold text-sm text-base-content">
-                            {new Date(row.timeline.publicConsultationDeadline).toLocaleDateString('en-US', { 
-                              month: 'short', day: 'numeric', year: 'numeric' 
-                            })}
-                          </div>
-                          <div className="text-[9px] text-base-content/60 mt-1">60 days before RO</div>
-                        </div>
-                      )}
-
-                      {/* Sanggunian Submission */}
-                      {row.timeline.sanggunianSubmissionDeadline && (
-                        <div className="bg-base-100 p-3 rounded-lg border-l-4 border-accent">
-                          <div className="text-[10px] text-accent font-bold mb-1">🏛️ SANGGUNIAN</div>
-                          <div className="font-semibold text-sm text-base-content">
-                            {new Date(row.timeline.sanggunianSubmissionDeadline).toLocaleDateString('en-US', { 
-                              month: 'short', day: 'numeric', year: 'numeric' 
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* BLGF Approval */}
-                      {row.timeline.blgfApprovalDeadline && (
-                        <div className="bg-base-100 p-3 rounded-lg border-l-4 border-success">
-                          <div className="text-[10px] text-success font-bold mb-1">✅ BLGF APPROVAL</div>
-                          <div className="font-semibold text-sm text-base-content">
-                            {new Date(row.timeline.blgfApprovalDeadline).toLocaleDateString('en-US', { 
-                              month: 'short', day: 'numeric', year: 'numeric' 
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Effectivity Date */}
-                      {row.timeline.effectivityDate && (
-                        <div className="bg-base-100 p-3 rounded-lg border-l-4 border-error">
-                          <div className="text-[10px] text-error font-bold mb-1">🎯 EFFECTIVITY</div>
-                          <div className="font-semibold text-sm text-base-content">
-                            {new Date(row.timeline.effectivityDate).toLocaleDateString('en-US', { 
-                              month: 'short', day: 'numeric', year: 'numeric' 
-                            })}
-                          </div>
-                          <div className="text-[9px] text-base-content/60 mt-1">SMV takes effect</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Stage Progress Summary */}
-                <div className="mb-4">
-                  <h4 className="text-sm font-bold mb-3 flex items-center gap-2 text-base-content">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    Stage Progress Summary
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                    {stages.map((stage, idx) => {
-                      const activities = row.stageMap[stage] || [];
-                      const completed = activities.filter(a => a.status === "Completed").length;
-                      const total = activities.length;
-                      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-                      
-                      return (
-                        <div key={stage} className="bg-base-100 p-3 rounded-lg border border-base-300">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className={`radial-progress text-sm ${
-                              percent === 100 ? 'text-success' : 
-                              percent > 0 ? 'text-warning' : 
-                              'text-base-content/30'
-                            }`}
-                            style={{"--value": percent, "--size": "2.5rem", "--thickness": "4px"}}
-                            >
-                              {percent}
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-bold text-xs text-primary">Stage {idx + 1}</div>
-                              <div className="text-[10px] text-base-content/60">{completed}/{total}</div>
-                            </div>
-                          </div>
-                          <div className="text-[10px] text-base-content/70 leading-tight">{stage}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Alerts */}
-                {row.alerts && row.alerts.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-bold flex items-center gap-2 text-warning">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      Alerts
-                    </h4>
-                    {row.alerts.map((alert, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`alert ${alert.type === 'danger' ? 'alert-error' : 'alert-warning'} text-xs`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span>{alert.message}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* CTA to Open Modal */}
-                {isAdmin && onSetTimeline && (
-                  <div className="mt-4 pt-4 border-t border-base-300">
-                    <button 
-                      className="btn btn-primary btn-sm w-full sm:w-auto"
-                      onClick={() => onSetTimeline(row)}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit Timeline & Activities (4-Tab Modal)
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
           </div>
         );
       })}
-
-      {/* Stage Legend at Bottom */}
-      <div className="bg-base-200 rounded-lg p-4 border border-base-300">
-        <h4 className="text-sm font-bold mb-3 text-base-content">📊 Stage Legend (6 Stages per RA 12001)</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
-          {stages.map((stage, idx) => (
-            <div key={stage} className="flex items-center gap-2 bg-base-100 p-2 rounded">
-              <div className="badge badge-primary badge-sm">{idx + 1}</div>
-              <span className="text-base-content font-medium">{stage}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

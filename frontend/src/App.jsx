@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router";
 import { useAuth } from "./contexts/AuthContext.jsx";
 
-import Navbar from "./components/layout/Navbar/Navbar.jsx";
-import Footer from "./components/layout/Footer";
+import Sidebar from "./components/layout/Sidebar/Sidebar.jsx";
+import TopHeader from "./components/layout/TopHeader/TopHeader.jsx";
 import HomePage from "./pages/HomePage";
 import AssessorsPage from "./pages/AssessorsPage";
 import CreatePage from "./pages/CreatePage";
@@ -19,6 +19,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   const [currentTheme, setCurrentTheme] = useState("synthwave");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, loading } = useAuth();
 
   const navigate = useNavigate();
@@ -112,24 +113,32 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-base-100">
+    <div className="min-h-screen bg-base-200/30">
       {/* DaisyUI CSS CDN */}
       <link
         href="https://cdnjs.cloudflare.com/ajax/libs/daisyui/4.4.19/full.css"
         rel="stylesheet"
       />
 
-      {/* Navigation */}
-      <Navbar
-        currentPage={currentPage}
-        currentTheme={currentTheme}
-        onThemeChange={handleThemeChange}
-        user={user}
-        onNavigate={handleNavigate}
-      />
+      {user && (
+        <>
+          {/* Sidebar Navigation */}
+          <Sidebar 
+            isCollapsed={sidebarCollapsed} 
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          />
+          
+          {/* Top Header */}
+          <TopHeader
+            currentTheme={currentTheme}
+            onThemeChange={handleThemeChange}
+            sidebarCollapsed={sidebarCollapsed}
+          />
+        </>
+      )}
 
-      {/* Main Content - Mobile Optimized */}
-      <main className="flex-grow pt-14 pb-2 px-2 sm:px-3 lg:px-4">
+      {/* Main Content - Offset for sidebar and header when logged in */}
+      <main className={`${user ? (sidebarCollapsed ? 'ml-20' : 'ml-64') + ' mt-16 p-6' : 'p-4'} min-h-screen transition-all duration-300`}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
@@ -221,9 +230,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }

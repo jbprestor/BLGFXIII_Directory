@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { X, FileText, Users, BarChart3, Edit2, Trash2, Save, XCircle } from "lucide-react";
+import { X, FileText, Users, BarChart3, Edit2, Trash2, Save, XCircle } from "../common/Icon";
 import toast from "react-hot-toast";
 import { useAuth } from "../../contexts/AuthContext";
 
-const PLACEHOLDER_IMAGE = "https://via.placeholder.com/200?text=LGU";
+const PLACEHOLDER_IMAGE = "https://placehold.co/200x200/3b82f6/white?text=LGU";
 const prettyPopulation = (n) => (n === 0 ? "0" : (n ? n.toLocaleString() : "—"));
 const prettyNumber = (n) => (n === 0 ? "0" : (n || n === 0 ? n.toLocaleString() : "—"));
 const prettyDate = (d) => {
@@ -20,7 +20,7 @@ function toSafeCandidate(c) {
   if (isAbsoluteUrl(c)) return c;
   // If candidate looks like a short label (e.g. "Province:1"), encode as placeholder text
   try {
-    return `https://via.placeholder.com/400x400?text=${encodeURIComponent(String(c))}`;
+    return `https://placehold.co/400x400/3b82f6/white?text=${encodeURIComponent(String(c))}`;
   } catch {
     return PLACEHOLDER_IMAGE;
   }

@@ -1,6 +1,6 @@
 // src/components/lgu/ProvinceLguCard.jsx
 import React from "react";
-import { Building } from "lucide-react";
+import { Building } from "../common/Icon";
 import LguIcon from "../common/LguIcon.jsx";
 
 // SMV Status badge styling
@@ -47,7 +47,7 @@ export default React.memo(function ProvinceLguCard({
   const toSafeImageUrl = (url) => {
     if (!url) return PLACEHOLDER_IMAGE;
     if (/^(https?:)?\/\//i.test(url) || /^data:/i.test(url)) return url;
-    return `https://via.placeholder.com/400x400?text=${encodeURIComponent(String(url).replace(/[?#].*$/, ''))}`;
+    return `https://placehold.co/400x400/3b82f6/white?text=${encodeURIComponent(String(url).replace(/[?#].*$/, ''))}`;
   };
 
   const iconName = (() => {

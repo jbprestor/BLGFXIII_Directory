@@ -9,7 +9,7 @@ import {
   Building,
   ChevronDown,
   ChevronUp,
-} from "lucide-react";
+} from "../components/common/Icon";
 import toast from "react-hot-toast";
 import QuickStats from "../components/lgu/QuickStats.jsx";
 import SearchFilters from "../components/lgu/SearchFilter.jsx";
@@ -165,7 +165,7 @@ export default function LGUPage() {
   }, [filteredLgus]);
 
   // images
-  const PLACEHOLDER_IMAGE = "https://via.placeholder.com/200?text=Province";
+  const PLACEHOLDER_IMAGE = "https://placehold.co/200x200/3b82f6/white?text=Province";
 
   const normalizeKey = (s) => {
     if (typeof s !== 'string') return '';

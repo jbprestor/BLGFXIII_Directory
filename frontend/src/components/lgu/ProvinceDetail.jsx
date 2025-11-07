@@ -1,7 +1,7 @@
 // src/components/lgu/ProvinceDetail.jsx
 import React from "react";
 import ProvinceLguCard from "./ProvinceLGUCard.jsx";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "../common/Icon";
 
 /**
  * ProvinceDetail — extracted from LGUPage
