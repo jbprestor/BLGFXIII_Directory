@@ -34,12 +34,7 @@ export async function getAllSMVMonitoring(req, res) {
     const monitoringList = await queryBuilder;
     const total = await SMVMonitoring.countDocuments(query);
 
-    console.log(`🗄️ Backend: Fetched ${monitoringList.length} SMV monitoring records (year: ${year || 'all'}, all: ${all})`);
-    monitoringList.forEach(m => {
-      const lguName = m.lguId?.name || 'Unknown';
-      const lguId = m.lguId?._id || m.lguId;
-      console.log(`  - ${lguName} (LGU ID: ${lguId}, Monitoring ID: ${m._id})`);
-    });
+    // Removed verbose backend fetch logs for production cleanliness
 
     res.status(200).json({
       monitoringList,
