@@ -14,9 +14,10 @@ export default function ProfilePage() {
       console.log("getImageUrl called with null/undefined path");
       return null;
     }
-    const baseUrl = import.meta.env.MODE === "development" 
-      ? "http://localhost:5001" 
-      : "";
+    const baseUrl = import.meta.env.VITE_IMG_URL ||
+      (import.meta.env.MODE === "development"
+        ? "http://localhost:5001"
+        : "");
     const fullUrl = `${baseUrl}${path}`;
     console.log("✅ getImageUrl - Path:", path, "| Base URL:", baseUrl, "| Full URL:", fullUrl);
     return fullUrl;
@@ -106,13 +107,13 @@ export default function ProfilePage() {
       console.log("Uploading file:", file.name, file.type, file.size);
       const response = await api.uploadProfilePicture(formData);
       console.log("Upload response:", response.data);
-      
+
       if (response.data.success) {
         const newPicturePath = response.data.data.profilePicture;
         console.log("New picture path:", newPicturePath);
         setProfilePicture(newPicturePath);
         toast.success("Profile picture updated successfully!");
-        
+
         // Update user in auth context
         if (updateUser) {
           updateUser({ ...user, profilePicture: newPicturePath });
@@ -138,7 +139,7 @@ export default function ProfilePage() {
       if (response.data.success) {
         setProfilePicture(null);
         toast.success("Profile picture removed successfully!");
-        
+
         // Update user in auth context
         if (updateUser) {
           updateUser({ ...user, profilePicture: null });
@@ -232,7 +233,7 @@ export default function ProfilePage() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Upload overlay - only show in edit mode */}
                 {isEditing && (
                   <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center z-20 pointer-events-none">
@@ -265,7 +266,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Edit indicator badge - show when in edit mode */}
                 {isEditing && (
                   <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-lg animate-pulse z-30">
@@ -274,7 +275,7 @@ export default function ProfilePage() {
                     </svg>
                   </div>
                 )}
-                
+
                 {/* Hidden file input */}
                 <input
                   ref={fileInputRef}
@@ -320,7 +321,7 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-            
+
             {/* Edit mode hint */}
             {isEditing && (
               <div className="alert alert-info mt-4">

@@ -22,9 +22,10 @@ export default function UserMenu({
       console.log("UserMenu getImageUrl called with null/undefined path");
       return null;
     }
-    const baseUrl = import.meta.env.MODE === "development" 
-      ? "http://localhost:5001" 
-      : "";
+    const baseUrl = import.meta.env.VITE_IMG_URL ||
+      (import.meta.env.MODE === "development"
+        ? "http://localhost:5001"
+        : "");
     const fullUrl = `${baseUrl}${path}`;
     console.log("✅ UserMenu getImageUrl - Path:", path, "| Full URL:", fullUrl);
     return fullUrl;
