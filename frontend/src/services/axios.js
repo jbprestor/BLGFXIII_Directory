@@ -6,9 +6,10 @@ export default function useApi() {
   if (_cachedApi) return _cachedApi;
   // Determine API base URL
   const API_BASE_URL =
-    import.meta.env.MODE === "development"
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.MODE === "development"
       ? "http://localhost:5001/api"
-      : "/api";
+      : "/api");
 
   // Create axios instance
   const api = axios.create({
@@ -29,12 +30,12 @@ export default function useApi() {
       config.headers.Authorization = `Bearer ${token}`;
       // Only log in development mode and don't expose the actual token
       if (import.meta.env.MODE === "development") {
-        console.log("Token added to request: [REDACTED]");
+       // console.log("Token added to request: [REDACTED]");
       }
     } else if (!isPublicEndpoint) {
       // Only warn about missing token for protected endpoints
       if (import.meta.env.MODE === "development") {
-        console.warn("No token found in localStorage");
+        // console.warn("No token found in localStorage");
       }
     }
     return config;

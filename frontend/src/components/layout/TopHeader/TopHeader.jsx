@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import useClickOutside from "../../../hooks/useClickOutside.js";
 import Theme from "../../../contexts/Theme.jsx";
 
-export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapsed }) {
+export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapsed, onMobileMenuClick }) {
   const { user, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
@@ -23,16 +23,30 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
   };
 
   return (
-    <header className={`h-16 bg-base-100 border-b border-base-300 flex items-center justify-between px-6 fixed top-0 right-0 ${sidebarCollapsed ? 'left-20' : 'left-64'} z-30 transition-all duration-300`}>
-      {/* Left: Page Title or Breadcrumb */}
+    <header
+      className={`
+        h-16 bg-base-100 border-b border-base-300 flex items-center justify-between px-4 sm:px-6 
+        fixed top-0 right-0 z-30 transition-all duration-300
+        left-0 ${sidebarCollapsed ? 'lg:left-20' : 'lg:left-64'}
+      `}
+    >
+      {/* Left: Mobile Toggle & Title */}
       <div className="flex items-center gap-3">
-        <svg className="w-5 h-5 text-base-content/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        </svg>
+        {/* Mobile Menu Button */}
+        <button
+          className="lg:hidden btn btn-ghost btn-square btn-sm -ml-2"
+          onClick={onMobileMenuClick}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
         <span className="text-sm text-base-content/60 font-medium">Dashboard</span>
       </div>
 
       {/* Right: Theme + User Menu */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Notification Icon */}
         <button className="btn btn-ghost btn-circle btn-sm" aria-label="Notifications">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,11 +75,10 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
                       onThemeChange(key);
                       setThemeOpen(false);
                     }}
-                    className={`justify-between ${
-                      currentTheme === key
+                    className={`justify-between ${currentTheme === key
                         ? "active bg-primary text-primary-content"
                         : "hover:bg-base-200"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center space-x-3">
                       <span className="text-lg">{themeData.icon}</span>

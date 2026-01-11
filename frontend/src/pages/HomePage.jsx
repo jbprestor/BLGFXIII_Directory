@@ -1,8 +1,17 @@
+import { useState } from "react";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import UserLoginModal from "../components/modals/users/UserLoginModal.jsx";
+import UserRegisterModal from "../components/modals/users/UserRegisterModal.jsx";
+
 export default function HomePage() {
+  const { user } = useAuth();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Hero Section - Centered Dashboard Style */}
-      <section className="bg-base-100 rounded-xl shadow-lg border border-base-300/50 p-8 min-h-[calc(100vh-200px)] flex items-center justify-center">
+      <section className="bg-base-100 rounded-xl shadow-lg border border-base-300/50 p-4 sm:p-8 min-h-[calc(100vh-100px)] sm:min-h-[calc(100vh-200px)] flex items-center justify-center">
         <div className="text-center max-w-2xl">
           <div className="mb-6">
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
@@ -10,24 +19,44 @@ export default function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <h1 className="text-4xl font-bold text-base-content mb-3">(Dashboard) Work in progress</h1>
-            <p className="text-base-content/60 text-lg">This module is under construction.</p>
+            <h1 className="text-4xl font-bold text-base-content mb-3">
+              {user ? `Welcome, ${user.firstName}` : "BLGF XIII Portal"}
+            </h1>
+            <p className="text-base-content/60 text-lg">
+              {user
+                ? "This module is under construction."
+                : "Bureau of Local Government Finance - Region XIII"}
+            </p>
           </div>
-          
+
           <div className="flex flex-wrap justify-center gap-3 mt-8">
-            <button className="btn btn-primary gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              View Reports
-            </button>
-            <button className="btn btn-outline gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              Settings
-            </button>
+            {!user ? (
+              <button
+                onClick={() => setIsLoginModalOpen(true)}
+                className="btn btn-primary gap-2 btn-lg"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Login to Portal
+              </button>
+            ) : (
+              <>
+                <button className="btn btn-primary gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  View Reports
+                </button>
+                <button className="btn btn-outline gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Settings
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -45,7 +74,7 @@ export default function HomePage() {
             <div className="stat-value text-primary text-lg sm:text-2xl lg:text-3xl">1,634</div>
             <div className="stat-desc text-xs">Active local government units</div>
           </div>
-          
+
           <div className="stat">
             <div className="stat-figure text-secondary">
               <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,7 +85,7 @@ export default function HomePage() {
             <div className="stat-value text-secondary text-lg sm:text-2xl lg:text-3xl">24,891</div>
             <div className="stat-desc text-xs">This fiscal year</div>
           </div>
-          
+
           <div className="stat">
             <div className="stat-figure text-accent">
               <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,7 +167,7 @@ export default function HomePage() {
             </div>
             <div className="timeline-end text-xs opacity-50">2 hours ago</div>
           </div>
-          
+
           <div className="timeline-item">
             <div className="timeline-start text-xs opacity-50">5 hours ago</div>
             <div className="timeline-middle">
@@ -149,7 +178,7 @@ export default function HomePage() {
               <div className="text-xs opacity-70">Q3 2024 financial summary completed</div>
             </div>
           </div>
-          
+
           <div className="timeline-item">
             <div className="timeline-start timeline-box">
               <div className="font-bold text-xs sm:text-sm">New LGU Registration</div>
@@ -168,7 +197,7 @@ export default function HomePage() {
         <div className="container mx-auto px-2 sm:px-4 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Ready to Get Started?</h2>
           <p className="text-sm sm:text-xl mb-6 sm:mb-8 text-base-content/70 max-w-2xl mx-auto leading-relaxed">
-            Join thousands of local government units already using our platform 
+            Join thousands of local government units already using our platform
             to streamline their financial operations and reporting processes.
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4">
@@ -187,6 +216,29 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {isLoginModalOpen && (
+        <UserLoginModal
+          onClose={() => setIsLoginModalOpen(false)}
+          onSuccess={() => {
+            setIsLoginModalOpen(false);
+          }}
+          onRequestAccess={() => {
+            setIsLoginModalOpen(false);
+            setIsRegisterModalOpen(true);
+          }}
+        />
+      )}
+
+      {isRegisterModalOpen && (
+        <UserRegisterModal
+          onClose={() => setIsRegisterModalOpen(false)}
+          onGoToLogin={() => {
+            setIsRegisterModalOpen(false);
+            setIsLoginModalOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 }

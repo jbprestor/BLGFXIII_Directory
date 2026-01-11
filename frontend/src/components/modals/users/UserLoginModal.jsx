@@ -9,7 +9,7 @@ export default function UserLoginPage({ onSuccess, onClose, onRequestAccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const { login } = useAuth();
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
@@ -62,12 +62,13 @@ export default function UserLoginPage({ onSuccess, onClose, onRequestAccess }) {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         borderRadius: '20px',
         padding: '0',
-        width: '100%',
+        width: '90%',
         maxWidth: '400px',
         margin: '20px',
         boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
         position: 'relative',
-        overflow: 'hidden'
+        overflowY: 'auto',
+        maxHeight: '90vh'
       }}>
         {/* Background Design Elements */}
         <div style={{
@@ -129,7 +130,7 @@ export default function UserLoginPage({ onSuccess, onClose, onRequestAccess }) {
             }}
           >
             <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
 
@@ -256,13 +257,13 @@ export default function UserLoginPage({ onSuccess, onClose, onRequestAccess }) {
               >
                 {showPassword ? (
                   <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd"/>
-                    <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>
+                    <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                    <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
                   </svg>
                 ) : (
                   <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                   </svg>
                 )}
               </button>
@@ -313,7 +314,7 @@ export default function UserLoginPage({ onSuccess, onClose, onRequestAccess }) {
                 </div>
                 <span>Remember me</span>
               </label>
-              
+
               <button
                 type="button"
                 style={{

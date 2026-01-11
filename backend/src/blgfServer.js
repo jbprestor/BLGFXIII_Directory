@@ -30,7 +30,6 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // CORS configuration - Must be before static files for browser requests
 if (process.env.NODE_ENV !== "production") {
-  console.log("CORS enabled for development");
   app.use(cors({
     origin: [
       process.env.VITE_CLIENT_API_URL_LOCAL,
@@ -46,7 +45,6 @@ if (process.env.NODE_ENV !== "production") {
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
-console.log("Static files served from:", uploadsDir);
 
 // Ensure qrrpa subfolder exists
 const qrrpaDir = path.join(uploadsDir, 'qrrpa');
@@ -75,7 +73,6 @@ app.get("/api/health", (req, res) => {
 
 // Static file serving for production
 if (process.env.NODE_ENV === "production") {
-  console.log("Serving static files in production");
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
   
   // Handle SPA routing

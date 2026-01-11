@@ -24,25 +24,21 @@ export default function SMVMonitoringPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [complianceFilter, setComplianceFilter] = useState("all");
   const [progressFilter, setProgressFilter] = useState("all");
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState(2025);
   const [activeTab, setActiveTab] = useState("table");
   const [viewMode, setViewMode] = useState("detailed"); // 'detailed' or 'simple'
-  
+
   // Timeline modal state
   const [timelineModalOpen, setTimelineModalOpen] = useState(false);
   const [selectedLguForTimeline, setSelectedLguForTimeline] = useState(null);
-  
-  // Available years for SMV (every 3 years)
+
+  // Available years for SMV
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const years = [];
-    // Generate years: current year and going back in 3-year intervals
-    for (let year = currentYear; year >= 2019; year -= 3) {
-      years.push(year);
-    }
-    // Also add future years if needed (next cycle)
-    if (!years.includes(currentYear + 3)) {
-      years.unshift(currentYear + 3);
+    // Allow selecting past 5 years and next year
+    for (let i = -1; i < 5; i++) {
+      years.push(currentYear - i);
     }
     return years.sort((a, b) => b - a); // Descending order
   }, []);
@@ -75,24 +71,24 @@ export default function SMVMonitoringPage() {
       setLoading(true);
       const res = await getSMVProcesses({ all: true, year: selectedYear });
       const allMonitorings = Array.isArray(res.data) ? res.data : res.data?.monitoringList || [];
-      
+
       console.log(`📊 Fetched ${allMonitorings.length} monitoring records for year ${selectedYear}`);
-      
+
       // Log each monitoring record to debug Surigao del Sur issue
       allMonitorings.forEach(m => {
         const lguName = m.lguId?.name || 'Unknown';
         const lguId = m.lguId?._id || m.lguId;
         console.log(`  - ${lguName} (LGU ID: ${lguId}, Monitoring ID: ${m._id})`);
       });
-      
+
       // Filter by selected year
-      const filteredByYear = allMonitorings.filter(m => 
-        m.referenceYear === selectedYear || 
+      const filteredByYear = allMonitorings.filter(m =>
+        m.referenceYear === selectedYear ||
         new Date(m.createdAt).getFullYear() === selectedYear
       );
-      
+
       console.log(`✅ After year filter: ${filteredByYear.length} records`);
-      
+
       setMonitorings(filteredByYear);
       setError(null);
     } catch (error) {
@@ -131,14 +127,14 @@ export default function SMVMonitoringPage() {
         const monitoringLguId = m.lguId?._id || m.lguId; // Handle both populated and string ID
         return monitoringLguId === lgu._id || monitoringLguId === lgu._id.toString();
       }) || {};
-      
+
       console.log(`🔍 Matching for ${lgu.name}:`, {
         lguId: lgu._id,
         foundMonitoring: !!monitoring._id,
         monitoringId: monitoring._id,
         monitoringLguId: monitoring.lguId
       });
-      
+
       // Try to use saved stageMap first, otherwise construct from activities
       let stageMap;
       if (monitoring.stageMap && Object.keys(monitoring.stageMap).length > 0) {
@@ -153,13 +149,13 @@ export default function SMVMonitoringPage() {
             stageActivities.length > 0
               ? stageActivities
               : [
-                  {
-                    _id: `placeholder-${lgu._id}-${stage}`,
-                    category: stage,
-                    status: "Not Started",
-                    placeholder: true,
-                  },
-                ];
+                {
+                  _id: `placeholder-${lgu._id}-${stage}`,
+                  category: stage,
+                  status: "Not Started",
+                  placeholder: true,
+                },
+              ];
           return acc;
         }, {});
       }
@@ -170,7 +166,7 @@ export default function SMVMonitoringPage() {
       // Calculate Tab 2 Progress: Development activities
       const devActivities = Object.values(stageMap).flat().filter(a => !a.placeholder);
       const devCompleted = devActivities.filter(a => a.status === "Completed").length;
-      const tab2Progress = devActivities.length > 0 
+      const tab2Progress = devActivities.length > 0
         ? Math.round((devCompleted / devActivities.length) * 100)
         : 0;
 
@@ -266,7 +262,7 @@ export default function SMVMonitoringPage() {
     // Progress range filter
     if (progressFilter !== "all") {
       const [min, max] = progressFilter.split("-").map(Number);
-      filtered = filtered.filter(row => 
+      filtered = filtered.filter(row =>
         row.totalPercent >= min && row.totalPercent <= max
       );
     }
@@ -356,13 +352,13 @@ export default function SMVMonitoringPage() {
       hasStageMap: !!rowData.stageMap,
       stageMapKeys: rowData.stageMap ? Object.keys(rowData.stageMap) : []
     });
-    
+
     if (rowData.monitoringId) {
       console.log('✅ Monitoring exists in database with ID:', rowData.monitoringId);
     } else {
       console.log('⚠️ No monitoring ID - will check database or create new');
     }
-    
+
     setSelectedLguForTimeline(rowData);
     setTimelineModalOpen(true);
   };
@@ -370,7 +366,7 @@ export default function SMVMonitoringPage() {
   // Handle saving timeline
   const handleSaveTimeline = async (allData) => {
     const loadingToastId = toast.loading(`Saving data for ${selectedLguForTimeline.lguName}...`);
-    
+
     try {
       let monitoringId = selectedLguForTimeline?.monitoringId;
 
@@ -381,7 +377,7 @@ export default function SMVMonitoringPage() {
           const existingCheck = await api.get("/smv-processes", {
             params: { lguId: selectedLguForTimeline.lguId, year: selectedYear },
           });
-          
+
           const existing = existingCheck.data?.monitoringList?.[0];
           if (existing) {
             // Found existing monitoring, use it
@@ -399,7 +395,7 @@ export default function SMVMonitoringPage() {
               valuationDate: new Date(selectedYear, 0, 1),
               createdBy: user._id,
             });
-            
+
             monitoringId = createRes.data._id;
             setMonitorings((prev) => [...prev, createRes.data]);
             console.log("✅ Created new monitoring for", selectedLguForTimeline.lguName);
@@ -430,7 +426,7 @@ export default function SMVMonitoringPage() {
 
       // Prepare the update data
       const updateData = {};
-      
+
       // Handle timeline data (convert to ISO dates if needed)
       if (allData.timeline) {
         const timeline = {};
@@ -443,7 +439,7 @@ export default function SMVMonitoringPage() {
         });
         updateData.timeline = timeline;
       }
-      
+
       // Handle activities (stageMap) - Convert stageMap to activities array
       if (allData.stageMap) {
         // Clean stageMap - remove MongoDB-specific fields and placeholders
@@ -462,14 +458,14 @@ export default function SMVMonitoringPage() {
           }
         });
         updateData.stageMap = cleanedStageMap;
-        
+
         // Also convert stageMap to activities array for backend compatibility
         // Map frontend stage names to backend enum values
         const stageNameMap = {
           "Finalization of Proposed SMV": "Finalization",
           // Add other mappings if needed
         };
-        
+
         const activitiesArray = [];
         Object.keys(allData.stageMap).forEach(stage => {
           const stageActivities = allData.stageMap[stage];
@@ -479,14 +475,14 @@ export default function SMVMonitoringPage() {
               if (!activity.placeholder) {
                 // Map stage name to backend enum value
                 const backendCategory = stageNameMap[stage] || stage;
-                
+
                 const activityData = {
                   name: activity.name,
                   category: backendCategory,
                   status: activity.status || 'Not Started',
                   remarks: activity.remarks || ''
                 };
-                
+
                 // Only include dateCompleted if it has a valid value
                 if (activity.dateCompleted && activity.dateCompleted !== '') {
                   // Convert to Date object if it's a string
@@ -496,7 +492,7 @@ export default function SMVMonitoringPage() {
                     activityData.dateCompleted = dateObj;
                   }
                 }
-                
+
                 activitiesArray.push(activityData);
               }
             });
@@ -504,7 +500,7 @@ export default function SMVMonitoringPage() {
         });
         updateData.activities = activitiesArray;
       }
-      
+
       // Handle proposed publication activities - clean data
       if (allData.proposedPublicationActivities) {
         console.log("📋 Raw proposedPublicationActivities:", allData.proposedPublicationActivities);
@@ -518,7 +514,7 @@ export default function SMVMonitoringPage() {
         }));
         console.log("✅ Cleaned proposedPublicationActivities:", updateData.proposedPublicationActivities);
       }
-      
+
       // Handle review publication activities - clean data
       if (allData.reviewPublicationActivities) {
         console.log("📋 Raw reviewPublicationActivities:", allData.reviewPublicationActivities);
@@ -536,9 +532,9 @@ export default function SMVMonitoringPage() {
 
       // Save all data using the general update endpoint
       const res = await api.put(`/smv-processes/${monitoringId}`, updateData);
-      
+
       console.log("✅ SMVMonitoringPage: Received updated data from backend", res.data);
-      
+
       // Update local state
       setMonitorings((prev) =>
         prev.map((m) => (m._id === monitoringId ? res.data : m))
@@ -553,7 +549,7 @@ export default function SMVMonitoringPage() {
       // Success toast now handled by modal component
     } catch (error) {
       toast.dismiss(loadingToastId);
-      
+
       // Show error toast
       const errorMessage = error.response?.data?.message || error.message || "Failed to save timeline";
       toast.error(`Error: ${errorMessage}`);
@@ -574,11 +570,10 @@ export default function SMVMonitoringPage() {
           <button
             role="tab"
             aria-selected={activeTab === "dashboard"}
-            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
-              activeTab === "dashboard"
-                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
-                : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
-            }`}
+            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${activeTab === "dashboard"
+              ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
+              : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
+              }`}
             onClick={() => setActiveTab("dashboard")}
           >
             <div className="flex items-center justify-center gap-2">
@@ -591,11 +586,10 @@ export default function SMVMonitoringPage() {
           <button
             role="tab"
             aria-selected={activeTab === "table"}
-            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
-              activeTab === "table"
-                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
-                : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
-            }`}
+            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${activeTab === "table"
+              ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
+              : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
+              }`}
             onClick={() => setActiveTab("table")}
           >
             <div className="flex items-center justify-center gap-2">
@@ -608,11 +602,10 @@ export default function SMVMonitoringPage() {
           <button
             role="tab"
             aria-selected={activeTab === "analytics"}
-            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${
-              activeTab === "analytics"
-                ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
-                : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
-            }`}
+            className={`flex-1 py-3 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-300 ${activeTab === "analytics"
+              ? "bg-primary text-primary-content shadow-lg transform scale-[1.02]"
+              : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 hover:scale-[1.01]"
+              }`}
             onClick={() => setActiveTab("analytics")}
           >
             <div className="flex items-center justify-center gap-2">
@@ -627,8 +620,8 @@ export default function SMVMonitoringPage() {
 
       {/* Tab Content */}
       <div className="px-2 pb-4 sm:px-4">
-  <div className="bg-base-100/95 backdrop-blur-sm rounded-xl shadow-xl border border-base-300/50 min-h-[calc(100vh-180px)] w-full max-w-7xl mx-auto overflow-hidden">
-          
+        <div className="bg-base-100/95 backdrop-blur-sm rounded-xl shadow-xl border border-base-300/50 min-h-[calc(100vh-180px)] w-full max-w-7xl mx-auto overflow-hidden">
+
           {/* Dashboard Tab */}
           {activeTab === "dashboard" && (
             <section className="p-3 sm:p-4 lg:p-6">

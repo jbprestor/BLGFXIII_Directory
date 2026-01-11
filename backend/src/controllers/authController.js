@@ -21,14 +21,15 @@ export const registerUser = async (req, res) => {
         .json({ message: "User already exists with this email" });
     }
 
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // const salt = await bcrypt.genSalt(12);
+    // const hashedPassword = await bcrypt.hash(password, salt);
+
 
     const user = new User({
       firstName,
       lastName,
       email,
-      password: hashedPassword,
+      password, // Passed as plain text, hashed by pre-save hook
       role: role || "Municipal",
       region,
     });
@@ -139,7 +140,13 @@ export const logoutUser = (req, res) => {
 // Refresh Token
 export const refreshToken = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+    if (!token) return res.status(401).json({ message: "No token provided" });
+
+    // Verify token, ignoring expiration to allow refresh
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+    
+    const user = await User.findById(decoded._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const newToken = generateToken(user._id, user.role);

@@ -112,6 +112,13 @@ export default function App() {
     }
   };
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-base-200/30">
       {/* DaisyUI CSS CDN */}
@@ -123,22 +130,31 @@ export default function App() {
       {user && (
         <>
           {/* Sidebar Navigation */}
-          <Sidebar 
-            isCollapsed={sidebarCollapsed} 
-            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          <Sidebar
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            isMobileOpen={mobileSidebarOpen}
+            onMobileClose={() => setMobileSidebarOpen(false)}
           />
-          
+
           {/* Top Header */}
           <TopHeader
             currentTheme={currentTheme}
             onThemeChange={handleThemeChange}
             sidebarCollapsed={sidebarCollapsed}
+            onMobileMenuClick={() => setMobileSidebarOpen(true)}
           />
         </>
       )}
 
-      {/* Main Content - Offset for sidebar and header when logged in */}
-      <main className={`${user ? (sidebarCollapsed ? 'ml-20' : 'ml-64') + ' mt-16 p-6' : 'p-4'} min-h-screen transition-all duration-300`}>
+      {/* Main Content - Responsive Margins */}
+      <main
+        className={`
+          min-h-screen transition-all duration-300 pt-16
+          ${user ? (sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64') : ''}
+          p-4 sm:p-6
+        `}
+      >
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />

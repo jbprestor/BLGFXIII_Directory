@@ -7,24 +7,12 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
 node_modules
-.pnp
-.pnp.js
-
-# Build
 dist
 dist-ssr
-build
-out
+*.local
 
-# Environment variables
-.env
-.env.*
-!.env.example
-!.env.production
-
-# IDEs
+# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -34,6 +22,3 @@ out
 *.njsproj
 *.sln
 *.sw?
-
-# System
-Thumbs.db
