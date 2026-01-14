@@ -63,6 +63,7 @@ export default function useApi() {
   const getAllUsers = () => api.get("/users");
   const registerUser = (data) => api.post("/users/register", data);
   const loginUser = (data) => api.post("/users/login", data);
+  const logoutUser = () => api.post("/auth/logout");
   const getPendingUsers = () => api.get("/users/pending");
   const updateUserStatus = (userId, status) => api.patch(`/users/${userId}/status`, { status });
   const updateProfile = (data) => api.put("/users/profile", data);
@@ -124,6 +125,7 @@ export default function useApi() {
     getAllUsers,
     registerUser,
     loginUser,
+    logoutUser,
     getPendingUsers,
     updateUserStatus,
     updateProfile,

@@ -29,8 +29,8 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
   useClickOutside(notificationRef, () => setNotificationOpen(false));
 
   const handleLogout = async () => {
+    setProfileOpen(false);
     await logout();
-    window.location.replace("/");
   };
 
   useEffect(() => {
@@ -65,9 +65,6 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
     >
       {/* Left: Mobile Toggle & Title */}
       <div className="flex items-center gap-3">
-        {/* Mobile Menu Button */}
-        {/* Mobile Menu Button - REMOVED */}
-
         <span className="text-sm text-base-content/60 font-medium">Dashboard</span>
       </div>
 
@@ -206,12 +203,16 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
               </li>
               <div className="divider my-0"></div>
               <li>
-                <a className="gap-2 text-error cursor-pointer" onClick={handleLogout}>
+                <button
+                  type="button"
+                  className="gap-2 text-error cursor-pointer flex w-full items-center"
+                  onClick={handleLogout}
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
                   Logout
-                </a>
+                </button>
               </li>
             </ul>
           )}

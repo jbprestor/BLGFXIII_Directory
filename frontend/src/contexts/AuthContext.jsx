@@ -41,12 +41,21 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
-    // Force full reload to homepage
-    window.location.replace("/"); // replaces current history entry
+  const logout = async () => {
+    try {
+      // Call backend logout endpoint to invalidate session
+      await api.logoutUser();
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Continue with logout even if backend call fails
+    } finally {
+      // Clear local storage and user state
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUser(null);
+      // Force full reload to homepage
+      window.location.replace("/"); // replaces current history entry
+    }
   };
 
   const updateUser = (updatedData) => {

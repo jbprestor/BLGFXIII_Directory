@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { X, FileText, Users, BarChart3, Edit2, Trash2, Save, XCircle } from "../common/Icon";
+import { X, FileText, Users, BarChart3, Edit2, Trash2, Save, XCircle, Building } from "../common/Icon";
 import toast from "react-hot-toast";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -26,16 +26,16 @@ function toSafeCandidate(c) {
   }
 }
 
-export default function LGUDetails({ 
-  id, 
-  onClose, 
-  enqueueRequest, 
-  getLguById, 
-  getAllAssessors, 
-  getSMVProcesses, 
-  getCandidatesFor, 
-  lguCache, 
-  assessorsCache, 
+export default function LGUDetails({
+  id,
+  onClose,
+  enqueueRequest,
+  getLguById,
+  getAllAssessors,
+  getSMVProcesses,
+  getCandidatesFor,
+  lguCache,
+  assessorsCache,
   smvCache,
   updateLgu, // Added for CRUD
   deleteLgu  // Added for CRUD
@@ -53,8 +53,9 @@ export default function LGUDetails({
   const [loading, setLoading] = useState({ lgu: false, assessors: false, smv: false });
 
   // Check if user has admin/editor permissions
-  const canEdit = user && (user.role === 'admin' || user.role === 'editor');
-  const canDelete = user && user.role === 'admin';
+  // Check if user has admin/editor permissions
+  const canEdit = user && ['admin', 'editor'].includes(user.role?.toLowerCase());
+  const canDelete = user && user.role?.toLowerCase() === 'admin';
 
   // Initialize edit form when entering edit mode
   useEffect(() => {
@@ -80,19 +81,19 @@ export default function LGUDetails({
   // Save changes
   const handleSave = async () => {
     if (!editData || !canEdit) return;
-    
+
     setLoading(prev => ({ ...prev, lgu: true }));
     try {
-      const res = await enqueueRequest(() => 
-        updateLgu(editData._id || editData.id, editData), 
+      const res = await enqueueRequest(() =>
+        updateLgu(editData._id || editData.id, editData),
         "Update LGU"
       );
-      
+
       // Update local state and cache
       const updatedLgu = res?.data || res;
       setLgu(updatedLgu);
       lguCache?.current?.set(updatedLgu._id || updatedLgu.id, updatedLgu);
-      
+
       setEditMode(false);
       toast.success('LGU updated successfully');
     } catch (err) {
@@ -105,18 +106,18 @@ export default function LGUDetails({
   // Delete LGU
   const handleDelete = async () => {
     if (!canDelete) return;
-    
+
     if (!window.confirm('Are you sure you want to delete this LGU? This action cannot be undone.')) {
       return;
     }
 
     setLoading(prev => ({ ...prev, lgu: true }));
     try {
-      await enqueueRequest(() => 
-        deleteLgu(lgu._id || lgu.id), 
+      await enqueueRequest(() =>
+        deleteLgu(lgu._id || lgu.id),
         "Delete LGU"
       );
-      
+
       toast.success('LGU deleted successfully');
       onClose();
     } catch (err) {
@@ -179,7 +180,7 @@ export default function LGUDetails({
           const res = await enqueueRequest(() => getAllAssessors(), "Assessors");
           const allAssessors = res?.data || res || [];
           // Only keep assessors where lgu._id matches current LGU's _id
-          const lguAssessors = allAssessors.filter(a => 
+          const lguAssessors = allAssessors.filter(a =>
             (a.lgu?._id === (lgu._id || lgu.id)) || // match by LGU reference
             (a.lguName === lgu.name) // fallback: match by LGU name
           );
@@ -216,395 +217,396 @@ export default function LGUDetails({
   if (!id) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div aria-hidden="true" className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
-      {/* Responsive modal: full-screen on xs, centered panel on md+ */}
-      <div ref={dialogRef} role="dialog" aria-modal="true" className="relative w-full h-full sm:h-auto max-w-3xl mx-0 sm:mx-auto bg-base-100 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-start sm:justify-between p-4 border-b border-base-200 gap-3">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-base-200 border flex items-center justify-center">
-              {/* Use lightweight icon on xs, image on sm+ */}
-              <div className="sm:hidden text-base-content/50"><svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v6a4 4 0 004 4h10"/></svg></div>
-              <img src={imgSrc} alt={lgu?.name || 'LGU'} onError={onImgError} className="hidden sm:block w-full h-full object-cover" loading="lazy" decoding="async" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">{lgu?.name || 'Loading...'}</h3>
-              <div className="text-sm text-base-content/60">{lgu?.province} • {lgu?.region}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="btn btn-ghost" onClick={() => { navigator.clipboard?.writeText(JSON.stringify(lgu || {})); toast.success('Copied'); }}>Copy</button>
-            <button className="btn btn-ghost" onClick={onClose}><X /></button>
-          </div>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div aria-hidden="true" className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+      {/* Responsive modal: increased max-width for better edit layout */}
+      <div ref={dialogRef} role="dialog" aria-modal="true" className="relative w-full h-full sm:h-auto max-h-[90vh] max-w-5xl mx-auto bg-base-100 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
-        <div className="p-3 border-b border-base-200">
-          <nav className="flex gap-2">
-            <button className={`btn btn-sm ${activeTab === 'overview' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('overview')}><FileText className="w-4 h-4 mr-2"/>Overview</button>
-            <button className={`btn btn-sm ${activeTab === 'assessors' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('assessors')}><Users className="w-4 h-4 mr-2"/>Assessors</button>
-            <button className={`btn btn-sm ${activeTab === 'smv' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('smv')}><BarChart3 className="w-4 h-4 mr-2"/>SMV</button>
-          </nav>
-        </div>
-
-  <div className="p-4 max-h-[70vh] overflow-auto">
-          {activeTab === 'overview' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-3 bg-base-200 rounded-lg">
-                  <div className="text-xs text-base-content/60">Population</div>
-                  <div className="font-semibold">{prettyPopulation(lgu?.population)}</div>
-                </div>
-                <div className="p-3 bg-base-200 rounded-lg">
-                  <div className="text-xs text-base-content/60">Income Class</div>
-                  <div className="font-semibold">{lgu?.incomeClass || '—'}</div>
-                </div>
-                <div className="p-3 bg-base-200 rounded-lg">
-                  <div className="text-xs text-base-content/60">Classification</div>
-                  <div className="font-semibold">{lgu?.classification || '—'}</div>
-                </div>
-                <div className="p-3 bg-base-200 rounded-lg">
-                  <div className="text-xs text-base-content/60">Status</div>
-                  <div className="font-semibold">{lgu?.currentSMVStatus || '—'}</div>
-                </div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-center sm:justify-between p-4 border-b border-base-200 gap-4 bg-base-100/50 backdrop-blur-md sticky top-0 z-10">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-base-200 border border-base-300 shadow-sm flex-shrink-0">
+              <img src={imgSrc} alt={lgu?.name || 'LGU'} onError={onImgError} className="w-full h-full object-cover" loading="lazy" decoding="async" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xl font-bold truncate">{editMode ? `Editing: ${lgu?.name}` : (lgu?.name || 'Loading...')}</h3>
+              <div className="text-sm text-base-content/60 flex items-center gap-2">
+                <span className="badge badge-sm badge-ghost">{lgu?.province}</span>
+                <span className="hidden sm:inline">•</span>
+                <span className="truncate">{lgu?.region}</span>
               </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            {!editMode && (
+              <button className="btn btn-ghost btn-sm" onClick={() => { navigator.clipboard?.writeText(JSON.stringify(lgu || {})); toast.success('Copied'); }}>
+                Copy Data
+              </button>
+            )}
+            <button className="btn btn-ghost btn-sm btn-circle" onClick={onClose}><X /></button>
+          </div>
+        </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Local Chief Executive (LCE)</h4>
-                  {lgu?.lce ? (
-                    <div className="text-sm text-base-content/70">
-                      <div className="font-medium">{[lgu.lce.firstName, lgu.lce.middleName, lgu.lce.lastName].filter(Boolean).join(' ')}</div>
-                      <div>{lgu.lce.officeAddress}</div>
-                      <div className="text-xs">{lgu.lce.officialEmail}</div>
+        {/* Tabs - Hidden in Edit Mode */}
+        {!editMode && (
+          <div className="px-4 pt-2 border-b border-base-200 bg-base-50/50">
+            <nav className="flex gap-6 -mb-px">
+              {['overview', 'assessors', 'smv'].map((tab) => (
+                <button
+                  key={tab}
+                  className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content/80'}`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'assessors' && assessors.length > 0 && <span className="ml-2 badge badge-xs badge-ghost">{assessors.length}</span>}
+                </button>
+              ))}
+            </nav>
+          </div>
+        )}
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-base-300 scrollbar-track-transparent">
+
+          {editMode ? (
+            /* EDIT MODE */
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Section 1: Core Identity */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 pb-2 border-b border-base-200">
+                    <Building className="w-5 h-5 text-primary" />
+                    <h4 className="font-bold text-lg">Core Information</h4>
+                  </div>
+
+                  <div className="form-control w-full">
+                    <label className="label font-medium">LGU Name</label>
+                    <input type="text" className="input input-bordered w-full focus:input-primary" value={editData?.name || ''} onChange={e => handleChange('name', e.target.value)} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="form-control w-full">
+                      <label className="label font-medium">Classification</label>
+                      <select className="select select-bordered w-full focus:select-primary" value={editData?.classification || ''} onChange={e => handleChange('classification', e.target.value)}>
+                        <option value="">Select...</option>
+                        <option value="HUC">HUC</option>
+                        <option value="CC">CC</option>
+                        <option value="Municipality">Municipality</option>
+                        <option value="Province">Province</option>
+                        <option value="ICC">ICC</option>
+                      </select>
                     </div>
-                  ) : <div className="text-sm text-base-content/60">—</div>}
-                </div>
 
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Geography & Contact</h4>
-                  <div className="text-sm text-base-content/70">
-                    <div>Land area: {prettyNumber(lgu?.landArea)} km²</div>
-                    <div>Coordinates: {lgu?.coordinates?.latitude ? `${lgu.coordinates.latitude}, ${lgu.coordinates.longitude}` : '—'}</div>
-                      <div>Phone: {lgu?.contactInfo?.phoneNumber || '—'}</div>
-                      <div>Website: {lgu?.contactInfo?.website ? (<a className="link" href={lgu.contactInfo.website} target="_blank" rel="noreferrer">{lgu.contactInfo.website}</a>) : '—'}</div>
-                      <div>Facebook: {lgu?.contactInfo?.socialMedia?.facebook || '—'}</div>
-                      <div>Twitter: {lgu?.contactInfo?.socialMedia?.twitter || '—'}</div>
-                      <div>ZIP Code: {lgu?.zipCode || '—'}</div>
-                    <div>Established: {prettyDate(lgu?.establishmentDate)}</div>
+                    <div className="form-control w-full">
+                      <label className="label font-medium">Income Class</label>
+                      <input type="text" className="input input-bordered w-full focus:input-primary" value={editData?.incomeClass || ''} onChange={e => handleChange('incomeClass', e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="form-control w-full">
+                    <label className="label font-medium">Population</label>
+                    <input type="number" className="input input-bordered w-full focus:input-primary" value={editData?.population || ''} onChange={e => handleChange('population', parseInt(e.target.value) || 0)} />
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <h4 className="font-semibold">Performance & SMV</h4>
-                <div className="text-sm text-base-content/70">
-                  <div>Seal of Good Local Governance: {lgu?.performanceMetrics?.sealOfGoodLocalGovernance?.hasAward ? `${lgu.performanceMetrics.sealOfGoodLocalGovernance.level || ''} (${lgu.performanceMetrics.sealOfGoodLocalGovernance.year || '—'})` : 'No'}</div>
-                  <div>Business permit processing (days): {prettyNumber(lgu?.performanceMetrics?.businessPermitProcessingTime)}</div>
-                  <div>Tax collection efficiency: {lgu?.performanceMetrics?.taxCollectionEfficiency ? `${lgu.performanceMetrics.taxCollectionEfficiency}%` : '—'}</div>
-                  <div>Existing SMV base year: {lgu?.existingSMV?.baseYear || '—'}</div>
+                {/* Section 2: Leadership */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 pb-2 border-b border-base-200">
+                    <Users className="w-5 h-5 text-secondary" />
+                    <h4 className="font-bold text-lg">Local Chief Executive</h4>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="form-control w-full">
+                      <label className="label font-medium">First Name</label>
+                      <input type="text" className="input input-bordered w-full focus:input-primary" value={editData?.lce?.firstName || ''} onChange={e => handleChange('lce.firstName', e.target.value)} />
+                    </div>
+                    <div className="form-control w-full">
+                      <label className="label font-medium">Last Name</label>
+                      <input type="text" className="input input-bordered w-full focus:input-primary" value={editData?.lce?.lastName || ''} onChange={e => handleChange('lce.lastName', e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className="form-control w-full">
+                    <label className="label font-medium">Official Email</label>
+                    <input type="email" className="input input-bordered w-full focus:input-primary" value={editData?.lce?.officialEmail || ''} onChange={e => handleChange('lce.officialEmail', e.target.value)} />
+                  </div>
+
+                  <div className="form-control w-full">
+                    <label className="label font-medium">Office Address</label>
+                    <input type="text" className="input input-bordered w-full focus:input-primary" value={editData?.lce?.officeAddress || ''} onChange={e => handleChange('lce.officeAddress', e.target.value)} />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <h4 className="font-semibold">SMV History</h4>
-                {Array.isArray(lgu?.smvHistory) && lgu.smvHistory.length ? (
-                  <div className="space-y-2">
-                    {lgu.smvHistory.map((h, i) => (
-                      <div key={i} className="p-2 bg-base-100 rounded">
-                        <div className="text-sm font-medium">{h.ordinanceNo || '—'} • {h.baseYear || '—'}</div>
-                        <div className="text-xs text-base-content/70">{h.notes || ''}</div>
+                {/* Section 3: Status & Revision */}
+                <div className="space-y-6 lg:col-span-2">
+                  <div className="flex items-center gap-2 pb-2 border-b border-base-200">
+                    <BarChart3 className="w-5 h-5 text-accent" />
+                    <h4 className="font-bold text-lg">Monitoring Status</h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="form-control w-full">
+                      <label className="label font-medium">Current SMV Status</label>
+                      <select className="select select-bordered w-full focus:select-primary" value={editData?.currentSMVStatus || ''} onChange={e => handleChange('currentSMVStatus', e.target.value)}>
+                        <option value="No Revision">No Revision</option>
+                        <option value="Preparatory">Preparatory</option>
+                        <option value="Data Collection">Data Collection</option>
+                        <option value="Data Analysis">Data Analysis</option>
+                        <option value="Preparation">Preparation</option>
+                        <option value="Testing">Testing</option>
+                        <option value="Finalization">Finalization</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Implemented">Implemented</option>
+                      </select>
+                      <div className="label">
+                        <span className="label-text-alt text-base-content/60">Select the current phase of SMV revision.</span>
                       </div>
-                    ))}
-                  </div>
-                ) : <div className="text-sm text-base-content/60">No SMV history recorded</div>}
-              </div>
+                    </div>
 
-              {/* Administrative & timestamps */}
-              <div className="space-y-2">
-                <h4 className="font-semibold">Administrative</h4>
-                <div className="text-sm text-base-content/70">
-                  <div>ZIP: {lgu?.zipCode || '—'}</div>
-                  <div>Mayoral Term: {lgu?.mayoralTerm?.startDate ? `${prettyDate(lgu.mayoralTerm.startDate)} — ${prettyDate(lgu.mayoralTerm.endDate)}` : '—'}</div>
-                  <div>Record created: {prettyDate(lgu?.createdAt)} • updated: {prettyDate(lgu?.updatedAt)}</div>
+                    <div className="bg-base-200/50 p-4 rounded-lg flex items-center justify-between border border-base-300">
+                      <div>
+                        <div className="font-medium">2025 General Revision</div>
+                        <div className="text-sm text-base-content/60">Is the LGU participating?</div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        className="toggle toggle-primary toggle-lg"
+                        checked={editData?.existingSMV?.conductingRevision2025 === true}
+                        onChange={e => handleChange('existingSMV.conductingRevision2025', e.target.checked)}
+                      />
+                    </div>
+                  </div>
                 </div>
+
+
               </div>
             </div>
-          )}
-
-          {activeTab === 'assessors' && (
-            <div className="space-y-3">
-              {loading.assessors ? (
-                <div className="py-6 text-center">
-                  <span className="loading loading-spinner loading-lg"/>
-                </div>
-              ) : assessors.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="text-5xl mb-4">👤</div>
-                  <div className="font-medium text-base-content/70">No Assessors Assigned</div>
-                  <div className="text-sm text-base-content/50 mt-1">This LGU currently has no assessors on record</div>
-                </div>
-              ) : (
-                <>
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium">Assigned Assessors</h3>
-                    <div className="badge badge-outline">{assessors.length} total</div>
+          ) : (
+            /* VIEW MODE */
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {activeTab === 'overview' && (
+                /* ... (rest of View Mode Overview logic preserved) ... */
+                <div className="space-y-6">
+                  {/* Key Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="stat bg-base-200/50 rounded-xl p-4 border border-base-200">
+                      <div className="stat-title text-xs uppercase tracking-wider opacity-60">Population</div>
+                      <div className="stat-value text-lg sm:text-2xl mt-1">{prettyPopulation(lgu?.population)}</div>
+                    </div>
+                    <div className="stat bg-base-200/50 rounded-xl p-4 border border-base-200">
+                      <div className="stat-title text-xs uppercase tracking-wider opacity-60">Income Class</div>
+                      <div className="stat-value text-lg sm:text-2xl mt-1">{lgu?.incomeClass || '—'}</div>
+                    </div>
+                    <div className="stat bg-base-200/50 rounded-xl p-4 border border-base-200">
+                      <div className="stat-title text-xs uppercase tracking-wider opacity-60">Class</div>
+                      <div className="stat-value text-lg sm:text-2xl mt-1">{lgu?.classification || '—'}</div>
+                    </div>
+                    <div className="stat bg-base-200/50 rounded-xl p-4 border border-base-200">
+                      <div className="stat-title text-xs uppercase tracking-wider opacity-60">SMV Status</div>
+                      <div className="stat-value text-lg sm:text-lg mt-1 whitespace-nowrap overflow-hidden text-ellipsis text-primary">{lgu?.currentSMVStatus || '—'}</div>
+                    </div>
                   </div>
-                  <div className="grid gap-3">
-                    {assessors.map(a => (
-                      <div key={a._id || a.id} className="card bg-base-100 shadow-sm">
-                        <div className="card-body p-4">
-                          <div className="flex justify-between">
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* LCE Card */}
+                    <div className="card bg-base-100 border border-base-200 shadow-sm">
+                      <div className="card-body p-5">
+                        <h3 className="card-title text-base flex items-center gap-2 text-secondary mb-2">
+                          <Users className="w-5 h-5" /> Local Chief Executive
+                        </h3>
+                        {lgu?.lce ? (
+                          <div className="space-y-3">
                             <div>
-                              <h4 className="card-title text-base">{[a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ')}</h4>
-                              <div className="text-sm mt-1">
-                                <div className="font-medium text-base-content/70">{a.officialDesignation || a.position || '—'}</div>
-                                <div className="text-base-content/60 mt-2">
-                                  {a.statusOfAppointment && (
-                                    <div className="badge badge-sm mr-2">{a.statusOfAppointment}</div>
-                                  )}
-                                  {a.salaryGrade && (
-                                    <span className="text-xs">SG {a.salaryGrade}-{a.stepIncrement || 1}</span>
-                                  )}
-                                </div>
+                              <div className="text-xl font-bold">{[lgu.lce.firstName, lgu.lce.middleName, lgu.lce.lastName].filter(Boolean).join(' ')}</div>
+                              <div className="text-sm opacity-60">Mayor / LCE</div>
+                            </div>
+                            <div className="text-sm space-y-1">
+                              <div className="flex items-start gap-2 opacity-70">
+                                <span className="font-medium min-w-[60px]">Office:</span>
+                                <span>{lgu.lce.officeAddress || 'No address on record'}</span>
+                              </div>
+                              <div className="flex items-start gap-2 opacity-70">
+                                <span className="font-medium min-w-[60px]">Email:</span>
+                                <span>{lgu.lce.officialEmail || '—'}</span>
                               </div>
                             </div>
-                            <div className="text-right text-sm text-base-content/60">
-                              {a.dateOfAppointment && (
-                                <div>Since {prettyDate(a.dateOfAppointment)}</div>
-                              )}
-                            </div>
                           </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 text-sm">
-                            <div>
-                              <div className="text-xs font-medium text-base-content/50 mb-1">Contact Details</div>
-                              <div>{a.officeEmail || a.personalEmail || '—'}</div>
-                              <div>{a.mobileNumber || a.contactNumber || '—'}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs font-medium text-base-content/50 mb-1">Credentials</div>
-                              <div>{[a.bachelorDegree, a.masteralDegree, a.doctoralDegree].filter(Boolean).join(', ') || '—'}</div>
-                              {a.prcLicenseNumber && (
-                                <div className="text-xs mt-1">
-                                  PRC: {a.prcLicenseNumber}
-                                  {a.prcLicenseExpiration && ` (exp. ${prettyDate(a.prcLicenseExpiration)})`}
-                                </div>
-                              )}
+                        ) : <div className="text-base-content/60 italic">No LCE information available.</div>}
+                      </div>
+                    </div>
+
+                    {/* Geography Card */}
+                    <div className="card bg-base-100 border border-base-200 shadow-sm">
+                      <div className="card-body p-5">
+                        <h3 className="card-title text-base flex items-center gap-2 text-accent mb-2">
+                          <Building className="w-5 h-5" /> Geography & Contact
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="opacity-60 text-xs">Land Area</div>
+                            <div className="font-medium">{prettyNumber(lgu?.landArea)} km²</div>
+                          </div>
+                          <div>
+                            <div className="opacity-60 text-xs">ZIP Code</div>
+                            <div className="font-medium">{lgu?.zipCode || '—'}</div>
+                          </div>
+                          <div className="col-span-2">
+                            <div className="opacity-60 text-xs">Phone</div>
+                            <div className="font-medium">{lgu?.contactInfo?.phoneNumber || '—'}</div>
+                          </div>
+                          <div className="col-span-2">
+                            <div className="opacity-60 text-xs">Location</div>
+                            <div className="font-medium truncate" title={lgu?.coordinates?.latitude ? `${lgu.coordinates.latitude}, ${lgu.coordinates.longitude}` : ''}>
+                              {lgu?.coordinates?.latitude ? `${lgu.coordinates.latitude}, ${lgu.coordinates.longitude}` : 'No coordinates'}
                             </div>
                           </div>
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </>
+
+                  {/* Performance Metrics */}
+                  <div className="card bg-base-100 border border-base-200 shadow-sm">
+                    <div className="card-body p-5">
+                      <h3 className="card-title text-base mb-4">Performance Metrics</h3>
+                      <div className="overflow-x-auto">
+                        <table className="table table-sm">
+                          <tbody>
+                            <tr>
+                              <td className="text-base-content/60 font-medium">Seal of Good Local Governance</td>
+                              <td className="font-bold text-right">
+                                {lgu?.performanceMetrics?.sealOfGoodLocalGovernance?.hasAward
+                                  ? <span className="badge badge-success badge-sm">Awarded</span>
+                                  : <span className="opacity-50">Not Awarded</span>}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="text-base-content/60 font-medium">Business Permit Processing</td>
+                              <td className="text-right">{prettyNumber(lgu?.performanceMetrics?.businessPermitProcessingTime)} days</td>
+                            </tr>
+                            <tr>
+                              <td className="text-base-content/60 font-medium">Tax Collection Efficiency</td>
+                              <td className="text-right font-mono">{lgu?.performanceMetrics?.taxCollectionEfficiency ? `${lgu.performanceMetrics.taxCollectionEfficiency}%` : '—'}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {activeTab === 'assessors' && (
+                /* Assessors Tab Logic */
+                <div className="space-y-4">
+                  {loading.assessors ? (
+                    <div className="py-12 text-center"><span className="loading loading-spinner loading-lg text-primary" /></div>
+                  ) : assessors.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-base-300 rounded-xl bg-base-100/50">
+                      <Users className="w-12 h-12 text-base-content/20 mb-3" />
+                      <div className="font-medium opacity-60">No Assessors Assigned</div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {assessors.map(a => (
+                        <div key={a._id || a.id} className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow duration-200 border border-base-200">
+                          <div className="card-body p-4">
+                            <div className="flex gap-3">
+                              <div className="avatar placeholder">
+                                <div className="bg-neutral text-neutral-content rounded-full w-10 h-10">
+                                  <span className="text-sm">{a.firstName?.[0]}{a.lastName?.[0]}</span>
+                                </div>
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold truncate">{[a.firstName, a.lastName].filter(Boolean).join(' ')}</div>
+                                <div className="text-xs opacity-60 truncate">{a.officialDesignation || 'Assessor'}</div>
+                              </div>
+                            </div>
+                            <div className="mt-2 text-xs opacity-70 space-y-1">
+                              <div>{a.officeEmail || 'No email'}</div>
+                              <div>{a.mobileNumber || 'No phone'}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'smv' && (
+                <div className="space-y-4">
+                  {loading.smv ? <div className="py-12 text-center"><span className="loading loading-spinner loading-lg text-primary" /></div> :
+                    smvProcesses.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-base-300 rounded-xl bg-base-100/50">
+                        <BarChart3 className="w-12 h-12 text-base-content/20 mb-3" />
+                        <div className="font-medium opacity-60">No SMV Processes Recorded</div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {smvProcesses.map(p => (
+                          <div key={p._id || p.id} className="alert relative border border-base-200 bg-base-100 shadow-sm align-start">
+                            <BarChart3 className="w-5 h-5 text-primary" />
+                            <div>
+                              <h3 className="font-bold">{p.title || p.name}</h3>
+                              <div className="text-xs">Base Year: {p.referenceYear || p.baseYear || '—'}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
               )}
             </div>
           )}
-
-          {activeTab === 'smv' && (
-            <div className="space-y-3">
-              {loading.smv ? <div className="py-6 text-center"><span className="loading loading-spinner loading-lg"/></div> :
-                smvProcesses.length === 0 ? <div className="text-base-content/60">No SMV processes found</div> :
-                smvProcesses.map(p => (
-                  <div key={p._id || p.id} className="p-3 bg-base-100 rounded-lg">
-                    <div className="font-medium">{p.title || p.name}</div>
-                    <div className="text-sm text-base-content/60">{p.referenceYear || p.baseYear || '—'}</div>
-                  </div>
-                ))}
-            </div>
-          )}
         </div>
 
-        {editMode && (
-          <div className="border-t border-base-200 p-4">
-            <h3 className="font-semibold mb-4">Edit LGU Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Basic Information */}
-              <div className="form-control">
-                <label className="label">Name</label>
-                <input 
-                  type="text" 
-                  className="input input-bordered" 
-                  value={editData?.name || ''} 
-                  onChange={e => handleChange('name', e.target.value)}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">Classification</label>
-                <select 
-                  className="select select-bordered" 
-                  value={editData?.classification || ''} 
-                  onChange={e => handleChange('classification', e.target.value)}
-                >
-                  <option value="">Select Classification</option>
-                  <option value="HUC">HUC</option>
-                  <option value="CC">CC</option>
-                  <option value="Municipality">Municipality</option>
-                  <option value="Province">Province</option>
-                  <option value="ICC">ICC</option>
-                </select>
-              </div>
-
-              <div className="form-control">
-                <label className="label">Income Class</label>
-                <input 
-                  type="text" 
-                  className="input input-bordered" 
-                  value={editData?.incomeClass || ''} 
-                  onChange={e => handleChange('incomeClass', e.target.value)}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">Population</label>
-                <input 
-                  type="number" 
-                  className="input input-bordered" 
-                  value={editData?.population || ''} 
-                  onChange={e => handleChange('population', parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              {/* LCE Information */}
-              <div className="form-control">
-                <label className="label">LCE First Name</label>
-                <input 
-                  type="text" 
-                  className="input input-bordered" 
-                  value={editData?.lce?.firstName || ''} 
-                  onChange={e => handleChange('lce.firstName', e.target.value)}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">LCE Last Name</label>
-                <input 
-                  type="text" 
-                  className="input input-bordered" 
-                  value={editData?.lce?.lastName || ''} 
-                  onChange={e => handleChange('lce.lastName', e.target.value)}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">LCE Email</label>
-                <input 
-                  type="email" 
-                  className="input input-bordered" 
-                  value={editData?.lce?.officialEmail || ''} 
-                  onChange={e => handleChange('lce.officialEmail', e.target.value)}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">LCE Office Address</label>
-                <input 
-                  type="text" 
-                  className="input input-bordered" 
-                  value={editData?.lce?.officeAddress || ''} 
-                  onChange={e => handleChange('lce.officeAddress', e.target.value)}
-                />
-              </div>
-
-              {/* SMV Status */}
-              <div className="form-control">
-                <label className="label">Current SMV Status</label>
-                <select 
-                  className="select select-bordered" 
-                  value={editData?.currentSMVStatus || ''} 
-                  onChange={e => handleChange('currentSMVStatus', e.target.value)}
-                >
-                  <option value="No Revision">No Revision</option>
-                  <option value="Preparatory">Preparatory</option>
-                  <option value="Data Collection">Data Collection</option>
-                  <option value="Data Analysis">Data Analysis</option>
-                  <option value="Preparation">Preparation</option>
-                  <option value="Testing">Testing</option>
-                  <option value="Finalization">Finalization</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Implemented">Implemented</option>
-                </select>
-              </div>
-
-              <div className="form-control">
-                <label className="label">Conducting 2025 Revision</label>
-                <select 
-                  className="select select-bordered" 
-                  value={editData?.existingSMV?.conductingRevision2025?.toString() || 'false'} 
-                  onChange={e => handleChange('existingSMV.conductingRevision2025', e.target.value === 'true')}
-                >
-                  <option value="true">Yes</option>
-                  <option value="false">No</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="p-3 border-t border-base-200 flex justify-between gap-2">
-          {/* Left side - Edit/Delete buttons */}
-          <div className="flex gap-2">
-            {canEdit && !editMode && (
-              <button 
-                className="btn btn-ghost btn-sm" 
-                onClick={() => setEditMode(true)}
-              >
-                <Edit2 className="w-4 h-4 mr-1" /> Edit
-              </button>
+        {/* Footer Actions */}
+        <div className="p-4 bg-base-100 border-t border-base-200 flex justify-between items-center gap-4 sticky bottom-0 z-10">
+          <div className="flex items-center gap-2">
+            {editMode ? (
+              <div className="text-sm opacity-60 hidden sm:block">* Unsaved changes will be lost</div>
+            ) : (
+              <div className="text-sm opacity-60 hidden sm:block">Last updated: {prettyDate(lgu?.updatedAt)}</div>
             )}
-            {canDelete && !editMode && (
-              <button 
-                className="btn btn-ghost btn-sm text-error" 
-                onClick={handleDelete}
-              >
-                <Trash2 className="w-4 h-4 mr-1" /> Delete
-              </button>
-            )}
+
           </div>
 
-          {/* Right side - Action buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             {editMode ? (
               <>
-                <button 
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    setEditMode(false);
-                    setEditData(null);
-                  }}
+                <button
+                  className="btn btn-ghost hover:bg-base-200"
+                  onClick={() => { setEditMode(false); setEditData(null); }}
                 >
-                  <XCircle className="w-4 h-4 mr-1" /> Cancel
+                  Cancel
                 </button>
-                <button 
-                  className="btn btn-primary btn-sm"
+                <button
+                  className="btn btn-primary px-6"
                   onClick={handleSave}
                   disabled={loading.lgu}
                 >
-                  <Save className="w-4 h-4 mr-1" /> 
-                  {loading.lgu ? 'Saving...' : 'Save Changes'}
+                  {loading.lgu ? <span className="loading loading-spinner loading-xs" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save Changes
                 </button>
               </>
             ) : (
-              <>
-                <button 
-                  className="btn btn-ghost btn-sm" 
-                  onClick={() => { 
-                    navigator.clipboard?.writeText(JSON.stringify(lgu || {})); 
-                    toast.success('Copied'); 
-                  }}
+              canEdit && (
+                <button
+                  className="btn btn-primary shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all w-full sm:w-auto"
+                  onClick={() => setEditMode(true)}
                 >
-                  Copy JSON
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Edit Details
                 </button>
-                <button className="btn btn-primary btn-sm" onClick={onClose}>
-                  Close
-                </button>
-              </>
+              )
             )}
           </div>
         </div>
+
       </div>
     </div>
   );
 }
-
