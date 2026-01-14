@@ -20,19 +20,6 @@
   },
   "homepage": "https://github.com/jbprestor/BLGFXIII_Directory#readme",
   "dependencies": {
-    "lucide-react": "^0.544.0",
-    "@upstash/ratelimit": "^2.0.6",
-    "@upstash/redis": "^1.35.3",
-    "bcryptjs": "^3.0.2",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.1",
-    "express": "^4.21.2",
-    "joi": "^18.0.1",
-    "joi-password-complexity": "^5.2.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.18.0",
-    "multer": "^1.4.4",
-    "node-fetch": "^3.3.2",
-    "path-to-regexp": "^8.3.0"
+    "lucide-react": "^0.544.0"
   }
 }

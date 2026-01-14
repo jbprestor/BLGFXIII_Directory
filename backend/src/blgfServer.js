@@ -101,17 +101,15 @@ app.use("/api/*", (req, res) => {
 });
 
 // Connect to database and start server
-// Connect to database and start server ONLY if run directly (not in Vercel)
-if (!process.env.VERCEL) {
-  connectDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server started on PORT: ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
-  }).catch((error) => {
-    console.error("Failed to connect to database:", error);
-    process.exit(1);
+// Connect to database and start server
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server started on PORT: ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
-}
+}).catch((error) => {
+  console.error("Failed to connect to database:", error);
+  process.exit(1);
+});
 
 export default app;
