@@ -1,5 +1,5 @@
-import app from '../src/blgfServer.js';
-import { connectDB } from '../src/config/db.js';
+import app from '../backend/src/blgfServer.js';
+import { connectDB } from '../backend/src/config/db.js';
 
 // Vercel Serverless Function Entry Point
 export default async function handler(req, res) {
