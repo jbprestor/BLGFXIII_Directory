@@ -1,0 +1,20 @@
+{
+    "version": 2,
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/backend/api/index.js"
+        },
+        {
+            "source": "/uploads/(.*)",
+            "destination": "/backend/uploads/$1"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ],
+    "buildCommand": "npm run build",
+    "outputDirectory": "frontend/dist",
+    "framework": "vite"
+}
