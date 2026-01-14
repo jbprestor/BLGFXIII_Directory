@@ -16,7 +16,7 @@ export default function EditModal({
   onClose,
   formatDate,
 }) {
-  const { api: _apiInstance, getAllLgusNoPagination } = useApi();
+  const { getAllLgusNoPagination } = useApi();
 
   const [formData, setFormData] = useState({});
   const [allLgusFromDb, setAllLgusFromDb] = useState([]);
@@ -39,7 +39,7 @@ export default function EditModal({
     fetchLGUs();
   }, []);
 
-  // Initialize form when editingPerson changes or LGUs loaded
+  // Initialize form
   useEffect(() => {
     if (editingPerson && allLgusFromDb.length) {
       const formatDateForInput = (dateString) =>
@@ -55,7 +55,6 @@ export default function EditModal({
       const matchedRegion = matchedLgu?.region || editingPerson.region || "Caraga";
       const matchedLguName = matchedLgu?.name || editingPerson.lguName || "";
 
-      // EXPLICIT: keep plantillaPosition and officialDesignation separate
       setFormData({
         ...editingPerson,
         plantillaPosition: editingPerson.plantillaPosition || "",
@@ -160,10 +159,8 @@ export default function EditModal({
       e.preventDefault();
 
       try {
-        // DO NOT override one with the other — keep them separate
         const payload = {
           ...formData,
-          // ensure numeric coercion for stepIncrement if present
           stepIncrement: formData.stepIncrement ? Number(formData.stepIncrement) : 1,
           birthday: formData.birthday ? new Date(formData.birthday).toISOString() : null,
           dateOfAppointment: formData.dateOfAppointment
@@ -178,7 +175,6 @@ export default function EditModal({
           dateOfCompulsoryRetirement: formData.dateOfCompulsoryRetirement
             ? new Date(formData.dateOfCompulsoryRetirement).toISOString()
             : null,
-          // don't set officialDesignation from plantillaPosition here — they are distinct fields
         };
 
         await onUpdate(payload);
@@ -198,7 +194,6 @@ export default function EditModal({
     (name) => {
       const config = FIELD_CONFIG[name];
 
-      // Special handling for region/province/lgu
       if (name === "region")
         return (
           <SelectField
@@ -207,6 +202,7 @@ export default function EditModal({
             value={selectedRegion}
             options={["Caraga"]}
             onChange={handleRegionChange}
+            compact
           />
         );
       if (name === "province")
@@ -217,6 +213,7 @@ export default function EditModal({
             value={selectedProvince}
             options={provinces}
             onChange={handleProvinceChange}
+            compact
           />
         );
       if (name === "lguName")
@@ -227,10 +224,10 @@ export default function EditModal({
             value={selectedLgu}
             options={lgus}
             onChange={handleLguChange}
+            compact
           />
         );
 
-      // read-only fields
       if (["lguType", "incomeClass"].includes(name))
         return (
           <InputField
@@ -238,17 +235,17 @@ export default function EditModal({
             name={name}
             value={formData[name] || ""}
             readOnly
+            compact
           />
         );
 
-      // select groups with extra enum options (include Acting/OIC)
       if (["sex", "statusOfAppointment", "civilStatus"].includes(name)) {
         const options =
           name === "sex"
             ? ["Male", "Female", "Other"]
             : name === "statusOfAppointment"
-            ? ["Permanent", "Temporary", "Contractual", "Casual", "Acting", "OIC", "Job Order"]
-            : ["Single", "Married", "Widowed", "Separated", "Divorced", "Others"];
+              ? ["Permanent", "Temporary", "Contractual", "Casual", "Acting", "OIC", "Job Order", "Retired"]
+              : ["Single", "Married", "Widowed", "Separated", "Divorced", "Others"];
         return (
           <SelectField
             label={config?.label || name}
@@ -256,11 +253,11 @@ export default function EditModal({
             value={formData[name] || ""}
             options={options}
             onChange={(v) => handleInputChange(v, name)}
+            compact
           />
         );
       }
 
-      // Explicitly render officialDesignation even if it's not in FIELD_CONFIG
       if (name === "officialDesignation") {
         return (
           <InputField
@@ -269,11 +266,11 @@ export default function EditModal({
             value={formData.officialDesignation || ""}
             onChange={handleInputChange}
             type="text"
+            compact
           />
         );
       }
 
-      // default rendering using FIELD_CONFIG
       if (config) {
         return config.type === "select" ? (
           <SelectField
@@ -282,6 +279,7 @@ export default function EditModal({
             value={formData[name] || ""}
             options={config.options}
             onChange={handleInputChange}
+            compact
           />
         ) : (
           <InputField
@@ -290,6 +288,7 @@ export default function EditModal({
             value={formData[name] || ""}
             onChange={handleInputChange}
             type={config.type}
+            compact
           />
         );
       }
@@ -302,50 +301,48 @@ export default function EditModal({
   if (!isOpen || !editingPerson) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30">
-      <div className="bg-base-100 dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto border border-base-300 dark:border-gray-700 p-6 animate-fade-in">
-        <ModalHeader editingPerson={editingPerson} onClose={onClose} />
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <FormSection {...SECTION_CONFIG.personalInfo}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/30 p-4">
+      <div className="bg-base-100 dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col border border-base-300 dark:border-gray-700 animate-fade-in">
+        <ModalHeader onClose={onClose} />
+
+        <form id="edit-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+          <Section title={SECTION_CONFIG.personalInfo.title}>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {FIELD_GROUPS.personalInfo.map((f) => (
                 <div key={f}>{renderField(f)}</div>
               ))}
             </div>
-          </FormSection>
+          </Section>
 
-          <FormSection {...SECTION_CONFIG.governmentInfo}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Section title={SECTION_CONFIG.governmentInfo.title}>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {FIELD_GROUPS.governmentInfo.map((f) => (
                 <div key={f}>{renderField(f)}</div>
               ))}
-
             </div>
-          </FormSection>
+          </Section>
 
-          <FormSection {...SECTION_CONFIG.importantDates}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Section title={SECTION_CONFIG.importantDates.title}>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {FIELD_GROUPS.importantDates.map((f) => (
                 <div key={f}>{renderField(f)}</div>
               ))}
             </div>
-          </FormSection>
+          </Section>
 
-          <FormSection {...SECTION_CONFIG.education}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Section title={SECTION_CONFIG.education.title}>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {FIELD_GROUPS.education.map((f) => (
                 <div key={f}>{renderField(f)}</div>
               ))}
             </div>
-          </FormSection>
-
-          <FormFooter
-            localData={formData}
-            formatDate={formatDate}
-            updateLoading={updateLoading}
-            onClose={onClose}
-          />
+          </Section>
         </form>
+
+        <FormFooter
+          loading={updateLoading}
+          onClose={onClose}
+        />
       </div>
     </div>
   );
@@ -354,22 +351,19 @@ export default function EditModal({
 /* ======= SUB COMPONENTS ======= */
 function ModalHeader({ onClose }) {
   return (
-    <div className="flex items-center justify-between mb-6 border-b border-base-300 dark:border-gray-700 pb-4">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg">
-          +
+    <div className="flex items-center justify-between px-6 py-4 border-b border-base-300 dark:border-gray-700 bg-base-200/50">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg">
+          ✏️
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-base-content">
+          <h2 className="text-xl font-bold text-base-content leading-tight">
             Edit Personnel
           </h2>
-          <p className="text-base-content/70 font-medium">
-            Update BLGF personnel record
-          </p>
         </div>
       </div>
       <button
-        className="btn btn-ghost btn-circle text-lg"
+        className="btn btn-ghost btn-circle btn-sm"
         onClick={onClose}
         aria-label="Close modal"
       >
@@ -379,37 +373,12 @@ function ModalHeader({ onClose }) {
   );
 }
 
-function FormSection({ title, children, color = "primary", icon }) {
-  const colorClasses = {
-    primary: "bg-primary/10 dark:bg-primary/20 border-l-4 border-primary",
-    secondary:
-      "bg-secondary/10 dark:bg-secondary/20 border-l-4 border-secondary",
-    accent: "bg-accent/10 dark:bg-accent/20 border-l-4 border-accent",
-    info: "bg-info/10 dark:bg-info/20 border-l-4 border-info",
-  };
-  const textColorClasses = {
-    primary: "text-primary",
-    secondary: "text-secondary",
-    accent: "text-accent",
-    info: "text-info",
-  };
-  const iconBgClasses = {
-    primary: "bg-primary/20 text-primary",
-    secondary: "bg-secondary/20 text-secondary",
-    accent: "bg-accent/20 text-accent",
-    info: "bg-info/20 text-info",
-  };
-
+function Section({ title, children }) {
   return (
-    <div className={`rounded-lg p-5 ${colorClasses[color]} shadow-sm`}>
-      <div className="flex items-center mb-4">
-        <div className={`p-2 rounded-lg mr-3 ${iconBgClasses[color]}`}>
-          {icon}
-        </div>
-        <h3 className={`text-lg font-semibold ${textColorClasses[color]}`}>
-          {title}
-        </h3>
-      </div>
+    <div>
+      <h3 className="text-sm font-bold uppercase text-base-content/50 mb-3 border-b border-base-200 pb-1 tracking-wider">
+        {title}
+      </h3>
       {children}
     </div>
   );
@@ -417,27 +386,27 @@ function FormSection({ title, children, color = "primary", icon }) {
 
 function FormFooter({ loading, onClose }) {
   return (
-    <div className="flex justify-between items-center mt-8 pt-4 border-t border-base-300 dark:border-gray-700">
-      <div className="text-sm text-base-content/70">
+    <div className="flex justify-between items-center px-6 py-4 border-t border-base-300 dark:border-gray-700 bg-base-100">
+      <div className="text-xs text-base-content/50 hidden sm:block">
         Fields marked with <span className="text-error">*</span> are required
       </div>
-      <div className="flex gap-3">
+      <div className="flex gap-2 w-full sm:w-auto justify-end">
         <button
           type="button"
-          className="btn btn-outline"
+          className="btn btn-ghost btn-sm"
           onClick={onClose}
           disabled={loading}
         >
           Cancel
         </button>
-        <button type="submit" className="btn btn-primary" disabled={loading}>
+        <button type="submit" form="edit-form" className="btn btn-primary btn-sm" disabled={loading}>
           {loading ? (
             <>
-              <span className="loading loading-spinner loading-sm mr-2"></span>
+              <span className="loading loading-spinner loading-xs mr-2"></span>
               Updating...
             </>
           ) : (
-            "Update Personnel"
+            "Save Changes"
           )}
         </button>
       </div>

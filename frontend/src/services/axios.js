@@ -21,16 +21,16 @@ export default function useApi() {
   // Add token automatically if available
   api.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
-    
+
     // Define public endpoints that don't require authentication
     const publicEndpoints = ['/users/register', '/users/login'];
     const isPublicEndpoint = publicEndpoints.some(endpoint => config.url.includes(endpoint));
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       // Only log in development mode and don't expose the actual token
       if (import.meta.env.MODE === "development") {
-       // console.log("Token added to request: [REDACTED]");
+        // console.log("Token added to request: [REDACTED]");
       }
     } else if (!isPublicEndpoint) {
       // Only warn about missing token for protected endpoints
@@ -135,6 +135,7 @@ export default function useApi() {
     createAssessor,
     updateAssessor,
     deleteAssessor,
+    getAssessorNotifications: () => api.get("/assessors/notifications"),
 
     // LGU
     getAllLgus,
@@ -159,15 +160,15 @@ export default function useApi() {
     getSMVProgress,
     updateSMVTimeline,
 
-  // QRRPA
-  getAllQrrpa,
-  getQrrpaById,
-  getQrrpaByLgu,
-  getQrrpaByPeriod,
-  createQrrpa,
-  createQrrpaMultipart,
-  updateQrrpa,
-  deleteQrrpa,
+    // QRRPA
+    getAllQrrpa,
+    getQrrpaById,
+    getQrrpaByLgu,
+    getQrrpaByPeriod,
+    createQrrpa,
+    createQrrpaMultipart,
+    updateQrrpa,
+    deleteQrrpa,
 
     // Raw axios instance
     api,

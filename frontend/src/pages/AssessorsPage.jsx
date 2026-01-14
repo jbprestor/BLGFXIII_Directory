@@ -1,12 +1,12 @@
-// src/pages/AssessorsPage.jsx
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import useApi from "../services/axios.js";
+import { useLocation } from "react-router"; // Import useLocation
 import LoadingSpinner from "../components/common/LoadingSpinner.jsx";
 import ErrorDisplay from "../components/common/ErrorDisplay.jsx";
 import SearchFilters from "../components/directory/SearchFilters.jsx";
 import PersonnelTable from "../components/directory/PersonnelTable.jsx";
-import QuickStats from "../components/directory/QuickStats.jsx"; 
+import QuickStats from "../components/directory/QuickStats.jsx";
 import EmptyState from "../components/common/EmptyState.jsx";
 import EditModal from "../components/modals/assessorsDirectory/EditModal.jsx";
 import DetailsModal from "../components/modals/assessorsDirectory/DetailsModal.jsx";
@@ -28,13 +28,27 @@ export default function AssessorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const location = useLocation(); // Hook to get URL params
+
   // Filters / UI state
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Update search term from URL on mount/update
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const search = params.get("search");
+    if (search) {
+      setSearchTerm(search);
+    }
+  }, [location.search]);
   const [selectedRegion, setSelectedRegion] = useState("all");
   const [selectedProvince, setSelectedProvince] = useState("all");
   const [selectedLguType, setSelectedLguType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedSex, setSelectedSex] = useState("all");
+  const [selectedLicenseStatus, setSelectedLicenseStatus] = useState("all"); // new state
+  const [selectedPositionCategory, setSelectedPositionCategory] = useState("all"); // new state for Head vs Assistant
+  const [activeTab, setActiveTab] = useState("active"); // "active" or "retired"
 
   const [sortConfig, _setSortConfig] = useState({ key: null, direction: "ascending" });
   const [currentPage, setCurrentPage] = useState(1);
@@ -181,7 +195,34 @@ export default function AssessorsPage() {
       const statusMatch = selectedStatus === "all" || a.statusOfAppointment === selectedStatus;
       const sexMatch = selectedSex === "all" || a.sex === selectedSex;
 
-      return searchMatch && regionMatch && provinceMatch && lguTypeMatch && statusMatch && sexMatch;
+      let licenseMatch = true;
+      if (selectedLicenseStatus === "REA") {
+        licenseMatch = !!a.prcLicenseNumber; // Must have a license
+      } else if (selectedLicenseStatus === "Non-REA") {
+        licenseMatch = !a.prcLicenseNumber; // Must NOT have a license
+      }
+
+      const isRetired = a.statusOfAppointment === "Retired";
+      const isInActiveTab = activeTab === "active" ? !isRetired : isRetired;
+
+      // Position Category Logic
+      let positionMatch = true;
+      if (selectedPositionCategory !== "all") {
+        // Check both fields to ensure we catch "Assistant" if it's in either
+        const designation = ((a.officialDesignation || "") + " " + (a.plantillaPosition || "")).toLowerCase();
+        const isAssistant = designation.includes("assistant");
+
+        if (selectedPositionCategory === "Head Assessor") {
+          // Must include "assessor" (usually) but NOT "assistant"
+          // Or we can just say !isAssistant if we assume the list is mostly Assessors/Assistants
+          // Let's be safe: !isAssistant
+          positionMatch = !isAssistant;
+        } else if (selectedPositionCategory === "Assistant Assessor") {
+          positionMatch = isAssistant;
+        }
+      }
+
+      return searchMatch && regionMatch && provinceMatch && lguTypeMatch && statusMatch && sexMatch && licenseMatch && isInActiveTab && positionMatch;
     });
 
     if (sortConfig.key) {
@@ -203,7 +244,10 @@ export default function AssessorsPage() {
     selectedLguType,
     selectedStatus,
     selectedSex,
+    selectedLicenseStatus,
     sortConfig,
+    activeTab,
+    selectedPositionCategory,
   ]);
 
   // pagination
@@ -269,6 +313,8 @@ export default function AssessorsPage() {
     setSelectedLguType("all");
     setSelectedStatus("all");
     setSelectedSex("all");
+    setSelectedLicenseStatus("all");
+    setSelectedPositionCategory("all");
     setCurrentPage(1);
   }, []);
 
@@ -276,7 +322,7 @@ export default function AssessorsPage() {
   if (error) return <ErrorDisplay error={error} onRetry={refreshAssessors} />;
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header - Mobile Optimized */}
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
@@ -288,8 +334,8 @@ export default function AssessorsPage() {
           </div>
 
           {canAdd && (
-            <button 
-              onClick={() => setIsCreateModalOpen(true)} 
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
               className="btn btn-primary btn-sm sm:btn-md lg:btn-lg w-full sm:w-auto flex-shrink-0"
             >
               <span className="text-sm sm:text-base">+ Add Assessor</span>
@@ -298,75 +344,99 @@ export default function AssessorsPage() {
         </div>
       </div>
 
-      <SearchFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        selectedLguType={selectedLguType}
-        setSelectedLguType={setSelectedLguType}
-        selectedStatus={selectedStatus}
-        setSelectedStatus={setSelectedStatus}
-        selectedRegion={selectedRegion}
-        setSelectedRegion={setSelectedRegion}
-        selectedProvince={selectedProvince}
-        setSelectedProvince={setSelectedProvince}
-        selectedSex={selectedSex}
-        setSelectedSex={setSelectedSex}
-        uniqueRegions={uniqueRegions}
-        uniqueProvinces={uniqueProvinces}
-        resultCount={filteredData.length}
-        exportData={filteredData} // pass filtered rows so export matches visible results
-      />
+      <div className="flex flex-col gap-6">
+        {/* Tabs */}
+        <div role="tablist" className="tabs tabs-boxed bg-base-100 p-2 shadow-sm border border-base-200 rounded-xl inline-flex w-auto self-start">
+          <a
+            role="tab"
+            className={`tab px-6 h-10 rounded-lg transition-all ${activeTab === "active" ? "tab-active bg-primary text-primary-content shadow-md" : "hover:bg-base-200"}`}
+            onClick={() => setActiveTab("active")}
+          >
+            Active Personnel
+          </a>
+          <a
+            role="tab"
+            className={`tab px-6 h-10 rounded-lg transition-all ${activeTab === "retired" ? "tab-active bg-primary text-primary-content shadow-md" : "hover:bg-base-200"}`}
+            onClick={() => setActiveTab("retired")}
+          >
+            Retired Personnel
+          </a>
+        </div>
 
-      <PersonnelTable
-        data={currentItems}
-        onViewDetails={(a) => {
-          setSelectedAssessor(a);
-          setIsDetailsModalOpen(true);
-        }}
-        onEdit={canEdit ? (a) => { setEditingAssessor(a); setIsEditModalOpen(true); } : undefined}
-        onDelete={canDelete ? handleDelete : undefined}
-        deleteLoading={deleteLoading}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        canEdit={canEdit}
-        canDelete={canDelete}
-      />
-
-      <QuickStats directory={assessors} />
-
-      {filteredData.length === 0 && !loading && (
-        <EmptyState onClearFilters={clearAllFilters} />
-      )}
-
-      {canAdd && (
-        <AddModal
-          isOpen={isCreateModalOpen}
-          onAddPersonnel={handleCreate}
-          onClose={() => setIsCreateModalOpen(false)}
-          loading={createLoading}
+        <SearchFilters
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          selectedLguType={selectedLguType}
+          setSelectedLguType={setSelectedLguType}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          selectedRegion={selectedRegion}
+          setSelectedRegion={setSelectedRegion}
+          selectedProvince={selectedProvince}
+          setSelectedProvince={setSelectedProvince}
+          selectedSex={selectedSex}
+          setSelectedSex={setSelectedSex}
+          selectedLicenseStatus={selectedLicenseStatus}
+          setSelectedLicenseStatus={setSelectedLicenseStatus}
+          selectedPositionCategory={selectedPositionCategory}
+          setSelectedPositionCategory={setSelectedPositionCategory}
+          uniqueRegions={uniqueRegions}
+          uniqueProvinces={uniqueProvinces}
+          resultCount={filteredData.length}
+          exportData={filteredData} // pass filtered rows so export matches visible results
         />
-      )}
 
-      {canEdit && (
-        <EditModal
-          isOpen={isEditModalOpen}
-          editingPerson={editingAssessor}
-          updateLoading={updateLoading}
-          onInputChange={(e) => setEditingAssessor(prev => ({ ...prev, [e.target.name]: e.target.value }))}
-          onUpdate={handleUpdate}
-          onClose={() => setIsEditModalOpen(false)}
+        <PersonnelTable
+          data={currentItems}
+          onViewDetails={(a) => {
+            setSelectedAssessor(a);
+            setIsDetailsModalOpen(true);
+          }}
+          onEdit={canEdit ? (a) => { setEditingAssessor(a); setIsEditModalOpen(true); } : undefined}
+          onDelete={canDelete ? handleDelete : undefined}
+          deleteLoading={deleteLoading}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          canEdit={canEdit}
+          canDelete={canDelete}
+        />
+
+        <QuickStats directory={assessors} />
+
+        {filteredData.length === 0 && !loading && (
+          <EmptyState onClearFilters={clearAllFilters} />
+        )}
+
+        {canAdd && (
+          <AddModal
+            isOpen={isCreateModalOpen}
+            onAddPersonnel={handleCreate}
+            onClose={() => setIsCreateModalOpen(false)}
+            loading={createLoading}
+          />
+        )}
+
+        {canEdit && (
+          <EditModal
+            isOpen={isEditModalOpen}
+            editingPerson={editingAssessor}
+            updateLoading={updateLoading}
+            onInputChange={(e) => setEditingAssessor(prev => ({ ...prev, [e.target.name]: e.target.value }))}
+            onUpdate={handleUpdate}
+            onClose={() => setIsEditModalOpen(false)}
+            formatDate={formatDate}
+          />
+        )}
+
+        <DetailsModal
+          isOpen={isDetailsModalOpen}
+          selectedPerson={selectedAssessor}
+          onClose={() => setIsDetailsModalOpen(false)}
+          onEdit={canEdit ? (a) => { setEditingAssessor(a); setIsEditModalOpen(true); } : undefined}
           formatDate={formatDate}
         />
-      )}
-
-      <DetailsModal
-        isOpen={isDetailsModalOpen}
-        selectedPerson={selectedAssessor}
-        onClose={() => setIsDetailsModalOpen(false)}
-        onEdit={canEdit ? (a) => { setEditingAssessor(a); setIsEditModalOpen(true); } : undefined}
-        formatDate={formatDate}
-      />
+      </div>
     </div>
   );
 }

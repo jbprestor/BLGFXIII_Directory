@@ -1,4 +1,3 @@
-// components/common/FormFields.jsx
 export const InputField = ({
   label,
   name,
@@ -8,20 +7,20 @@ export const InputField = ({
   required,
   type = "text",
   placeholder,
+  compact = false,
   ...props
 }) => {
   return (
     <div className="form-control">
-      <label className="label">
-        <span className="label-text font-medium">
-          {label} {required && <span className="text-red-500">*</span>}
+      <label className="label py-1">
+        <span className="label-text font-medium text-base-content/80 text-xs sm:text-sm">
+          {label} {required && <span className="text-error">*</span>}
         </span>
       </label>
       <input
         type={type}
-        className={`input input-bordered w-full ${
-          error ? "border-red-500" : ""
-        }`}
+        className={`input input-bordered w-full ${compact ? "input-sm" : ""} ${error ? "input-error" : ""
+          }`}
         name={name}
         value={value || ""}
         onChange={onChange}
@@ -29,7 +28,7 @@ export const InputField = ({
         placeholder={placeholder}
         {...props}
       />
-      {error && <span className="text-red-500 text-sm mt-1">{error}</span>}
+      {error && <span className="text-error text-xs mt-1">{error}</span>}
     </div>
   );
 };
@@ -43,22 +42,22 @@ export const SelectField = ({
   required,
   options,
   placeholder,
+  compact = false,
   ...props
 }) => {
   return (
     <div className="form-control">
-      <label className="label">
-        <span className="label-text font-medium">
-          {label} {required && <span className="text-red-500">*</span>}
+      <label className="label py-1">
+        <span className="label-text font-medium text-base-content/80 text-xs sm:text-sm">
+          {label} {required && <span className="text-error">*</span>}
         </span>
       </label>
       <select
-        className={`select select-bordered w-full ${
-          error ? "border-red-500" : ""
-        }`}
+        className={`select select-bordered w-full ${compact ? "select-sm" : ""} ${error ? "select-error" : ""
+          }`}
         name={name}
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)} // ✅ ensure value only
+        onChange={(e) => onChange(e.target.value)}
         required={required}
         {...props}
       >
@@ -75,21 +74,23 @@ export const SelectField = ({
           )
         )}
       </select>
-      {error && <span className="text-red-500 text-sm mt-1">{error}</span>}
+      {error && <span className="text-error text-xs mt-1">{error}</span>}
     </div>
   );
 };
 
-export const DetailField = ({ label, value }) => {
+export const DetailField = ({ label, value, compact = true }) => {
   return (
     <div className="form-control">
       <label className="label py-1">
-        <span className="label-text font-medium text-base-content text-sm">
+        <span className="label-text font-medium text-base-content/70 text-xs uppercase tracking-wide">
           {label}
         </span>
       </label>
-      <div className="p-3 bg-base-100/80 rounded-lg border border-base-300 text-base-content font-normal backdrop-blur-sm">
-        {value || <span className="text-base-content/50">N/A</span>}
+      <div
+        className={`input input-bordered flex items-center bg-base-200/50 text-base-content w-full ${compact ? "input-sm text-sm" : ""}`}
+      >
+        {value || <span className="text-base-content/40 italic">N/A</span>}
       </div>
     </div>
   );

@@ -64,9 +64,8 @@ export default function PersonnelTable({
                           </div>
                           <div className="text-xs opacity-50">
                             {person.personalEmail || person.officeEmail
-                              ? `${person.personalEmail || "N/A"} / ${
-                                  person.officeEmail || "N/A"
-                                }`
+                              ? `${person.personalEmail || "N/A"} / ${person.officeEmail || "N/A"
+                              }`
                               : "N/A"}
                           </div>
                         </div>
@@ -76,15 +75,14 @@ export default function PersonnelTable({
                     {/* LGU Type */}
                     <td className="p-2 hidden sm:table-cell">
                       <span
-                        className={`badge badge-xs sm:badge-sm ${
-                          person.lguType === "City"
-                            ? "badge-primary"
-                            : person.lguType === "Municipality"
+                        className={`badge badge-xs sm:badge-sm ${person.lguType === "City"
+                          ? "badge-primary"
+                          : person.lguType === "Municipality"
                             ? "badge-secondary"
                             : person.lguType === "Province"
-                            ? "badge-accent"
-                            : "badge-outline"
-                        }`}
+                              ? "badge-accent"
+                              : "badge-outline"
+                          }`}
                       >
                         {person.lguType || "N/A"}
                       </span>
@@ -196,16 +194,16 @@ export default function PersonnelTable({
                             <strong>PRC Expiry:</strong>{" "}
                             {person.prcLicenseExpiration
                               ? new Date(
-                                  person.prcLicenseExpiration
-                                ).toLocaleDateString()
+                                person.prcLicenseExpiration
+                              ).toLocaleDateString()
                               : "N/A"}
                           </div>
                           <div>
                             <strong>Appointment Date:</strong>{" "}
                             {person.dateOfAppointment
                               ? new Date(
-                                  person.dateOfAppointment
-                                ).toLocaleDateString()
+                                person.dateOfAppointment
+                              ).toLocaleDateString()
                               : "N/A"}
                           </div>
                         </div>
@@ -241,9 +239,8 @@ export default function PersonnelTable({
                 return (
                   <button
                     key={pageNum}
-                    className={`join-item btn btn-xs sm:btn-sm ${
-                      currentPage === pageNum ? "btn-primary" : ""
-                    }`}
+                    className={`join-item btn btn-xs sm:btn-sm ${currentPage === pageNum ? "btn-primary" : ""
+                      }`}
                     onClick={() => onPageChange(pageNum)}
                   >
                     {pageNum}

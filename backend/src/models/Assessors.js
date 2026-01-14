@@ -16,7 +16,7 @@ const assessorSchema = new mongoose.Schema(
     // Professional Information
     plantillaPosition: { type: String, trim: true },
     officialDesignation: { type: String, trim: true },
-    statusOfAppointment: { type: String, enum: ["Permanent","Temporary","Casual","Job Order","Contractual","Acting","OIC"] },
+    statusOfAppointment: { type: String, enum: ["Permanent", "Temporary", "Casual", "Job Order", "Contractual", "Acting", "OIC", "Retired"] },
     dateOfAppointment: { type: Date },
     salaryGrade: { type: String, trim: true },
     stepIncrement: { type: Number, default: 1 },

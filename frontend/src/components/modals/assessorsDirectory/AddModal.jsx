@@ -27,7 +27,7 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
 
   // Fetch ALL LGUs (no pagination now)
   useEffect(() => {
-  let _isMounted = true;
+    let _isMounted = true;
     const fetchLgus = async () => {
       try {
         const response = await getAllLgusNoPagination(); // ✅ FIX: no stray "/"
@@ -155,10 +155,11 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
   // Validate form
   const validateForm = useCallback(() => {
     const newErrors = {};
-    Object.keys(FIELD_CONFIG).forEach((field) => {
-      const err = validateField(field, formData[field]);
-      if (err) newErrors[field] = err;
-    });
+    // Relaxed validation: Only ensure First/Last Name and LGU are present
+    if (!formData.firstName?.trim()) newErrors.firstName = "First Name is required";
+    if (!formData.lastName?.trim()) newErrors.lastName = "Last Name is required";
+    if (!formData.lguName) newErrors.lguName = "LGU is required";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
@@ -229,7 +230,7 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
           });
         }
 
-  const _res = await createAssessor(payload);
+        const _res = await createAssessor(payload);
 
         toast.success(
           `${payload.firstName} ${payload.lastName} added successfully`
@@ -262,7 +263,7 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
             value={selectedRegion}
             options={regions}
             onChange={handleRegionChange}
-            required
+          // required
           />
         );
       }
@@ -317,7 +318,7 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
             options={["Male", "Female", "Other"]}
             // force (value, name) style, not event
             onChange={(value) => handleInputChange(value, "sex")}
-            required
+          // required
           />
         );
       }
@@ -329,11 +330,11 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
             label="Employment Status"
             name="statusOfAppointment"
             value={formData.statusOfAppointment || ""}
-            options={["Permanent", "Temporary", "Contractual", "Casual", "Acting", "OIC", "Job Order"]}
+            options={["Permanent", "Temporary", "Contractual", "Casual", "Acting", "OIC", "Job Order", "Retired"]}
             onChange={(value) =>
               handleInputChange(value, "statusOfAppointment")
             }
-            required
+          // required
           />
         );
       }
@@ -354,7 +355,7 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
               "Others",
             ]}
             onChange={(value) => handleInputChange(value, "civilStatus")}
-            required
+          // required
           />
         );
       }
@@ -365,7 +366,8 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
         value: formData[name] || "",
         error: errors[name],
         onChange: handleInputChange,
-        required: config.validation?.includes("required"),
+        // Only require First and Last Name and LGU components
+        required: ["firstName", "lastName", "lguName", "province", "region"].includes(name),
         ...config,
       };
 

@@ -12,13 +12,14 @@ import AddModal from "../components/modals/assessorsDirectory/AddModal.jsx";
 import { confirmToastDaisy } from "../components/common/ConfirmToast";
 import { formatDate } from "../utils/formatters";
 import toast from "react-hot-toast";
- 
+
 export default function DirectoryPage() {
   // State management
   const [directory, setDirectory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("active"); // "active" or "retired"
   const [selectedLguType, setSelectedLguType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedRegion, setSelectedRegion] = useState("all");
@@ -80,8 +81,12 @@ export default function DirectoryPage() {
           "province",
         ].some((field) => person[field]?.toLowerCase().includes(searchLower));
 
+      const isRetired = person.statusOfAppointment === "Retired";
+      const isInActiveTab = activeTab === "active" ? !isRetired : isRetired;
+
       return (
         searchMatch &&
+        isInActiveTab &&
         (selectedLguType === "all" || person.lguType === selectedLguType) &&
         (selectedStatus === "all" ||
           person.statusOfAppointment === selectedStatus) &&
@@ -107,6 +112,7 @@ export default function DirectoryPage() {
     selectedStatus,
     selectedRegion,
     sortConfig,
+    activeTab,
   ]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -199,7 +205,7 @@ export default function DirectoryPage() {
 
         const payload = buildPayload(editingPerson);
         const res = await api.put(`/${editingPerson._id}`, payload);
-        
+
         // Only log success in development mode
         if (import.meta.env.MODE === "development") {
           console.log("Directory update successful");
@@ -285,6 +291,24 @@ export default function DirectoryPage() {
         <button onClick={handleCreateNew} className="btn btn-primary btn-lg">
           + Add New Assessor
         </button>
+      </div>
+
+      {/* Tabs */}
+      <div role="tablist" className="tabs tabs-boxed">
+        <a
+          role="tab"
+          className={`tab ${activeTab === "active" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("active")}
+        >
+          Active Personnel
+        </a>
+        <a
+          role="tab"
+          className={`tab ${activeTab === "retired" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("retired")}
+        >
+          Retired Personnel
+        </a>
       </div>
 
       {/* Filters */}

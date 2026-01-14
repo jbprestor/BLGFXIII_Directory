@@ -14,6 +14,10 @@ export default function SearchFilters({
   setSelectedProvince,   // <-- new prop
   selectedSex,
   setSelectedSex,
+  selectedLicenseStatus, // new
+  setSelectedLicenseStatus, // new
+  selectedPositionCategory, // new
+  setSelectedPositionCategory, // new
   uniqueRegions,
   uniqueProvinces,       // <-- new prop
   resultCount,
@@ -29,6 +33,8 @@ export default function SearchFilters({
     setSelectedRegion("all");
     setSelectedProvince?.("all"); // optional chaining in case parent didn't pass
     setSelectedSex("all");
+    setSelectedLicenseStatus?.("all");
+    setSelectedPositionCategory?.("all");
   };
 
   // Consider province in "is filter active"
@@ -38,7 +44,9 @@ export default function SearchFilters({
     (selectedStatus || "all") !== "all" ||
     (selectedRegion || "all") !== "all" ||
     (selectedProvince || "all") !== "all" ||
-    (selectedSex || "all") !== "all";
+    (selectedSex || "all") !== "all" ||
+    (selectedLicenseStatus || "all") !== "all" ||
+    (selectedPositionCategory || "all") !== "all";
 
   const hasExportData = Array.isArray(exportData) && exportData.length > 0;
 
@@ -182,6 +190,37 @@ export default function SearchFilters({
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
+              </select>
+            </div>
+
+            {/* License Status */}
+            <div className="form-control">
+              <label className="label py-1">
+                <span className="label-text text-xs sm:text-sm">License Status</span>
+              </label>
+              <select
+                className="select select-bordered select-sm sm:select-md w-full"
+                value={selectedLicenseStatus || "all"}
+                onChange={(e) => setSelectedLicenseStatus?.(e.target.value)}
+              >
+                <option value="all">All</option>
+                <option value="REA">REA (Licensed)</option>
+                <option value="Non-REA">Non-REA</option>
+              </select>
+            </div>
+            {/* Position Category */}
+            <div className="form-control">
+              <label className="label py-1">
+                <span className="label-text text-xs sm:text-sm">Position Category</span>
+              </label>
+              <select
+                className="select select-bordered select-sm sm:select-md w-full"
+                value={selectedPositionCategory || "all"}
+                onChange={(e) => setSelectedPositionCategory?.(e.target.value)}
+              >
+                <option value="all">All Levels</option>
+                <option value="Head Assessor">Head Assessor</option>
+                <option value="Assistant Assessor">Assistant Assessor</option>
               </select>
             </div>
           </div>

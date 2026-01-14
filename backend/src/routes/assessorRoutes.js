@@ -6,7 +6,8 @@ import {
   updateAssessor,
   deleteAssessor,
   getAssessorsByLGU,
-  searchAssessors
+  searchAssessors,
+  getAssessorNotifications
 } from "../controllers/assessorController.js";
 import { authenticate } from "../middleware/authMiddleware.js";
 
@@ -15,12 +16,13 @@ const router = express.Router();
 // Public routes
 router.get("/", getAllAssessors);
 router.get("/search", searchAssessors);
+router.get("/notifications", getAssessorNotifications); // Add this before /:id
 router.get("/lgu/:lguId", getAssessorsByLGU);
 router.get("/:id", getAssessorById); // keep this last
 
 
 // Protected routes
-router.post("/",  createAssessor);
+router.post("/", createAssessor);
 router.put("/:id", authenticate, updateAssessor);
 router.delete("/:id", authenticate, deleteAssessor);
 
