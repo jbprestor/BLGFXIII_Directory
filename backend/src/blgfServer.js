@@ -101,8 +101,8 @@ app.use("/api/*", (req, res) => {
 });
 
 // Connect to database and start server
-// Connect to database and start server ONLY if run directly
-if (process.env.VITE_VERCEL_ENV !== 'true') {
+// Connect to database and start server ONLY if run directly (not in Vercel)
+if (!process.env.VERCEL) {
   connectDB().then(() => {
     app.listen(PORT, () => {
       console.log(`Server started on PORT: ${PORT}`);
