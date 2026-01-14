@@ -3,11 +3,18 @@ import { connectDB } from '../backend/src/config/db.js';
 
 // Vercel Serverless Function Entry Point
 export default async function handler(req, res) {
-    // Ensure database connection is established
-    // Serverless functions are stateless, so we check/connect on every request
-    // Mongoose handles connection pooling nicely, so re-calling connectDB is fine
-    await connectDB();
+    try {
+        // Ensure database connection is established
+        await connectDB();
 
-    // Forward request to Express app
-    return app(req, res);
+        // Forward request to Express app
+        return app(req, res);
+    } catch (error) {
+        console.error("Serverless Handler Error:", error);
+        return res.status(500).json({
+            error: "Internal Server Error",
+            message: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
 }
