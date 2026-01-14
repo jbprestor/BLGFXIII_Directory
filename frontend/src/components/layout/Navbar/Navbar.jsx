@@ -166,20 +166,18 @@ export default function Navbar({
       {/* Navbar */}
       <header
         role="banner"
-        className={`navbar ${
-          isScrolled
-            ? "bg-base-100/95 backdrop-blur-md shadow-xl"
-            : `bg-gradient-to-r ${theme.gradient}`
-        } fixed top-0 z-40 transition-all duration-500 px-3 sm:px-6 lg:px-8`}
+        className={`navbar ${isScrolled
+          ? "bg-base-100/95 backdrop-blur-md shadow-xl"
+          : `bg-gradient-to-r ${theme.gradient}`
+          } fixed top-0 z-40 transition-all duration-500 px-3 sm:px-6 lg:px-8`}
       >
         <div className="navbar-start">
           {isLoggedIn && (
             <button
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open navigation menu"
-              className={`hamburger-menu btn btn-ghost btn-circle ${
-                isScrolled ? "text-base-content" : "text-white"
-              }`}
+              className={`hamburger-menu btn btn-ghost btn-circle ${isScrolled ? "text-base-content" : "text-white"
+                }`}
             >
               <svg
                 className="w-6 h-6"
@@ -212,13 +210,12 @@ export default function Navbar({
                 <li key={item.page}>
                   <a
                     onClick={() => onNavigate(item.page)}
-                    className={`nav-item flex items-center py-2 px-4 rounded-lg transition-all duration-300 cursor-pointer ${
-                      currentPage === item.page
-                        ? "active bg-primary text-primary-content shadow-lg border-2 border-primary-focus transform scale-105"
-                        : isScrolled
+                    className={`nav-item flex items-center py-2 px-4 rounded-lg transition-all duration-300 cursor-pointer ${currentPage === item.page
+                      ? "active bg-primary text-primary-content shadow-lg border-2 border-primary-focus transform scale-105"
+                      : isScrolled
                         ? "text-base-content hover:bg-base-200/80 hover:shadow-md"
                         : "text-white hover:bg-white/20 hover:shadow-md"
-                    }`}
+                      }`}
                   >
                     <span className="mr-2 text-lg">{item.icon}</span>
                     {item.name}
@@ -229,7 +226,7 @@ export default function Navbar({
           </div>
         )}
 
-  <nav aria-label="User controls" className="navbar-end gap-2">
+        <nav aria-label="User controls" className="navbar-end gap-2">
           {/* Theme Selector - Always visible but responsive */}
           <div className="hidden sm:block">
             <ThemeSelector
@@ -258,11 +255,10 @@ export default function Navbar({
             <button
               onClick={handleLoginOpen}
               aria-label="Open login dialog"
-              className={`btn btn-primary text-sm px-3 sm:text-base sm:px-4 ${
-                isScrolled
-                  ? ""
-                  : "btn-outline border-white text-white hover:bg-white hover:text-primary"
-              }`}
+              className={`btn btn-primary text-sm px-3 sm:text-base sm:px-4 ${isScrolled
+                ? ""
+                : "btn-outline border-white text-white hover:bg-white hover:text-primary"
+                }`}
             >
               <span className="hidden sm:inline">Log in</span>
               <span className="sm:hidden">Login</span>
@@ -314,11 +310,10 @@ export default function Navbar({
                         onNavigate(item.page);
                         setMobileMenuOpen(false);
                       }}
-                      className={`mobile-nav-item flex items-center py-3 px-3 rounded-xl transition-all duration-300 text-base cursor-pointer ${
-                        currentPage === item.page
-                          ? "active bg-primary text-primary-content shadow-lg font-medium border-l-4 border-primary-focus"
-                          : "text-base-content hover:bg-base-200/70 hover:shadow-sm hover:translate-x-1"
-                      }`}
+                      className={`mobile-nav-item flex items-center py-3 px-3 rounded-xl transition-all duration-300 text-base cursor-pointer ${currentPage === item.page
+                        ? "active bg-primary text-primary-content shadow-lg font-medium border-l-4 border-primary-focus"
+                        : "text-base-content hover:bg-base-200/70 hover:shadow-sm hover:translate-x-1"
+                        }`}
                     >
                       <span className="mr-3 text-lg opacity-80">{item.icon}</span>
                       <span className="flex-1">{item.name}</span>
@@ -363,11 +358,10 @@ export default function Navbar({
                               handleThemeChange(key);
                               setThemeOpen(false);
                             }}
-                            className={`justify-between transition-colors duration-300 ${
-                              currentTheme === key
-                                ? "active bg-primary text-primary-content font-semibold"
-                                : "hover:bg-base-200 text-base-content"
-                            }`}
+                            className={`justify-between transition-colors duration-300 ${currentTheme === key
+                              ? "active bg-primary text-primary-content font-semibold"
+                              : "hover:bg-base-200 text-base-content"
+                              }`}
                           >
                             <div className="flex items-center space-x-3">
                               <span className="text-lg">{themeData.icon}</span>
