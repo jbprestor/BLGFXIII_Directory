@@ -34,13 +34,47 @@ export default function AssessorsPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Update search term from URL on mount/update
+  // Update search term from URL on mount/update and check for ID
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const search = params.get("search");
+    const id = params.get("id");
+
     if (search) {
       setSearchTerm(search);
     }
-  }, [location.search]);
+
+    // Deep link to specific assessor via ID
+    if (id) {
+      if (assessors.length > 0) {
+        const found = assessors.find(a => a._id === id || a.id === id);
+
+        if (found) {
+          // 1. Open the modal
+          setSelectedAssessor(found);
+          setIsDetailsModalOpen(true);
+
+          // 2. Clear all filters to ensure visibility
+          setSelectedRegion("all");
+          setSelectedProvince("all");
+          setSelectedLguType("all");
+          setSelectedStatus("all");
+          setSelectedSex("all");
+          setSelectedLicenseStatus("all");
+          setSelectedPositionCategory("all");
+
+          // 3. Switch to correct tab based on status
+          const isRetired = found.statusOfAppointment === "Retired";
+          setActiveTab(isRetired ? "retired" : "active");
+
+          // 4. Set search term to isolate this person
+          if (found.fullName) {
+            setSearchTerm(found.fullName);
+          }
+        }
+      }
+    }
+  }, [location.search, assessors]);
   const [selectedRegion, setSelectedRegion] = useState("all");
   const [selectedProvince, setSelectedProvince] = useState("all");
   const [selectedLguType, setSelectedLguType] = useState("all");

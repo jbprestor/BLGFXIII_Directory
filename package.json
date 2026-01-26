@@ -1,25 +1,28 @@
 {
-  "name": "blgfxiii_directory",
+  "name": "blgfxiii-directory",
   "version": "1.0.0",
-  "description": "This is all about BLGF XIII work \r Disclaimer, Not for use of Everyone!!! Exclusively for BLGF Caraga!\r ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/jbprestor/BLGFXIII_Directory?utm_source=oss&utm_medium=github&utm_campaign=jbprestor%2FBLGFXIII_Directory&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)",
-  "main": "index.js",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "build": "npm install --prefix backend && npm install --include=dev --prefix frontend && npm run build --prefix frontend --force",
-    "start": "npm run start --prefix backend"
+    "build": "cd frontend && npm install && npm run build",
+    "install-backend": "cd backend && npm install",
+    "postinstall": "npm run install-backend"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jbprestor/BLGFXIII_Directory.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/jbprestor/BLGFXIII_Directory/issues"
-  },
-  "homepage": "https://github.com/jbprestor/BLGFXIII_Directory#readme",
   "dependencies": {
-    "lucide-react": "^0.544.0"
+    "@upstash/ratelimit": "^2.0.6",
+    "@upstash/redis": "^1.35.3",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^4.21.2",
+    "joi": "^18.0.1",
+    "joi-password-complexity": "^5.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0",
+    "multer": "^1.4.4",
+    "node-fetch": "^3.3.2",
+    "path-to-regexp": "^8.3.0"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }

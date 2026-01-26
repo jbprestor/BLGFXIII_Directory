@@ -172,6 +172,9 @@ export default function useApi() {
     updateQrrpa,
     deleteQrrpa,
 
+    // Dashboard
+    getDashboardStats: () => api.get("/dashboard/stats"),
+
     // Raw axios instance
     api,
   };

@@ -46,203 +46,150 @@ export default function UserRegisterModal({ onClose, onGoToLogin }) {
     };
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        }}>
-            <div style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                borderRadius: '20px',
-                width: '90%',
-                maxWidth: '500px',
-                margin: '20px',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-                position: 'relative',
-                overflowY: 'auto',
-                maxHeight: '90vh'
-            }}>
-                {/* Background Design Elements */}
-                <div style={{
-                    position: 'absolute',
-                    top: '-50%',
-                    right: '-20%',
-                    width: '200px',
-                    height: '200px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    pointerEvents: 'none'
-                }}></div>
+        <div className="fixed inset-0 bg-base-300/80 backdrop-blur-sm flex items-center justify-center z-[1000] p-4 font-sans transition-all duration-300">
+            {/* Modal Card Container */}
+            <div className="relative w-full max-w-lg bg-base-100 rounded-3xl shadow-2xl border border-base-200 overflow-hidden transform transition-all">
 
-                <div style={{
-                    background: 'white',
-                    borderRadius: '20px',
-                    margin: '4px',
-                    padding: '40px',
-                    position: 'relative'
-                }}>
+                {/* Decorative Top Bar */}
+                <div className="h-2 w-full bg-gradient-to-r from-primary to-secondary"></div>
+
+                <div className="p-8 sm:p-10 relative">
                     {/* Close Button */}
                     <button
                         onClick={onClose}
-                        style={{
-                            position: 'absolute',
-                            top: '16px',
-                            right: '16px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#a0aec0',
-                            padding: '4px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}
+                        className="absolute top-4 right-4 btn btn-circle btn-ghost btn-sm text-base-content/40 hover:bg-base-200 hover:text-base-content transition-colors"
                     >
                         <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
 
-                    <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                        <h1 style={{ fontSize: '28px', fontWeight: '600', color: '#2d3748', margin: '0 0 8px 0' }}>
+                    <div className="text-center mb-8">
+                        <div className="inline-flex items-center justify-center w-24 h-24 mb-6 bg-transparent">
+                            <img
+                                src="https://blgf.gov.ph/wp-content/uploads/2022/05/BLGF-Seal-Regular.png"
+                                alt="BLGF Logo"
+                                className="w-full h-full object-contain drop-shadow-md"
+                            />
+                        </div>
+                        <h1 className="text-3xl font-bold text-base-content tracking-tight">
                             Create Account
                         </h1>
-                        <p style={{ fontSize: '14px', color: '#718096', margin: '0' }}>
+                        <p className="text-sm text-base-content/60 mt-1">
                             Join the BLGF XIII Portal today.
                         </p>
                     </div>
 
                     {error && (
-                        <div style={{
-                            background: '#fed7d7',
-                            border: '1px solid #fc8181',
-                            borderRadius: '8px',
-                            padding: '12px',
-                            marginBottom: '20px',
-                            color: '#c53030',
-                            fontSize: '14px',
-                            textAlign: 'center'
-                        }}>
-                            {error}
+                        <div className="alert alert-error text-sm py-3 mb-6 shadow-sm rounded-xl">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span>{error}</span>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="form-control">
+                                <label className="label pt-0"><span className="label-text font-medium text-base-content/80">First Name</span></label>
+                                <input
+                                    type="text"
+                                    name="firstName"
+                                    placeholder="John"
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                    required
+                                    className="input input-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-200/50 hover:bg-base-200 transition-all font-medium"
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label pt-0"><span className="label-text font-medium text-base-content/80">Last Name</span></label>
+                                <input
+                                    type="text"
+                                    name="lastName"
+                                    placeholder="Doe"
+                                    value={formData.lastName}
+                                    onChange={handleChange}
+                                    required
+                                    className="input input-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-200/50 hover:bg-base-200 transition-all font-medium"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-control">
+                            <label className="label pt-0"><span className="label-text font-medium text-base-content/80">Region</span></label>
                             <input
                                 type="text"
-                                name="firstName"
-                                placeholder="First Name"
-                                value={formData.firstName}
+                                name="region"
+                                placeholder="Region (e.g. Region XIII)"
+                                value={formData.region}
                                 onChange={handleChange}
                                 required
-                                style={{
-                                    width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', outline: 'none'
-                                }}
-                            />
-                            <input
-                                type="text"
-                                name="lastName"
-                                placeholder="Last Name"
-                                value={formData.lastName}
-                                onChange={handleChange}
-                                required
-                                style={{
-                                    width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', outline: 'none'
-                                }}
+                                className="input input-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-200/50 hover:bg-base-200 transition-all"
                             />
                         </div>
 
-                        <input
-                            type="text"
-                            name="region"
-                            placeholder="Region (e.g. Region XIII)"
-                            value={formData.region}
-                            onChange={handleChange}
-                            required
-                            style={{
-                                width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', outline: 'none'
-                            }}
-                        />
-
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Email Address"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                            style={{
-                                width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', outline: 'none'
-                            }}
-                        />
-
-                        <div style={{ position: 'relative' }}>
+                        <div className="form-control">
+                            <label className="label pt-0"><span className="label-text font-medium text-base-content/80">Email Address</span></label>
                             <input
-                                type={showPassword ? "text" : "password"}
-                                name="password"
-                                placeholder="Password"
-                                value={formData.password}
+                                type="email"
+                                name="email"
+                                placeholder="name@example.com"
+                                value={formData.email}
                                 onChange={handleChange}
                                 required
-                                minLength={6}
-                                style={{
-                                    width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', outline: 'none'
-                                }}
+                                className="input input-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-200/50 hover:bg-base-200 transition-all"
                             />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                style={{
-                                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                                    background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0'
-                                }}
-                            >
-                                {showPassword ? "Hide" : "Show"}
-                            </button>
+                        </div>
+
+                        <div className="form-control">
+                            <label className="label pt-0"><span className="label-text font-medium text-base-content/80">Password</span></label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    placeholder="Min 6 characters"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    required
+                                    minLength={6}
+                                    className="input input-bordered w-full rounded-xl pr-12 focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-200/50 hover:bg-base-200 transition-all"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-base-content"
+                                >
+                                    {showPassword ? (
+                                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                                            <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                        </svg>
+                                    ) : (
+                                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            style={{
-                                width: '100%',
-                                padding: '16px',
-                                border: 'none',
-                                borderRadius: '12px',
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                color: 'white',
-                                fontSize: '16px',
-                                fontWeight: '600',
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                                opacity: loading ? 0.7 : 1,
-                                marginTop: '10px'
-                            }}
+                            className={`btn btn-primary w-full rounded-xl text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 border-none mt-4 transition-all`}
                         >
-                            {loading ? "Creating Account..." : "Sign Up"}
+                            {loading ? <span className="loading loading-spinner loading-sm"></span> : "Sign Up"}
                         </button>
                     </form>
 
-                    <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
-                        <p style={{ fontSize: '14px', color: '#718096', margin: '0' }}>
+                    <div className="text-center mt-6 pt-4 border-t border-base-200">
+                        <p className="text-sm text-base-content/60">
                             Already have an account?{' '}
                             <button
                                 type="button"
                                 onClick={onGoToLogin}
-                                style={{
-                                    background: 'none', border: 'none', color: '#667eea',
-                                    fontSize: '14px', cursor: 'pointer', fontWeight: '600'
-                                }}
+                                className="text-primary font-bold hover:underline cursor-pointer"
                             >
                                 Login
                             </button>

@@ -1,244 +1,249 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import UserLoginModal from "../components/modals/users/UserLoginModal.jsx";
 import UserRegisterModal from "../components/modals/users/UserRegisterModal.jsx";
+import useApi from "../services/axios.js";
+import { useNavigate } from "react-router";
+import { Building, Users, AlertCircle, BarChart3, ChevronRight, FileText } from "../components/common/Icon";
 
 export default function HomePage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { getDashboardStats } = useApi();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  return (
-    <div className="max-w-7xl mx-auto">
-      {/* Hero Section - Centered Dashboard Style */}
-      <section className="bg-base-100 rounded-xl shadow-lg border border-base-300/50 p-4 sm:p-8 min-h-[calc(100vh-100px)] sm:min-h-[calc(100vh-200px)] flex items-center justify-center">
-        <div className="text-center max-w-2xl">
-          <div className="mb-6">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <h1 className="text-4xl font-bold text-base-content mb-3">
-              {user ? `Welcome, ${user.firstName}` : "BLGF XIII Portal"}
-            </h1>
-            <p className="text-base-content/60 text-lg">
-              {user
-                ? "This module is under construction."
-                : "Bureau of Local Government Finance - Region XIII"}
-            </p>
-          </div>
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-          <div className="flex flex-wrap justify-center gap-3 mt-8">
-            {!user ? (
+  useEffect(() => {
+    if (user) {
+      loadStats();
+    }
+  }, [user]);
+
+  const loadStats = async () => {
+    try {
+      const res = await getDashboardStats();
+      setStats(res.data);
+    } catch (err) {
+      console.error("Failed to load dashboard stats", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        {/* Landing Hero */}
+        <section className="bg-base-100 rounded-xl shadow-lg border border-base-300/50 p-4 sm:p-12 min-h-[calc(100vh-100px)] flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+
+          <div className="text-center max-w-2xl relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+              <img
+                src="https://blgf.gov.ph/wp-content/uploads/2022/05/BLGF-Seal-Regular.png"
+                alt="BLGF Logo"
+                className="w-full h-full object-contain drop-shadow-xl"
+              />
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-base-content mb-4 tracking-tight">
+              BLGF Region XIII
+            </h1>
+            <p className="text-base-content/60 text-xl mb-8 font-light">
+              Integrated Monitoring & Assessment Portal
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => setIsLoginModalOpen(true)}
-                className="btn btn-primary gap-2 btn-lg"
+                className="btn btn-primary btn-lg shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
                 Login to Portal
               </button>
-            ) : (
-              <>
-                <button className="btn btn-primary gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  View Reports
-                </button>
-                <button className="btn btn-outline gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Settings
-                </button>
-              </>
-            )}
+
+            </div>
           </div>
+        </section>
+
+        {isLoginModalOpen && (
+          <UserLoginModal
+            onClose={() => setIsLoginModalOpen(false)}
+            onSuccess={() => setIsLoginModalOpen(false)}
+            onRequestAccess={() => {
+              setIsLoginModalOpen(false);
+              setIsRegisterModalOpen(true);
+            }}
+          />
+        )}
+
+        {isRegisterModalOpen && (
+          <UserRegisterModal
+            onClose={() => setIsRegisterModalOpen(false)}
+            onGoToLogin={() => {
+              setIsRegisterModalOpen(false);
+              setIsLoginModalOpen(true);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // authenticated view
+  return (
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+          <p className="text-base-content/60">Welcome back, {user.firstName}!</p>
         </div>
-      </section>
-
-      {/* Quick Stats - Mobile Optimized */}
-      <section className="container mx-auto px-2 sm:px-4">
-        <div className="stats stats-vertical lg:stats-horizontal shadow w-full">
-          <div className="stat">
-            <div className="stat-figure text-primary">
-              <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
-            </div>
-            <div className="stat-title text-xs sm:text-sm">Registered LGUs</div>
-            <div className="stat-value text-primary text-lg sm:text-2xl lg:text-3xl">1,634</div>
-            <div className="stat-desc text-xs">Active local government units</div>
-          </div>
-
-          <div className="stat">
-            <div className="stat-figure text-secondary">
-              <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <div className="stat-title text-xs sm:text-sm">Reports Processed</div>
-            <div className="stat-value text-secondary text-lg sm:text-2xl lg:text-3xl">24,891</div>
-            <div className="stat-desc text-xs">This fiscal year</div>
-          </div>
-
-          <div className="stat">
-            <div className="stat-figure text-accent">
-              <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <div className="stat-title text-xs sm:text-sm">System Uptime</div>
-            <div className="stat-value text-accent text-lg sm:text-2xl lg:text-3xl">99.8%</div>
-            <div className="stat-desc text-xs">Average availability</div>
-          </div>
+        <div className="flex gap-2">
+          <button className="btn btn-sm btn-ghost" onClick={loadStats}>Refresh Data</button>
         </div>
-      </section>
+      </div>
 
-      {/* Features Grid - Mobile Optimized */}
-      <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8">Core Services</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {/* Directory Card */}
-          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <div className="card-body items-center text-center p-4 sm:p-6">
-              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">📁</div>
-              <h3 className="card-title text-sm sm:text-base">Directory</h3>
-              <p className="text-xs sm:text-sm text-base-content/70 leading-relaxed">Access comprehensive LGU contact information and organizational structure.</p>
-              <div className="card-actions">
-                <button className="btn btn-primary btn-xs sm:btn-sm">Browse Directory</button>
-              </div>
-            </div>
-          </div>
-
-          {/* SMV Profiling Card */}
-          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <div className="card-body items-center text-center p-4 sm:p-6">
-              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">📊</div>
-              <h3 className="card-title text-sm sm:text-base">SMV Profiling</h3>
-              <p className="text-xs sm:text-sm text-base-content/70 leading-relaxed">Statistical Market Value profiling and financial analysis tools.</p>
-              <div className="card-actions">
-                <button className="btn btn-secondary btn-xs sm:btn-sm">View Analytics</button>
-              </div>
-            </div>
-          </div>
-
-          {/* QRRPA Card */}
-          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <div className="card-body items-center text-center p-4 sm:p-6">
-              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">📋</div>
-              <h3 className="card-title text-sm sm:text-base">QRRPA Submission</h3>
-              <p className="text-xs sm:text-sm text-base-content/70 leading-relaxed">Quarterly Real Property Assessment report submissions.</p>
-              <div className="card-actions">
-                <button className="btn btn-accent btn-xs sm:btn-sm">Submit Report</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Assessors Card */}
-          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            <div className="card-body items-center text-center p-4 sm:p-6">
-              <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">👥</div>
-              <h3 className="card-title text-sm sm:text-base">Assessors</h3>
-              <p className="text-xs sm:text-sm text-base-content/70 leading-relaxed">Manage assessor credentials and certification records.</p>
-              <div className="card-actions">
-                <button className="btn btn-info btn-xs sm:btn-sm">Manage Assessors</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Recent Activity Timeline - Mobile Optimized */}
-      <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8">Recent System Activity</h2>
-        <div className="timeline">
-          <div className="timeline-item">
-            <div className="timeline-start timeline-box">
-              <div className="font-bold text-xs sm:text-sm">System Update</div>
-              <div className="text-xs opacity-70">Enhanced security features deployed</div>
-            </div>
-            <div className="timeline-middle">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-primary rounded-full"></div>
-            </div>
-            <div className="timeline-end text-xs opacity-50">2 hours ago</div>
-          </div>
-
-          <div className="timeline-item">
-            <div className="timeline-start text-xs opacity-50">5 hours ago</div>
-            <div className="timeline-middle">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-secondary rounded-full"></div>
-            </div>
-            <div className="timeline-end timeline-box">
-              <div className="font-bold text-xs sm:text-sm">Report Generated</div>
-              <div className="text-xs opacity-70">Q3 2024 financial summary completed</div>
-            </div>
-          </div>
-
-          <div className="timeline-item">
-            <div className="timeline-start timeline-box">
-              <div className="font-bold text-xs sm:text-sm">New LGU Registration</div>
-              <div className="text-xs opacity-70">Municipality of San Fernando joined the system</div>
-            </div>
-            <div className="timeline-middle">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-accent rounded-full"></div>
-            </div>
-            <div className="timeline-end text-xs opacity-50">1 day ago</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Call to Action - Mobile Optimized */}
-      <section className="bg-base-200 py-8 sm:py-16">
-        <div className="container mx-auto px-2 sm:px-4 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Ready to Get Started?</h2>
-          <p className="text-sm sm:text-xl mb-6 sm:mb-8 text-base-content/70 max-w-2xl mx-auto leading-relaxed">
-            Join thousands of local government units already using our platform
-            to streamline their financial operations and reporting processes.
-          </p>
-          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4">
-            <button className="btn btn-primary btn-sm sm:btn-lg w-full sm:w-auto">
-              <span>📝</span>
-              Register Your LGU
-            </button>
-            <button className="btn btn-outline btn-sm sm:btn-lg w-full sm:w-auto">
-              <span>📞</span>
-              Contact Support
-            </button>
-            <button className="btn btn-ghost btn-sm sm:btn-lg w-full sm:w-auto">
-              <span>📚</span>
-              View Documentation
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {isLoginModalOpen && (
-        <UserLoginModal
-          onClose={() => setIsLoginModalOpen(false)}
-          onSuccess={() => {
-            setIsLoginModalOpen(false);
-          }}
-          onRequestAccess={() => {
-            setIsLoginModalOpen(false);
-            setIsRegisterModalOpen(true);
-          }}
+      {/* 1. THE PULSE (Real-time Stats) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Registered LGUs"
+          value={loading ? "..." : stats?.totalLgus}
+          icon={<Building className="w-6 h-6 text-blue-500" />}
+          color="bg-blue-500/10"
+          onClick={() => navigate('/lgu-profile')}
         />
-      )}
-
-      {isRegisterModalOpen && (
-        <UserRegisterModal
-          onClose={() => setIsRegisterModalOpen(false)}
-          onGoToLogin={() => {
-            setIsRegisterModalOpen(false);
-            setIsLoginModalOpen(true);
-          }}
+        <StatCard
+          title="Active Assessors"
+          value={loading ? "..." : stats?.totalAssessors}
+          icon={<Users className="w-6 h-6 text-purple-500" />}
+          color="bg-purple-500/10"
+          onClick={() => navigate('/directory')}
         />
-      )}
+        <StatCard
+          title="Vacant Head Assessors"
+          value={loading ? "..." : stats?.vacantHeadAssessors}
+          icon={<AlertCircle className="w-6 h-6 text-orange-500" />}
+          className={stats?.vacantHeadAssessors > 0 ? "border-orange-200 bg-orange-50" : ""}
+          color="bg-orange-500/10"
+          trend="Action Needed"
+          trendColor="text-orange-600"
+          onClick={() => navigate('/lgu-profile?filter=vacant_head')}
+        />
+        <StatCard
+          title="SMV Projects At Risk"
+          value={loading ? "..." : stats?.smvStats?.atRisk}
+          icon={<BarChart3 className="w-6 h-6 text-red-500" />}
+          className={stats?.smvStats?.atRisk > 0 ? "border-red-200 bg-red-50" : ""}
+          color="bg-red-500/10"
+          trend="Compliance Alert"
+          trendColor="text-red-600"
+          onClick={() => navigate('/smv-monitoring')}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 2. SMV PIPELINE CHART */}
+        <div className="lg:col-span-2 card bg-base-100 shadow-sm border border-base-200">
+          <div className="card-body">
+            <h3 className="card-title text-base sm:text-lg flex justify-between">
+              <span>SMV Revision Status (2025)</span>
+              <span className="text-xs font-normal opacity-60 bg-base-200 px-2 py-1 rounded">Live Pipeline</span>
+            </h3>
+
+            <div className="mt-4 space-y-4">
+              {loading ? (
+                <div className="h-48 flex items-center justify-center text-base-content/30">Loading pipeline data...</div>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(stats?.smvStats?.pipeline || {})
+                    .filter(([_, count]) => count > 0)
+                    .sort((a, b) => b[1] - a[1]) // Sort by count desc
+                    .map(([stage, count]) => {
+                      const total = stats?.smvStats?.total || 1;
+                      const percentage = Math.round((count / total) * 100);
+                      return (
+                        <div key={stage} className="group">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium text-base-content/80">{stage}</span>
+                            <span className="text-base-content/60">{count} LGUs ({percentage}%)</span>
+                          </div>
+                          <div className="h-3 w-full bg-base-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary transition-all duration-1000 ease-out rounded-full group-hover:brightness-110 relative"
+                              style={{ width: `${percentage}%` }}
+                            >
+                              <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {(!stats?.smvStats?.pipeline || Object.values(stats.smvStats.pipeline).every(v => v === 0)) && (
+                    <div className="text-center py-8 opacity-50 text-sm">No active SMV revisions found.</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="card-actions justify-end mt-4">
+              <button className="btn btn-sm btn-outline gap-2" onClick={() => navigate('/smv-monitoring')}>
+                View Full Monitoring <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. QUICK ACTIONS / SHORTCUTS */}
+        <div className="card bg-base-100 shadow-sm border border-base-200 h-fit">
+          <div className="card-body">
+            <h3 className="card-title text-base sm:text-lg mb-2">Quick Actions</h3>
+            <div className="grid grid-cols-1 gap-2">
+              <button className="btn btn-ghost justify-start h-auto py-3 px-4 bg-base-200/50 hover:bg-base-200" onClick={() => navigate('/qrrpa-monitoring')}>
+                <div className="p-2 rounded-lg bg-green-100 text-green-600 mr-3"><FileText className="w-5 h-5" /></div>
+                <div className="text-left">
+                  <div className="font-medium">Submit QRRPA</div>
+                  <div className="text-xs opacity-60">Upload quarterly report</div>
+                </div>
+              </button>
+              <button className="btn btn-ghost justify-start h-auto py-3 px-4 bg-base-200/50 hover:bg-base-200" onClick={() => navigate('/assessors/new')}>
+                <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600 mr-3"><Users className="w-5 h-5" /></div>
+                <div className="text-left">
+                  <div className="font-medium">Add New Assessor</div>
+                  <div className="text-xs opacity-60">Register staff profile</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+function StatCard({ title, value, icon, color, trend, trendColor, className = "", onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      className={`card bg-base-100 shadow-sm border border-base-200 hover:shadow-md transition-all cursor-pointer ${className}`}
+    >
+      <div className="card-body p-5">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="text-sm font-medium text-base-content/60 mb-1">{title}</div>
+            <div className="text-3xl font-bold">{value}</div>
+            {trend && <div className={`text-xs font-medium mt-1 ${trendColor}`}>{trend}</div>}
+          </div>
+          <div className={`p-3 rounded-xl ${color}`}>
+            {icon}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 
 // Import all route files
+// Import all route files
 import { userRoutes } from "./routes/usersRoutes.js";
 import { authRoutes } from "./routes/authRoutes.js";
 import { lguRoutes } from "./routes/lguRoutes.js";
@@ -14,6 +15,7 @@ import { assessorRoutes } from "./routes/assessorRoutes.js";
 import { smvMonitoringRoutes } from "./routes/smvMonitoringRoutes.js";
 import { laoeMonitoringRoutes } from "./routes/laoeMonitoringRoutes.js";
 import { qrrpaMonitoringRoutes } from "./routes/qrrpaMonitoringRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 dotenv.config();
 
@@ -66,6 +68,7 @@ app.use("/api/assessors", assessorRoutes);
 app.use("/api/smv-processes", smvMonitoringRoutes);
 app.use("/api/laoe-monitoring", laoeMonitoringRoutes);
 app.use("/api/qrrpa-monitoring", qrrpaMonitoringRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Health check endpoint (no rate limiting)
 app.get("/api/health", (req, res) => {
@@ -103,10 +106,13 @@ app.use("/api/*", (req, res) => {
 // Connect to database and start server
 // Connect to database and start server
 connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server started on PORT: ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
+  // Only start listening if NOT in Vercel environment
+  if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+      console.log(`Server started on PORT: ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  }
 }).catch((error) => {
   console.error("Failed to connect to database:", error);
   process.exit(1);

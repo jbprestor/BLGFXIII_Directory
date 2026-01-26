@@ -9,7 +9,8 @@ export default function SearchFilters({
   selectedSMVStatus, setSelectedSMVStatus,
   conducting2025Revision, setConducting2025Revision,
   uniqueRegions, uniqueProvinces, lguTypes, smvStatuses,
-  showFilters, setShowFilters, setCurrentPage
+  showFilters, setShowFilters, setCurrentPage,
+  headAssessorStatus, setHeadAssessorStatus
 }) {
   const activeFiltersCount = [
     !!searchTerm,
@@ -17,7 +18,8 @@ export default function SearchFilters({
     selectedRegion !== "all",
     selectedProvinceFilter !== "all",
     selectedSMVStatus !== "all",
-    conducting2025Revision !== "all"
+    conducting2025Revision !== "all",
+    headAssessorStatus !== "all",
   ].filter(Boolean).length;
 
   const clear = () => {
@@ -27,6 +29,7 @@ export default function SearchFilters({
     setSelectedProvinceFilter("all");
     setSelectedSMVStatus("all");
     setConducting2025Revision("all");
+    setHeadAssessorStatus("all");
     setCurrentPage(1);
     toast.success("Filters cleared");
   };
@@ -109,6 +112,15 @@ export default function SearchFilters({
                 <option value="all">All LGUs</option>
                 <option value="true">Conducting 2025 Revision</option>
                 <option value="false">Not Conducting 2025 Revision</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="label"><span className="label-text">Head Assessor</span></label>
+              <select className="select select-bordered w-full" value={headAssessorStatus} onChange={(e) => { setHeadAssessorStatus(e.target.value); setCurrentPage(1); }}>
+                <option value="all">All</option>
+                <option value="filled">Filled</option>
+                <option value="vacant">Vacant</option>
               </select>
             </div>
           </div>

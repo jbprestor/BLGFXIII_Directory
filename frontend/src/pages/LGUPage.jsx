@@ -11,6 +11,7 @@ import {
   ChevronUp,
 } from "../components/common/Icon";
 import toast from "react-hot-toast";
+import { useSearchParams } from "react-router"; // Fixed import source
 import QuickStats from "../components/lgu/QuickStats.jsx";
 import SearchFilters from "../components/lgu/SearchFilter.jsx";
 import ProvinceDetail from "../components/lgu/ProvinceDetail.jsx";
@@ -21,11 +22,13 @@ import { useLGUImages } from "../assets/LguImages.js";
  * LGUPage — provinces view first
  */
 export default function LGUPage() {
+  const [searchParams] = useSearchParams(); // Get URL params
   const RAW_LGU_IMAGES = useLGUImages();
   const { getAllLgusNoPagination, getLguById, getAllAssessors, getSMVProcesses, updateLgu, deleteLgu } = useApi();
 
   // state
   const [lgus, setLgus] = useState([]);
+  const [allAssessors, setAllAssessors] = useState([]); // Store all assessors for filtering
   const [selectedProvince, setSelectedProvince] = useState(null);
   const [selectedLguId, setSelectedLguId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +45,16 @@ export default function LGUPage() {
   const [selectedProvinceFilter, setSelectedProvinceFilter] = useState("all");
   const [selectedSMVStatus, setSelectedSMVStatus] = useState("all");
   const [conducting2025Revision, setConducting2025Revision] = useState("all");
+  const [headAssessorStatus, setHeadAssessorStatus] = useState("all");
+
+  // Initialize filter from URL
+  useEffect(() => {
+    const filterParam = searchParams.get('filter');
+    if (filterParam === 'vacant_head') {
+      setHeadAssessorStatus('vacant');
+      setShowFilters(true);
+    }
+  }, [searchParams]);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
@@ -108,30 +121,50 @@ export default function LGUPage() {
 
   const fetchLgus = useCallback(async (forceRefresh = false) => {
     const now = Date.now();
-    const cacheValid = listCache.current.data && (now - listCache.current.timestamp) < listCache.current.ttl;
-    if (cacheValid && !forceRefresh) {
+    const listCacheValid = listCache.current.data && (now - listCache.current.timestamp) < listCache.current.ttl;
+
+    // We also want to cache assessors if possible, or just fetch them. 
+    // For simplicity, let's fetch both if LGU cache is invalid, or if forced.
+    if (listCacheValid && !forceRefresh) {
       setLgus(listCache.current.data);
-      return;
+      // We might need to persist assessors in cache too or just re-fetch them if they are fast.
+      // But let's just trigger a re-fetch of assessors if needed or rely on separate state.
+      // Actually, if we use cache for LGUs, we should probably have assessors cached or already in state?
+      // For now, let's fetch assessors always or optimistically.
     }
 
     setIsLoading(true);
     setError(null);
     try {
-      const res = await enqueueRequest(() => getAllLgusNoPagination(), "LGU list");
-      const all = normalizeListResponse(res);
+      // Parallel fetch
+      const [lguRes, assessorRes] = await Promise.all([
+        (!listCacheValid || forceRefresh) ? enqueueRequest(() => getAllLgusNoPagination(), "LGU list") : Promise.resolve({ data: listCache.current.data }),
+        enqueueRequest(() => getAllAssessors({ all: true }), "All Assessors") // Fetch all assessors for filtering
+      ]);
+
+      // Handle LGUs
+      const all = normalizeListResponse(lguRes);
       const validLgus = all.filter((item) => item && (item._id || item.id));
-      listCache.current = { data: validLgus, timestamp: Date.now(), ttl: listCache.current.ttl };
+      if (!listCacheValid || forceRefresh) {
+        listCache.current = { data: validLgus, timestamp: Date.now(), ttl: listCache.current.ttl };
+      }
       setLgus(validLgus);
+
+      // Handle Assessors
+      const assessorsData = assessorRes?.data || assessorRes || [];
+      setAllAssessors(assessorsData);
+
       if (forceRefresh) toast.success("Data refreshed");
     } catch (err) {
-      console.error("Error fetching LGUs:", err);
+      console.error("Error fetching data:", err);
       if (err?.response?.status === 429) setError("Too many requests. Please wait a moment and try again.");
-      else setError("Failed to load LGUs. Check your connection.");
-      setLgus([]);
+      else setError("Failed to load data. Check your connection.");
+      // Keep old data if available?
+      if (!lgus.length) setLgus([]);
     } finally {
       setIsLoading(false);
     }
-  }, [getAllLgusNoPagination, enqueueRequest, normalizeListResponse]);
+  }, [getAllLgusNoPagination, getAllAssessors, enqueueRequest, normalizeListResponse, lgus.length]);
 
   useEffect(() => { fetchLgus(); }, [fetchLgus]);
 
@@ -147,12 +180,43 @@ export default function LGUPage() {
       const matchesRegion = selectedRegion === "all" || g.region === selectedRegion;
       const matchesProvince = selectedProvinceFilter === "all" || g.province === selectedProvinceFilter;
       const matchesSMVStatus = selectedSMVStatus === "all" || g.currentSMVStatus === selectedSMVStatus;
-      const matches2025Revision = conducting2025Revision === "all" || 
+      const matches2025Revision = conducting2025Revision === "all" ||
         (conducting2025Revision === "true" && g.existingSMV?.conductingRevision2025 === true) ||
         (conducting2025Revision === "false" && g.existingSMV?.conductingRevision2025 !== true);
-      return matchesSearch && matchesType && matchesRegion && matchesProvince && matchesSMVStatus && matches2025Revision;
+
+      // Head Assessor Filter
+      let matchesHeadAssessor = true;
+      if (headAssessorStatus !== "all") {
+        // Find assessors for this LGU
+        const lguAssessors = allAssessors.filter(a => {
+          const aLguId = a.lgu?._id || a.lgu?.id || a.lgu;
+          const gLguId = g._id || g.id;
+          return String(aLguId) === String(gLguId);
+        });
+
+        // Check for Head Assessor vacancy logic
+        // Logic: A position is FILLED if:
+        // (Status == 'Permanent') AND (Designation/Position is Municipal/City/Provincial Assessor)
+        const exactTitles = ["municipal assessor", "city assessor", "provincial assessor"];
+
+        const filledHead = lguAssessors.find(a => {
+          const oDes = (a.officialDesignation || "").toLowerCase().trim();
+          const pPos = (a.plantillaPosition || "").toLowerCase().trim();
+          const status = (a.statusOfAppointment || "").toLowerCase().trim();
+
+          const isTitleMatch = exactTitles.includes(oDes) || exactTitles.includes(pPos);
+          const isPermanent = status === "permanent";
+
+          return isTitleMatch && isPermanent;
+        });
+
+        if (headAssessorStatus === "vacant") matchesHeadAssessor = !filledHead;
+        if (headAssessorStatus === "filled") matchesHeadAssessor = !!filledHead;
+      }
+
+      return matchesSearch && matchesType && matchesRegion && matchesProvince && matchesSMVStatus && matches2025Revision && matchesHeadAssessor;
     });
-  }, [lgus, searchTerm, selectedLguType, selectedRegion, selectedProvinceFilter, selectedSMVStatus, conducting2025Revision]);
+  }, [lgus, allAssessors, searchTerm, selectedLguType, selectedRegion, selectedProvinceFilter, selectedSMVStatus, conducting2025Revision, headAssessorStatus]);
 
   const provinces = useMemo(() => {
     const grouped = {};
@@ -191,7 +255,7 @@ export default function LGUPage() {
   const getCandidatesFor = (input) => {
     const candidates = [];
     if (!input) return [PLACEHOLDER_IMAGE];
-    
+
     // Handle both string (province name) and object (LGU) inputs
     let searchKey;
     if (typeof input === 'string') {
@@ -200,9 +264,9 @@ export default function LGUPage() {
       // For LGU objects, try name first, then province
       searchKey = input.name || input.province;
     }
-    
+
     if (!searchKey) return [PLACEHOLDER_IMAGE];
-    
+
     const nk = normalizeKey(searchKey);
     if (nk && imageIndex.has(nk)) candidates.push(imageIndex.get(nk));
     candidates.push(PLACEHOLDER_IMAGE);
@@ -305,7 +369,13 @@ export default function LGUPage() {
       metadata: {
         exportedAt: new Date().toISOString(),
         totalLgus: filteredLgus.length,
-        filters: { searchTerm, region: selectedRegion, province: selectedProvinceFilter, type: selectedLguType },
+        filters: {
+          searchTerm,
+          region: selectedRegion,
+          province: selectedProvinceFilter,
+          type: selectedLguType,
+          headAssessorStatus
+        },
       },
       lgus: filteredLgus,
     };
@@ -334,7 +404,7 @@ export default function LGUPage() {
       <nav className="text-xs sm:text-sm breadcrumbs">
         <ul className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
           <li>
-            <button 
+            <button
               onClick={() => {
                 setSelectedLguId(null);
                 setSelectedProvince(null);
@@ -351,7 +421,7 @@ export default function LGUPage() {
 
           {selectedProvince && (
             <li>
-              <button 
+              <button
                 onClick={() => {
                   setSelectedLguId(null);
                   setCurrentPage(1);
@@ -378,22 +448,22 @@ export default function LGUPage() {
           <div className="min-w-0 flex-1">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">
               {currentLgu ? currentLgu.name :
-               selectedProvince ? `${selectedProvince} LGUs` :
-               'Provinces'}
+                selectedProvince ? `${selectedProvince} LGUs` :
+                  'Provinces'}
             </h1>
             <p className="text-xs sm:text-sm text-base-content/60 mt-1">
               {currentLgu ? `${currentLgu.classification} • ${currentLgu.incomeClass}` :
-               selectedProvince ? `Browse ${provinces[selectedProvince]?.length?.toLocaleString() || 0} LGUs in ${selectedProvince}` :
-               `Browse ${Object.keys(provinces).length.toLocaleString()} Provinces`}
+                selectedProvince ? `Browse ${provinces[selectedProvince]?.length?.toLocaleString() || 0} LGUs in ${selectedProvince}` :
+                  `Browse ${Object.keys(provinces).length.toLocaleString()} Provinces`}
             </p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <button className="btn btn-outline btn-xs sm:btn-sm" onClick={() => fetchLgus(true)} disabled={isLoading} aria-label="Refresh LGU data">
-              <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isLoading ? "animate-spin" : ""}`} /> 
+              <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isLoading ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
             <button className="btn btn-primary btn-xs sm:btn-sm" onClick={exportData} disabled={filteredLgus.length === 0} aria-label="Export filtered LGU data">
-              <Download className="w-3 h-3 sm:w-4 sm:h-4" /> 
+              <Download className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Export</span>
             </button>
           </div>
@@ -421,6 +491,8 @@ export default function LGUPage() {
         showFilters={showFilters}
         setShowFilters={setShowFilters}
         setCurrentPage={setCurrentPage}
+        headAssessorStatus={headAssessorStatus}
+        setHeadAssessorStatus={setHeadAssessorStatus}
       />
 
       {/* loading */}
@@ -451,10 +523,10 @@ export default function LGUPage() {
           {!selectedProvince && (
             <>
               {Object.keys(provinces).length === 0 ? (
-                    <div className="text-center py-12">
-                      <Building className="w-16 h-16 text-base-content/40 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No Provinces Found</h3>
-                      <p className="text-base-content/60 mb-4">Try adjusting your search or filters</p>
+                <div className="text-center py-12">
+                  <Building className="w-16 h-16 text-base-content/40 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Provinces Found</h3>
+                  <p className="text-base-content/60 mb-4">Try adjusting your search or filters</p>
                   <button
                     className="btn btn-outline"
                     onClick={() => {
@@ -464,6 +536,7 @@ export default function LGUPage() {
                       setSelectedProvinceFilter("all");
                       setSelectedSMVStatus("all");
                       setConducting2025Revision("all");
+                      setHeadAssessorStatus("all");
                     }}
                     aria-label="Clear all filters"
                   >
@@ -602,7 +675,7 @@ export default function LGUPage() {
               </div>
             </>
           )}
-   
+
           {/* province detail */}
           {selectedProvince && !selectedLguId && (
             <ProvinceDetail

@@ -209,10 +209,50 @@ export default function LGUDetails({
       finally { setLoading((s) => ({ ...s, smv: false })); }
     };
 
-    if (activeTab === 'assessors') loadAssessors();
+    if (activeTab === 'assessors' || activeTab === 'overview') loadAssessors();
     if (activeTab === 'smv') loadSmv();
     return () => { mounted = false; };
   }, [activeTab, lgu, enqueueRequest, getAllAssessors, getSMVProcesses, assessorsCache, smvCache]);
+
+  // Helper to find Head Assessor and check vacancy
+  const getHeadAssessorData = () => {
+    if (!assessors || assessors.length === 0) return { head: null, isVacant: true };
+
+    const exactTitles = ["Municipal Assessor", "City Assessor", "Provincial Assessor"];
+
+    // Priority 1: Exact Match
+    let head = assessors.find(a =>
+      exactTitles.includes(a.plantillaPosition) || exactTitles.includes(a.officialDesignation)
+    );
+
+    // Priority 2: Loose Match (contains Assessor, excludes Assistant/Admin)
+    if (!head) {
+      head = assessors.find(a => {
+        const title = (a.officialDesignation || a.plantillaPosition || "").toLowerCase();
+        return title.includes("assessor") &&
+          !title.includes("assistant") &&
+          !title.includes("administrative");
+      });
+    }
+
+    if (!head) return { head: null, isVacant: true };
+
+    // Apply User's Vacancy Logic:
+    // "check if status of appointment is not permanent annd the plantilla position or official designation is not Municipal Assessor or Provincial Assessor or City Assessor meaning that one is vacant positiion"
+    const status = head.statusOfAppointment;
+    const pPos = head.plantillaPosition;
+    const oDes = head.officialDesignation;
+
+    const isTitleMatch = exactTitles.includes(pPos) || exactTitles.includes(oDes);
+    const isPermanent = status === "Permanent";
+
+    // If (Not Permanent AND Not ExactTitle) -> VACANT
+    const isVacant = (!isPermanent && !isTitleMatch);
+
+    return { head, isVacant };
+  };
+
+  const { head: headAssessor, isVacant: headAssessorVacant } = getHeadAssessorData();
 
   if (!id) return null;
 
@@ -433,6 +473,50 @@ export default function LGUDetails({
                             </div>
                           </div>
                         ) : <div className="text-base-content/60 italic">No LCE information available.</div>}
+                      </div>
+                    </div>
+
+                    {/* Local Assessor Card */}
+                    <div className="card bg-base-100 border border-base-200 shadow-sm">
+                      <div className="card-body p-5">
+                        <div className="flex justify-between items-start">
+                          <h3 className="card-title text-base flex items-center gap-2 text-primary mb-2">
+                            <Users className="w-5 h-5" /> Local Assessor
+                          </h3>
+                          {headAssessorVacant && (
+                            <div className="badge badge-error gap-1 font-bold text-white bg-red-500 border-none animate-pulse">
+                              VACANT POSITION
+                            </div>
+                          )}
+                        </div>
+
+                        {headAssessor ? (
+                          <div className="space-y-3">
+                            <div>
+                              <div className="text-xl font-bold">
+                                {[headAssessor.firstName, headAssessor.middleName, headAssessor.lastName].filter(Boolean).join(' ')}
+                              </div>
+                              <div className="text-sm opacity-60 flex items-center gap-2">
+                                {headAssessor.officialDesignation || headAssessor.plantillaPosition || 'Assessor'}
+                                {!headAssessorVacant && <span className="badge badge-xs badge-success badge-outline">Filled</span>}
+                              </div>
+                            </div>
+                            <div className="text-sm space-y-1">
+                              <div className="flex items-start gap-2 opacity-70">
+                                <span className="font-medium min-w-[60px]">Status:</span>
+                                <span>{headAssessor.statusOfAppointment || '—'}</span>
+                              </div>
+                              <div className="flex items-start gap-2 opacity-70">
+                                <span className="font-medium min-w-[60px]">Email:</span>
+                                <span>{headAssessor.officeEmail || '—'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-base-content/60 italic py-2">
+                            No Assessor information available.
+                          </div>
+                        )}
                       </div>
                     </div>
 

@@ -114,19 +114,19 @@ function ModalHeader({ selectedPerson, onClose }) {
     <div className="flex items-center justify-between px-6 py-4 border-b border-base-300 dark:border-gray-700 bg-base-200/50">
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg shadow-sm">
-          {selectedPerson.name?.charAt(0) || "U"}
+          {selectedPerson.fullName?.charAt(0) || "U"}
         </div>
         <div>
           <h2 className="text-xl font-bold text-base-content leading-tight">
-            {selectedPerson.name}
+            {selectedPerson.fullName}
           </h2>
           <div className="flex items-center space-x-2 mt-0.5">
             <span
               className={`badge badge-sm ${selectedPerson.lguType === "City"
-                  ? "badge-primary"
-                  : selectedPerson.lguType === "Municipality"
-                    ? "badge-secondary"
-                    : "badge-accent"
+                ? "badge-primary"
+                : selectedPerson.lguType === "Municipality"
+                  ? "badge-secondary"
+                  : "badge-accent"
                 }`}
             >
               {selectedPerson.lguType}

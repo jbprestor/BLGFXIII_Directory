@@ -21,6 +21,7 @@ import {
   XCircle,
   Search,
   Filter,
+  AlertCircle,
 } from "lucide-react";
 
 export {
@@ -44,6 +45,7 @@ export {
   XCircle,
   Search,
   Filter,
+  AlertCircle,
 };
 
 export default {};

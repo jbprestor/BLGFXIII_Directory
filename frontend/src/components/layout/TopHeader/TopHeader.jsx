@@ -7,7 +7,7 @@ import useApi from "../../../services/axios.js";
 
 import { useNavigate, Link } from "react-router";
 
-export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapsed }) {
+export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapsed, onMobileMenuClick }) {
   const { user, logout } = useAuth();
   const { getAssessorNotifications } = useApi();
   const navigate = useNavigate();
@@ -51,8 +51,9 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
   };
 
   const handleNotificationClick = (n) => {
+    console.log("Notification clicked:", n);
     setNotificationOpen(false);
-    navigate(`/directory?search=${encodeURIComponent(n.message.split(' for ')[1])}`);
+    navigate(`/assessors?id=${n.id}`);
   };
 
   return (
@@ -65,6 +66,12 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
     >
       {/* Left: Mobile Toggle & Title */}
       <div className="flex items-center gap-3">
+        <button
+          className="btn btn-ghost btn-square btn-sm lg:hidden"
+          onClick={onMobileMenuClick}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-5 h-5 stroke-current"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
         <span className="text-sm text-base-content/60 font-medium">Dashboard</span>
       </div>
 
@@ -98,10 +105,11 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
                   </div>
                 ) : (
                   notifications.map((n, i) => (
-                    <div
+                    <Link
                       key={i}
-                      className="p-3 hover:bg-base-200 cursor-pointer border-b border-base-200 last:border-0 transition-colors"
-                      onClick={() => handleNotificationClick(n)}
+                      to={`/assessors?id=${n.id}`}
+                      className="block p-3 hover:bg-base-200 cursor-pointer border-b border-base-200 last:border-0 transition-colors text-left"
+                      onClick={() => setNotificationOpen(false)}
                     >
                       <div className="flex gap-3">
                         <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${n.type === 'expired' ? 'bg-error' : 'bg-warning'}`}></div>
@@ -111,7 +119,7 @@ export default function TopHeader({ currentTheme, onThemeChange, sidebarCollapse
                           {n.lgu && <p className="text-[10px] text-base-content/60 mt-1">{n.lgu}</p>}
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))
                 )}
               </div>
