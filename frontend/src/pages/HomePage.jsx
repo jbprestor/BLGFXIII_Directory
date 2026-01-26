@@ -63,7 +63,9 @@ export default function HomePage() {
               >
                 Login to Portal
               </button>
-
+              <button className="btn btn-outline btn-lg hover:bg-base-200">
+                Learn More
+              </button>
             </div>
           </div>
         </section>
