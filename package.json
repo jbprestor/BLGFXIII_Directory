@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "cd frontend && npm install && npm run build",
-    "install-backend": "cd backend && npm install",
+    "install-backend": "cd backend && npm install --omit=dev",
     "postinstall": "npm run install-backend"
   },
   "dependencies": {
@@ -23,6 +23,6 @@
     "path-to-regexp": "^8.3.0"
   },
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   }
 }
