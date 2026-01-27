@@ -2,7 +2,7 @@
     "name": "root-package",
     "private": true,
     "scripts": {
-        "build": "cd frontend && npm install --include=dev && npm run build",
-        "start": "cd frontend && npx serve dist -s -l 5001"
+        "build": "npm install --prefix backend && npm install --include=dev --prefix frontend && npm run build --prefix frontend",
+        "start": "npm start --prefix backend"
     }
 }
