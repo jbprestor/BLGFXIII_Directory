@@ -15,8 +15,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
-    if (token && userData) {
-      setUser(JSON.parse(userData)); // restore user from localStorage
+    if (token && userData && userData !== "undefined") {
+      try {
+        setUser(JSON.parse(userData)); // restore user from localStorage
+      } catch (e) {
+        console.error("Failed to parse user data from local storage", e);
+        localStorage.removeItem("user");
+      }
     }
     setLoading(false);
   }, []);
