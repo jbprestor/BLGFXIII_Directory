@@ -13,7 +13,12 @@ export default function useApi() {
     defaultUrl = "https://blgfxiii-directory.onrender.com/api";
   }
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || defaultUrl;
+  let API_BASE_URL = import.meta.env.VITE_API_URL || defaultUrl;
+
+  // Ensure /api suffix exists if not present (unless it's just /api)
+  if (API_BASE_URL !== "/api" && !API_BASE_URL.endsWith("/api")) {
+    API_BASE_URL = `${API_BASE_URL.replace(/\/$/, "")}/api`;
+  }
 
   // Create axios instance
   const api = axios.create({
