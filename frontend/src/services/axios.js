@@ -5,11 +5,15 @@ let _cachedApi = null;
 export default function useApi() {
   if (_cachedApi) return _cachedApi;
   // Determine API base URL
-  const API_BASE_URL =
-    import.meta.env.VITE_API_URL ||
-    (import.meta.env.MODE === "development"
-      ? "http://localhost:5001/api"
-      : "/api");
+  // Determine API base URL
+  let defaultUrl = "/api";
+  if (import.meta.env.MODE === "development") {
+    defaultUrl = "http://localhost:5001/api";
+  } else if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+    defaultUrl = "https://blgfxiii-directory.onrender.com/api";
+  }
+
+  const API_BASE_URL = import.meta.env.VITE_API_URL || defaultUrl;
 
   // Create axios instance
   const api = axios.create({
