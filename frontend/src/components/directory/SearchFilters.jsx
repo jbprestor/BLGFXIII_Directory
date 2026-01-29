@@ -90,183 +90,155 @@ export default function SearchFilters({
   };
 
   return (
-    <div className="card bg-base-100 shadow-xl border border-base-300">
-      <div className="card-body p-4 sm:p-6">
-        <h2 className="card-title mb-2 sm:mb-4 text-lg sm:text-xl">Search & Filter</h2>
-
-        {/* Search bar */}
-        <div className="form-control mb-4">
-          <label className="label py-1">
-            <span className="label-text text-xs sm:text-sm">Search Personnel</span>
-          </label>
+    <div className="bg-base-100 rounded-lg shadow-sm border border-base-300 p-3">
+      {/* Top Row: Search + Actions */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center">
+        {/* Search Input (Grows) */}
+        <div className="relative flex-1 w-full">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-4 w-4 text-base-content/50" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+          </div>
           <input
             type="text"
-            placeholder="Search by name, LGU, position, or email..."
-            className="input input-bordered input-sm sm:input-md w-full"
+            placeholder="Search personnel..."
+            className="input input-bordered input-sm w-full pl-10 bg-base-100 focus:bg-base-200 transition-colors"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        {/* Toggle advanced */}
-        <button
-          type="button"
-          className="btn btn-outline btn-xs sm:btn-sm mb-4"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-        >
-          {showAdvanced ? "Hide Advanced Search" : "Show Advanced Search"}
-        </button>
+        {/* Right Actions */}
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {/* Result Count - Subtle */}
+          <span className="text-xs text-base-content/60 font-medium whitespace-nowrap mr-2">
+            {resultCount} found
+          </span>
 
-        {/* Advanced filters */}
-        {showAdvanced && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4">
-            {/* Region */}
-            <div className="form-control">
-              <label className="label py-1">
-                <span className="label-text text-xs sm:text-sm">Region</span>
-              </label>
-              <select
-                className="select select-bordered select-sm sm:select-md w-full"
-                value={selectedRegion || "all"}
-                onChange={(e) => setSelectedRegion?.(e.target.value)}
-              >
-                <option value="all">All Regions</option>
-                {Array.isArray(uniqueRegions) && uniqueRegions.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
+          {/* Advanced Filter Toggle */}
+          <button
+            type="button"
+            className={`btn btn-sm btn-square ${showAdvanced ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            title="Advanced Filters"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+          </button>
 
-            {/* Province */}
-            <div className="form-control">
-              <label className="label py-1">
-                <span className="label-text text-xs sm:text-sm">Province</span>
-              </label>
-              <select
-                className="select select-bordered select-sm sm:select-md w-full"
-                value={selectedProvince || "all"}
-                onChange={(e) => setSelectedProvince?.(e.target.value)}
-                disabled={!Array.isArray(uniqueProvinces) || uniqueProvinces.length === 0}
-              >
-                <option value="all">All Provinces</option>
-                {Array.isArray(uniqueProvinces) && uniqueProvinces.length > 0 ? (
-                  uniqueProvinces.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))
-                ) : (
-                  <option value="all" disabled>No provinces available</option>
-                )}
-              </select>
-            </div>
-
-            {/* LGU Type */}
-            <div className="form-control">
-              <label className="label py-1">
-                <span className="label-text text-xs sm:text-sm">LGU Type</span>
-              </label>
-              <select
-                className="select select-bordered select-sm sm:select-md w-full"
-                value={selectedLguType || "all"}
-                onChange={(e) => setSelectedLguType?.(e.target.value)}
-              >
-                <option value="all">All Types</option>
-                <option value="City">City</option>
-                <option value="Municipality">Municipality</option>
-                <option value="Province">Province</option>
-              </select>
-            </div>
-
-            {/* Sex */}
-            <div className="form-control">
-              <label className="label py-1">
-                <span className="label-text text-xs sm:text-sm">Sex</span>
-              </label>
-              <select
-                className="select select-bordered select-sm sm:select-md w-full"
-                value={selectedSex || "all"}
-                onChange={(e) => setSelectedSex?.(e.target.value)}
-              >
-                <option value="all">All Sexes</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            {/* License Status */}
-            <div className="form-control">
-              <label className="label py-1">
-                <span className="label-text text-xs sm:text-sm">License Status</span>
-              </label>
-              <select
-                className="select select-bordered select-sm sm:select-md w-full"
-                value={selectedLicenseStatus || "all"}
-                onChange={(e) => setSelectedLicenseStatus?.(e.target.value)}
-              >
-                <option value="all">All</option>
-                <option value="REA">REA (Licensed)</option>
-                <option value="Non-REA">Non-REA</option>
-              </select>
-            </div>
-            {/* Position Category */}
-            <div className="form-control">
-              <label className="label py-1">
-                <span className="label-text text-xs sm:text-sm">Position Category</span>
-              </label>
-              <select
-                className="select select-bordered select-sm sm:select-md w-full"
-                value={selectedPositionCategory || "all"}
-                onChange={(e) => setSelectedPositionCategory?.(e.target.value)}
-              >
-                <option value="all">All Levels</option>
-                <option value="Head Assessor">Head Assessor</option>
-                <option value="Assistant Assessor">Assistant Assessor</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-
-
-        {/* Results & actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <div className="badge badge-neutral badge-sm sm:badge-lg">
-            {resultCount} result{resultCount !== 1 ? "s" : ""} found
+          {/* Export Dropdown */}
+          <div className="dropdown dropdown-end">
+            <label tabIndex={0} className={`btn btn-sm btn-ghost btn-square ${!hasExportData ? "opacity-50 pointer-events-none" : ""}`} title="Export Data">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </label>
+            <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-44 z-50">
+              <li>
+                <button
+                  onClick={() => exportXlsxFromJson(exportData, "assessors_export.xlsx")}
+                  className={!hasExportData ? "disabled" : ""}
+                >
+                  Export as Excel
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => exportToCSV(exportData, "assessors_export.csv")}
+                  className={!hasExportData ? "disabled" : ""}
+                >
+                  Export as CSV
+                </button>
+              </li>
+            </ul>
           </div>
 
-          <div className="flex gap-2 items-center">
-            {isFilterActive && (
-              <button type="button" className="btn btn-outline btn-xs sm:btn-sm" onClick={handleClearFilters}>
-                Clear Filters
-              </button>
-            )}
-
-            <div className="dropdown dropdown-end">
-              <label tabIndex={0} className={`btn btn-outline btn-xs sm:btn-sm ${!hasExportData ? "opacity-50 pointer-events-none" : ""}`}>
-                <span>📊</span> Export
-              </label>
-              <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-44">
-                <li>
-                  <button
-                    onClick={() => exportXlsxFromJson(exportData, "assessors_export.xlsx")}
-                    className={`w-full text-left ${!hasExportData ? "opacity-50 pointer-events-none" : ""}`}
-                  >
-                    Export as Excel (.xlsx)
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={() => exportToCSV(exportData, "assessors_export.csv")}
-                    className={`w-full text-left ${!hasExportData ? "opacity-50 pointer-events-none" : ""}`}
-                  >
-                    Export as CSV
-                  </button>
-                </li>
-              </ul>
-            </div>
-          </div>
+          {isFilterActive && (
+            <button title="Clear Filters" type="button" className="btn btn-ghost btn-sm btn-square text-error" onClick={handleClearFilters}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Advanced Filters Grid (Collapsible) */}
+      {showAdvanced && (
+        <div className="mt-3 pt-3 border-t border-base-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Region */}
+          <select
+            className="select select-bordered select-xs w-full"
+            value={selectedRegion || "all"}
+            onChange={(e) => setSelectedRegion?.(e.target.value)}
+          >
+            <option value="all">Region: All</option>
+            {Array.isArray(uniqueRegions) && uniqueRegions.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+
+          {/* Province */}
+          <select
+            className="select select-bordered select-xs w-full"
+            value={selectedProvince || "all"}
+            onChange={(e) => setSelectedProvince?.(e.target.value)}
+            disabled={!Array.isArray(uniqueProvinces) || uniqueProvinces.length === 0}
+          >
+            <option value="all">Province: All</option>
+            {Array.isArray(uniqueProvinces) && uniqueProvinces.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+
+          {/* LGU Type */}
+          <select
+            className="select select-bordered select-xs w-full"
+            value={selectedLguType || "all"}
+            onChange={(e) => setSelectedLguType?.(e.target.value)}
+          >
+            <option value="all">LGU Type: All</option>
+            <option value="City">City</option>
+            <option value="Municipality">Municipality</option>
+            <option value="Province">Province</option>
+          </select>
+
+          {/* Sex */}
+          <select
+            className="select select-bordered select-xs w-full"
+            value={selectedSex || "all"}
+            onChange={(e) => setSelectedSex?.(e.target.value)}
+          >
+            <option value="all">Sex: All</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+
+          {/* License Status */}
+          <select
+            className="select select-bordered select-xs w-full"
+            value={selectedLicenseStatus || "all"}
+            onChange={(e) => setSelectedLicenseStatus?.(e.target.value)}
+          >
+            <option value="all">License: All</option>
+            <option value="REA">REA (Licensed)</option>
+            <option value="Non-REA">Non-REA</option>
+          </select>
+
+          {/* Position Category */}
+          <select
+            className="select select-bordered select-xs w-full"
+            value={selectedPositionCategory || "all"}
+            onChange={(e) => setSelectedPositionCategory?.(e.target.value)}
+          >
+            <option value="all">Level: All</option>
+            <option value="Head Assessor">Head Assessor</option>
+            <option value="Assistant Assessor">Assistant Assessor</option>
+          </select>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useAuth } from "./contexts/AuthContext.jsx";
 import Sidebar from "./components/layout/Sidebar/Sidebar.jsx";
 import TopHeader from "./components/layout/TopHeader/TopHeader.jsx";
 import HomePage from "./pages/HomePage";
+import DirectoryPage from "./pages/DirectoryPage";
 import AssessorsPage from "./pages/AssessorsPage";
 import CreatePage from "./pages/CreatePage";
 import LGUPage from "./pages/LGUPage.jsx";
@@ -18,7 +19,7 @@ import QRRPAMonitoringPage from "./pages/QRRPAMonitoringPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
-  const [currentTheme, setCurrentTheme] = useState("synthwave");
+  const [currentTheme, setCurrentTheme] = useState("corporate");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, loading } = useAuth();
 
@@ -158,7 +159,7 @@ export default function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/directory" element={<AssessorsPage />} />
+          <Route path="/directory" element={<DirectoryPage />} />
           <Route path="/create" element={<CreatePage />} />
           <Route path="/lgu-profile" element={<LGUPage />} />
 
@@ -182,7 +183,7 @@ export default function App() {
             path="/assessors"
             element={
               <ProtectedRoute>
-                <AssessorsPage />
+                <DirectoryPage />
               </ProtectedRoute>
             }
           />

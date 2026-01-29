@@ -10,33 +10,19 @@ export default function QuickStats({ directory }) {
   };
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex space-x-4 py-2 min-w-max">
+    <div className="w-full">
+      <div className="flex flex-wrap gap-2 justify-center">
         {Object.entries(stats).map(([key, value]) => (
           <StatCard
             key={key}
             title={key.charAt(0).toUpperCase() + key.slice(1)}
             value={value}
-            desc={getDesc(key)}
             color={getColor(key)}
           />
         ))}
       </div>
     </div>
   );
-}
-
-function getDesc(key) {
-  switch (key) {
-    case "total": return "Registered in system";
-    case "cities": return "Personnel in cities";
-    case "municipalities": return "Personnel in municipalities";
-    case "provinces": return "Personnel in provinces";
-    case "male": return "Male personnel";
-    case "female": return "Female personnel";
-    case "other": return "Other gender";
-    default: return "";
-  }
 }
 
 function getColor(key) {
@@ -46,18 +32,17 @@ function getColor(key) {
     case "municipalities": return "text-accent";
     case "provinces": return "text-warning";
     case "male": return "text-info";
-    case "female": return "text-secondary";
-    case "other": return "text-accent";
+    case "female": return "text-pink-500";
+    case "other": return "text-base-content";
     default: return "text-base-content";
   }
 }
 
-function StatCard({ title, value, desc, color }) {
+function StatCard({ title, value, color }) {
   return (
-    <div className="stat border border-base-300 bg-base-100 p-4 rounded-lg min-w-[140px]">
-      <div className={`stat-title text-xs md:text-sm ${color}`}>{title}</div>
-      <div className={`stat-value text-lg md:text-2xl ${color}`}>{value}</div>
-      <div className="stat-desc text-xs">{desc}</div>
+    <div className="flex flex-col items-center justify-center border border-base-200 bg-base-100 px-3 py-2 rounded-lg shadow-sm flex-1 min-w-[80px]">
+      <div className={`text-[10px] w-full text-center uppercase tracking-wide opacity-70`}>{title}</div>
+      <div className={`text-xl font-bold leading-none mt-1 ${color}`}>{value}</div>
     </div>
   );
 }

@@ -21,7 +21,8 @@ export default function PersonnelTable({
   return (
     <div className="card bg-base-100 shadow-xl border border-base-300 overflow-hidden">
       <div className="card-body p-0">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="table table-zebra w-full">
             <thead>
               <tr className="bg-base-200">
@@ -112,8 +113,7 @@ export default function PersonnelTable({
                           className="btn btn-primary btn-xs"
                           onClick={() => onViewDetails(person)}
                         >
-                          <span className="hidden sm:inline">Details</span>
-                          <span className="sm:hidden">👁️</span>
+                          Details
                         </button>
 
                         {canEdit && onEdit && (
@@ -121,8 +121,7 @@ export default function PersonnelTable({
                             className="btn btn-info btn-xs"
                             onClick={() => onEdit(person)}
                           >
-                            <span className="hidden sm:inline">Update</span>
-                            <span className="sm:hidden">✏️</span>
+                            Update
                           </button>
                         )}
 
@@ -135,10 +134,7 @@ export default function PersonnelTable({
                             {deleteLoading === person._id ? (
                               <span className="loading loading-spinner loading-xs"></span>
                             ) : (
-                              <>
-                                <span className="hidden sm:inline">Delete</span>
-                                <span className="sm:hidden">🗑️</span>
-                              </>
+                              "Delete"
                             )}
                           </button>
                         )}
@@ -214,6 +210,64 @@ export default function PersonnelTable({
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="sm:hidden flex flex-col divide-y divide-base-300">
+          {data.map((person) => (
+            <div key={person._id} className="p-4 bg-base-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="avatar placeholder flex-shrink-0">
+                  <div className="bg-neutral text-neutral-content rounded-full w-10">
+                    <span className="text-xs">
+                      {person?.fullName?.charAt(0)?.toUpperCase() || "U"}
+                    </span>
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-sm truncate">
+                    {person.fullName || "Unnamed"}
+                  </div>
+                  <div className="text-xs text-base-content/70 truncate">
+                    {person.plantillaPosition || "Position N/A"}
+                  </div>
+                  <div className="text-[10px] text-base-content/50 uppercase tracking-wide">
+                    {person.lguName || "LGU N/A"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  className="btn btn-ghost btn-sm btn-circle"
+                  onClick={() => onViewDetails(person)}
+                  title="View Details"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+                {(canEdit || canDelete) && (
+                  <div className="dropdown dropdown-end">
+                    <label tabIndex={0} className="btn btn-ghost btn-sm btn-circle">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </label>
+                    <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50">
+                      {canEdit && (
+                        <li><button onClick={() => onEdit(person)}>Edit</button></li>
+                      )}
+                      {canDelete && (
+                        <li><button className="text-error" onClick={() => onDelete(person)}>Delete</button></li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Pagination */}

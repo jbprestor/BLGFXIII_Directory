@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import api from "../services/axios.js";
-import LoadingSpinner from "../components/common/LoadingSpinner";
+import { useLocation } from "react-router";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import useApi from "../services/axios.js";
+import LoadingSpinner from "../components/common/LoadingSpinner.jsx";
 import ErrorDisplay from "../components/common/ErrorDisplay.jsx";
 import SearchFilters from "../components/directory/SearchFilters.jsx";
 import PersonnelTable from "../components/directory/PersonnelTable.jsx";
@@ -9,25 +11,42 @@ import EmptyState from "../components/common/EmptyState.jsx";
 import EditModal from "../components/modals/assessorsDirectory/EditModal.jsx";
 import DetailsModal from "../components/modals/assessorsDirectory/DetailsModal.jsx";
 import AddModal from "../components/modals/assessorsDirectory/AddModal.jsx";
-import { confirmToastDaisy } from "../components/common/ConfirmToast";
-import { formatDate } from "../utils/formatters";
+import { confirmToastDaisy } from "../components/common/ConfirmToast.jsx";
+import { formatDate } from "../utils/formatters.js";
 import toast from "react-hot-toast";
 
 export default function DirectoryPage() {
+  const { user } = useAuth();
+  const { getAllAssessors, createAssessor, updateAssessor, deleteAssessor } = useApi();
+
+  const canAdd = user?.role === "Admin";
+  const canEdit = user?.role === "Admin";
+  const canDelete = user?.role === "Admin";
+
   // State management
   const [directory, setDirectory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("active"); // "active" or "retired"
+  const [activeTab, setActiveTab] = useState("all"); // "all", "heads", "assistants", "staff", "retired"
   const [selectedLguType, setSelectedLguType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedRegion, setSelectedRegion] = useState("all");
+  const [selectedProvince, setSelectedProvince] = useState("all");
+  const [selectedSex, setSelectedSex] = useState("all");
+  const [selectedLicenseStatus, setSelectedLicenseStatus] = useState("all");
+  const [selectedPositionCategory, setSelectedPositionCategory] = useState("all");
+
   const [sortConfig, setSortConfig] = useState({
     key: null,
     direction: "ascending",
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const location = useLocation();
+
+  // Modal & Loading States
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [updateLoading, setUpdateLoading] = useState(null);
   const [createLoading, setCreateLoading] = useState(false);
@@ -37,34 +56,90 @@ export default function DirectoryPage() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const itemsPerPage = 5;
+  const itemsPerPage = 8;
 
   const fetchDirectory = useCallback(async () => {
     try {
-      const res = await api.get();
-      // Only log in development mode
+      const res = await getAllAssessors();
       if (import.meta.env.MODE === "development") {
-        console.log("Fetched directory: [DATA REDACTED]");
+        console.log("Fetched directory data");
       }
-      setDirectory(Array.isArray(res.data) ? res.data : []);
+      const rawData = Array.isArray(res.data) ? res.data : [];
+      const mappedData = rawData.map(p => {
+        const lgu = p.lgu || {};
+        let type = lgu.classification || p.lguType;
+        if (type === "HUC" || type === "CC" || type === "ICC") type = "City";
 
+        return {
+          ...p,
+          fullName: [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" "),
+          lguName: lgu.name || p.lguName,
+          lguType: type,
+          province: lgu.province || p.province,
+          region: lgu.region || p.region
+        };
+      });
+      setDirectory(mappedData);
     } catch (_err) {
       console.error(_err);
       setError("Failed to load directory");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getAllAssessors]);
 
   useEffect(() => {
     fetchDirectory();
   }, [fetchDirectory]);
+
+  // Handle URL query params for notifications
+  useEffect(() => {
+    if (!loading && directory.length > 0) {
+      const params = new URLSearchParams(location.search);
+      const id = params.get("id");
+      if (id) {
+        const person = directory.find((p) => p._id === id);
+        if (person) {
+          setSelectedPerson(person);
+          setIsDetailsModalOpen(true);
+        }
+      }
+    }
+  }, [location.search, directory, loading]);
 
   // Derived data
   const uniqueRegions = useMemo(
     () => [...new Set(directory.map((p) => p.region).filter(Boolean))].sort(),
     [directory]
   );
+
+  const uniqueProvinces = useMemo(() => {
+    const provs = directory
+      .filter((a) => (selectedRegion === "all" ? true : a.region === selectedRegion))
+      .map((a) => a.province)
+      .filter(Boolean);
+    return [...new Set(provs)].sort();
+  }, [directory, selectedRegion]);
+
+  // Helper logic for categorization
+  const getCategory = (person) => {
+    if (person.statusOfAppointment === "Retired") return "retired";
+
+    const pos = (person.plantillaPosition || "").toLowerCase();
+
+    // Check both plantilla and designation for robustness
+    const designation = ((person.officialDesignation || "") + " " + pos).toLowerCase();
+
+    const isAssessor = pos.includes("assessor") || designation.includes("assessor");
+    const isAssistant = pos.includes("assistant") || designation.includes("assistant");
+
+    // Heads: usually contain "Assessor" but NOT "Assistant", and often Provincial/City/Municipal
+    // Strict check: if contains Assistant, it's Assistant. Else if Assessor, it's Head.
+    if (isAssistant) return "assistants";
+    if (isAssessor) return "heads";
+
+    return "staff";
+  };
 
   const filteredData = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
@@ -77,25 +152,70 @@ export default function DirectoryPage() {
           "lguName",
           "plantillaPosition",
           "emailAddress",
+          "officeEmail",
           "region",
           "province",
-        ].some((field) => person[field]?.toLowerCase().includes(searchLower));
+          "firstName",
+          "lastName" // Fallbacks if name is split
+        ].some((field) => {
+          if (field === "name" && !person.name) {
+            // Try fullName construction if name missing
+            const fullName = [person.firstName, person.middleName, person.lastName].filter(Boolean).join(" ");
+            return fullName.toLowerCase().includes(searchLower);
+          }
+          return person[field]?.toLowerCase().includes(searchLower)
+        });
 
+      // Category Logic for Tabs
+      const category = getCategory(person);
       const isRetired = person.statusOfAppointment === "Retired";
-      const isInActiveTab = activeTab === "active" ? !isRetired : isRetired;
+
+      let tabMatch = false;
+      if (activeTab === "all") {
+        tabMatch = !isRetired;
+      } else if (activeTab === "retired") {
+        tabMatch = isRetired;
+      } else {
+        // Heads, Assistants, Staff -> must be Active AND match category
+        tabMatch = !isRetired && category === activeTab;
+      }
+
+      // Other Filters
+      const regionMatch = selectedRegion === "all" || person.region === selectedRegion;
+      const provinceMatch = selectedProvince === "all" || person.province === selectedProvince;
+      const lguTypeMatch = selectedLguType === "all" || person.lguType === selectedLguType;
+      const statusMatch = selectedStatus === "all" || person.statusOfAppointment === selectedStatus;
+      const sexMatch = selectedSex === "all" || person.sex === selectedSex;
+
+      let licenseMatch = true;
+      if (selectedLicenseStatus === "REA") licenseMatch = !!person.prcLicenseNumber;
+      if (selectedLicenseStatus === "Non-REA") licenseMatch = !person.prcLicenseNumber;
+
+      // Position Category from Advanced Search (Optional overlap with Tabs)
+      let posCatMatch = true;
+      if (selectedPositionCategory !== "all") {
+        const designation = ((person.officialDesignation || "") + " " + (person.plantillaPosition || "")).toLowerCase();
+        const isAssistant = designation.includes("assistant");
+        if (selectedPositionCategory === "Head Assessor") posCatMatch = !isAssistant;
+        if (selectedPositionCategory === "Assistant Assessor") posCatMatch = isAssistant;
+      }
 
       return (
         searchMatch &&
-        isInActiveTab &&
-        (selectedLguType === "all" || person.lguType === selectedLguType) &&
-        (selectedStatus === "all" ||
-          person.statusOfAppointment === selectedStatus) &&
-        (selectedRegion === "all" || person.region === selectedRegion)
+        tabMatch &&
+        regionMatch &&
+        provinceMatch &&
+        lguTypeMatch &&
+        statusMatch &&
+        sexMatch &&
+        licenseMatch &&
+        posCatMatch
       );
     });
 
     if (sortConfig.key) {
       result.sort((a, b) => {
+        // Handle name specifically if needed, otherwise generic
         const aVal = a[sortConfig.key] ?? "";
         const bVal = b[sortConfig.key] ?? "";
         if (aVal < bVal) return sortConfig.direction === "ascending" ? -1 : 1;
@@ -111,6 +231,10 @@ export default function DirectoryPage() {
     selectedLguType,
     selectedStatus,
     selectedRegion,
+    selectedProvince,
+    selectedSex,
+    selectedLicenseStatus,
+    selectedPositionCategory,
     sortConfig,
     activeTab,
   ]);
@@ -124,7 +248,11 @@ export default function DirectoryPage() {
   // Helper function to build API payload
   const buildPayload = useCallback(
     (data) => ({
+      ...data, // Spread original data to keep IDs etc
       name: data.name,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      middleName: data.middleName,
       sex: data.sex,
       civilStatus: data.civilStatus,
       lguType: data.lguType,
@@ -174,61 +302,48 @@ export default function DirectoryPage() {
   const handleDelete = useCallback(
     (person) => {
       confirmToastDaisy(
-        `Are you sure you want to delete ${person.name}?`,
+        `Are you sure you want to delete ${person.name || person.fullName || "this person"}?`,
         async () => {
           setDeleteLoading(person._id);
           try {
-            await api.delete(`/${person._id}`);
+            await deleteAssessor(person._id);
             setDirectory((prev) => prev.filter((p) => p._id !== person._id));
-            toast.success(`${person.name} deleted successfully`);
-
-            // ✅ Re-fetch latest data
+            toast.success("Deleted successfully");
             await fetchDirectory();
           } catch {
-            toast.error(`Failed to delete ${person.name}`);
+            toast.error("Failed to delete");
           } finally {
             setDeleteLoading(null);
           }
         }
       );
     },
-    [fetchDirectory]
+    [fetchDirectory, deleteAssessor]
   );
 
   const handleUpdate = useCallback(
     async (e) => {
-      e.preventDefault();
+      if (e && e.preventDefault) e.preventDefault(); // Handle both form event and direct call
       if (!editingPerson) return;
+      const dataToUpdate = e.preventDefault ? editingPerson : e; // If called directly with data
 
       try {
-        setUpdateLoading(editingPerson._id);
+        setUpdateLoading(dataToUpdate._id || editingPerson._id);
+        const payload = buildPayload(dataToUpdate);
 
-        const payload = buildPayload(editingPerson);
-        const res = await api.put(`/${editingPerson._id}`, payload);
-
-        // Only log success in development mode
-        if (import.meta.env.MODE === "development") {
-          console.log("Directory update successful");
-        }
-
-        setDirectory((prev) =>
-          prev.map((person) =>
-            person._id === editingPerson._id ? res.data : person
-          )
-        );
+        await updateAssessor(dataToUpdate._id || editingPerson._id, payload);
 
         setIsEditModalOpen(false);
-        toast.success(`${editingPerson.name} updated successfully`);
-        // ✅ Re-fetch latest data after successful creation
+        toast.success("Updated successfully");
         await fetchDirectory();
       } catch (error) {
         console.error("Error updating directory:", error);
-        alert("Failed to update record. Please try again.");
+        toast.error("Failed to update");
       } finally {
         setUpdateLoading(null);
       }
     },
-    [editingPerson, buildPayload, fetchDirectory]
+    [editingPerson, buildPayload, fetchDirectory, updateAssessor]
   );
 
   const handleInputChange = useCallback((e) => {
@@ -245,19 +360,17 @@ export default function DirectoryPage() {
       setCreateLoading(true);
       try {
         const payload = buildPayload(formData);
-        await api.post("/", payload);
-
-        // ✅ Re-fetch latest data after successful creation
+        await createAssessor(payload);
         await fetchDirectory();
-
         setIsCreateModalOpen(false);
+        toast.success("Created successfully");
       } catch {
-        alert("Failed to create personnel");
+        toast.error("Failed to create personnel");
       } finally {
         setCreateLoading(false);
       }
     },
-    [buildPayload, fetchDirectory]
+    [buildPayload, fetchDirectory, createAssessor]
   );
 
   const handleClearFilters = useCallback(() => {
@@ -265,10 +378,13 @@ export default function DirectoryPage() {
     setSelectedLguType("all");
     setSelectedStatus("all");
     setSelectedRegion("all");
+    setSelectedProvince("all");
+    setSelectedSex("all");
+    setSelectedLicenseStatus("all");
+    setSelectedPositionCategory("all");
     setCurrentPage(1);
   }, []);
 
-  // Render loading or error states
   if (loading) return <LoadingSpinner />;
   if (error)
     return (
@@ -288,26 +404,49 @@ export default function DirectoryPage() {
             Units in the Philippines.
           </p>
         </div>
-        <button onClick={handleCreateNew} className="btn btn-primary btn-lg">
-          + Add New Assessor
-        </button>
+        {canAdd && (
+          <button onClick={handleCreateNew} className="btn btn-primary btn-lg">
+            + Add New Assessor
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
       <div role="tablist" className="tabs tabs-boxed">
         <a
           role="tab"
-          className={`tab ${activeTab === "active" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("active")}
+          className={`tab ${activeTab === "all" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("all")}
         >
-          Active Personnel
+          All
+        </a>
+        <a
+          role="tab"
+          className={`tab ${activeTab === "heads" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("heads")}
+        >
+          Provincial/City/Municipal Assessors
+        </a>
+        <a
+          role="tab"
+          className={`tab ${activeTab === "assistants" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("assistants")}
+        >
+          Assistants Assessors
+        </a>
+        <a
+          role="tab"
+          className={`tab ${activeTab === "staff" ? "tab-active" : ""}`}
+          onClick={() => setActiveTab("staff")}
+        >
+          Staff
         </a>
         <a
           role="tab"
           className={`tab ${activeTab === "retired" ? "tab-active" : ""}`}
           onClick={() => setActiveTab("retired")}
         >
-          Retired Personnel
+          Retired
         </a>
       </div>
 
@@ -321,12 +460,19 @@ export default function DirectoryPage() {
         setSelectedStatus={setSelectedStatus}
         selectedRegion={selectedRegion}
         setSelectedRegion={setSelectedRegion}
+        selectedProvince={selectedProvince}
+        setSelectedProvince={setSelectedProvince}
+        selectedSex={selectedSex}
+        setSelectedSex={setSelectedSex}
+        selectedLicenseStatus={selectedLicenseStatus}
+        setSelectedLicenseStatus={setSelectedLicenseStatus}
+        selectedPositionCategory={selectedPositionCategory}
+        setSelectedPositionCategory={setSelectedPositionCategory}
         uniqueRegions={uniqueRegions}
+        uniqueProvinces={uniqueProvinces}
         resultCount={filteredData.length}
+        exportData={filteredData}
       />
-
-      {/* Stats */}
-      <QuickStats directory={directory} />
 
       {/* Table */}
       <PersonnelTable
@@ -340,12 +486,17 @@ export default function DirectoryPage() {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
+        canEdit={canEdit}
+        canDelete={canDelete}
       />
 
       {/* Empty state */}
       {filteredData.length === 0 && !loading && (
         <EmptyState onClearFilters={handleClearFilters} />
       )}
+
+      {/* Stats */}
+      <QuickStats directory={directory} />
 
       {/* Modals */}
       <AddModal
