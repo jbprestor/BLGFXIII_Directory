@@ -411,43 +411,63 @@ export default function DirectoryPage() {
         )}
       </div>
 
-      {/* Tabs */}
-      <div role="tablist" className="tabs tabs-boxed">
-        <a
-          role="tab"
-          className={`tab ${activeTab === "all" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("all")}
-        >
-          All
-        </a>
-        <a
-          role="tab"
-          className={`tab ${activeTab === "heads" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("heads")}
-        >
-          Provincial/City/Municipal Assessors
-        </a>
-        <a
-          role="tab"
-          className={`tab ${activeTab === "assistants" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("assistants")}
-        >
-          Assistants Assessors
-        </a>
-        <a
-          role="tab"
-          className={`tab ${activeTab === "staff" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("staff")}
-        >
-          Staff
-        </a>
-        <a
-          role="tab"
-          className={`tab ${activeTab === "retired" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("retired")}
-        >
-          Retired
-        </a>
+      {/* Tabs (Responsive) */}
+      <div className="w-full">
+        {/* Mobile: Dropdown */}
+        <div className="sm:hidden mb-4">
+          <select
+            className="select select-bordered w-full"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+          >
+            <option value="all">All Personnel</option>
+            <option value="heads">Provincial/City/Municipal Assessors</option>
+            <option value="assistants">Assistant Assessors</option>
+            <option value="staff">Staff</option>
+            <option value="retired">Retired Assessors</option>
+          </select>
+        </div>
+
+        {/* Desktop: Tabs */}
+        <div className="hidden sm:block">
+          <div role="tablist" className="tabs tabs-boxed">
+            <a
+              role="tab"
+              className={`tab ${activeTab === "all" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("all")}
+            >
+              All
+            </a>
+            <a
+              role="tab"
+              className={`tab ${activeTab === "heads" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("heads")}
+            >
+              Provincial/City/Municipal Assessors
+            </a>
+            <a
+              role="tab"
+              className={`tab ${activeTab === "assistants" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("assistants")}
+            >
+              Assistant Assessors
+            </a>
+            <a
+              role="tab"
+              className={`tab ${activeTab === "staff" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("staff")}
+            >
+              Staff
+            </a>
+            <a
+              role="tab"
+              className={`tab ${activeTab === "retired" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("retired")}
+            >
+              Retired
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
