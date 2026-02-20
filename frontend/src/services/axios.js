@@ -56,9 +56,11 @@ export default function useApi() {
     (error) => {
       if (error.response?.status === 401) {
         console.error("Authentication failed - token may be expired");
-        // Optionally clear invalid token
-        // localStorage.removeItem("token");
-        // localStorage.removeItem("user");
+        // Clear invalid token and user data
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        // Force redirect to login
+        window.location.href = "/";
       }
       return Promise.reject(error);
     }
