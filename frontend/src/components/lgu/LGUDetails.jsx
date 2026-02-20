@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { X, FileText, Users, BarChart3, Edit2, Trash2, Save, XCircle, Building } from "../common/Icon";
 import toast from "react-hot-toast";
 import { useAuth } from "../../contexts/AuthContext";
+import { useOrdinanceConfig } from "../../hooks/useOrdinanceConfig";
+import { MUNICIPALITY_TO_PROVINCE } from "../../utils/qrrpa/defaultOrdinances";
 
 const PLACEHOLDER_IMAGE = "https://placehold.co/200x200/3b82f6/white?text=LGU";
 const prettyPopulation = (n) => (n === 0 ? "0" : (n ? n.toLocaleString() : "—"));
@@ -51,6 +53,21 @@ export default function LGUDetails({
   const [assessors, setAssessors] = useState([]);
   const [smvProcesses, setSmvProcesses] = useState([]);
   const [loading, setLoading] = useState({ lgu: false, assessors: false, smv: false });
+  const { ordinanceConfig } = useOrdinanceConfig();
+
+  const getOrdinanceData = () => {
+    if (!lgu || !ordinanceConfig) return null;
+    const lguName = lgu.name;
+    // Direct match (City) or Proxy via Province
+    let scope = lguName;
+    if (!ordinanceConfig[scope]) {
+      // try province from map or lgu object
+      scope = MUNICIPALITY_TO_PROVINCE[lguName] || lgu.province;
+    }
+    return { scope, data: ordinanceConfig[scope] };
+  };
+
+  const { scope: ordinanceScope, data: ordinanceData } = getOrdinanceData() || {};
 
   // Check if user has admin/editor permissions
   // Check if user has admin/editor permissions
@@ -199,10 +216,11 @@ export default function LGUDetails({
         const cached = smvCache?.current?.get(lgu._id || lgu.id);
         if (cached) setSmvProcesses(cached);
         else {
-          const res = await enqueueRequest(() => getSMVProcesses(lgu._id || lgu.id), "SMV");
-          const data = res?.data || res || [];
+          const res = await enqueueRequest(() => getSMVProcesses({ lguId: lgu._id || lgu.id }), "SMV");
+          // Handle paginated response structure { monitoringList: [...] }
+          const data = res?.data?.monitoringList || res?.data || [];
           if (!mounted) return;
-          setSmvProcesses(data);
+          setSmvProcesses(Array.isArray(data) ? data : []);
           try { smvCache?.current?.set(lgu._id || lgu.id, data); } catch { void 0; }
         }
       } catch { toast.error('Failed to load SMV processes'); }
@@ -291,7 +309,7 @@ export default function LGUDetails({
         {!editMode && (
           <div className="px-4 pt-2 border-b border-base-200 bg-base-50/50">
             <nav className="flex gap-6 -mb-px">
-              {['overview', 'assessors', 'smv'].map((tab) => (
+              {['overview', 'assessors', 'smv', 'ordinances'].map((tab) => (
                 <button
                   key={tab}
                   className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content/80'}`}
@@ -641,6 +659,57 @@ export default function LGUDetails({
                         ))}
                       </div>
                     )}
+                </div>
+              )}
+
+              {activeTab === 'ordinances' && (
+                <div className="space-y-6">
+                  {!ordinanceData ? (
+                    <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-base-300 rounded-xl bg-base-100/50">
+                      <FileText className="w-12 h-12 text-base-content/20 mb-3" />
+                      <div className="font-medium opacity-60">No Ordinance Data Available</div>
+                      <div className="text-xs opacity-50">Could not resolve province or city scope.</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="alert border border-base-200 bg-base-100 shadow-sm">
+                        <FileText className="w-5 h-5 text-primary" />
+                        <div>
+                          <h3 className="font-bold">Ordinance Scope: {ordinanceScope}</h3>
+                          <div className="text-xs">Using assessment levels defined for {ordinanceScope}.</div>
+                        </div>
+                      </div>
+
+                      {/* Iterate over Land, Building, Machinery */}
+                      {['Land', 'Building', 'Machinery'].map(kind => (
+                        <div key={kind} className="card bg-base-100 border border-base-200 shadow-sm">
+                          <div className="card-body p-4">
+                            <h4 className="font-bold text-base border-b border-base-200 pb-2 mb-2">{kind} Assessment Levels</h4>
+                            <div className="overflow-x-auto">
+                              <table className="table table-xs">
+                                <thead>
+                                  <tr>
+                                    <th>Classification</th>
+                                    <th className="text-right">Min Rate (%)</th>
+                                    <th className="text-right">Max Rate (%)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {Object.entries(ordinanceData[kind] || {}).map(([cls, rate]) => (
+                                    <tr key={cls} className="hover:bg-base-200/50">
+                                      <td className="font-medium">{cls}</td>
+                                      <td className="text-right font-mono">{rate.min}%</td>
+                                      <td className="text-right font-mono">{rate.max}%</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
