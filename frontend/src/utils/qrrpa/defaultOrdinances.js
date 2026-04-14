@@ -123,7 +123,7 @@ export const getDefaultOrdinances = () => {
 // Helper to map Municipality to Province (for auto-detection)
 export const MUNICIPALITY_TO_PROVINCE = {
     // Agusan del Norte
-    "Buenavista": "Agusan del Norte", "Carmen": "Agusan del Norte", "Jabonga": "Agusan del Norte",
+    "Buenavista": "Agusan del Norte", "Carmen (Agusan del Norte)": "Agusan del Norte", "Jabonga": "Agusan del Norte",
     "Kitcharao": "Agusan del Norte", "Las Nieves": "Agusan del Norte", "Magallanes": "Agusan del Norte",
     "Nasipit": "Agusan del Norte", "Remedios T. Romualdez": "Agusan del Norte", "Santiago": "Agusan del Norte",
     "Tubay": "Agusan del Norte",
@@ -146,7 +146,7 @@ export const MUNICIPALITY_TO_PROVINCE = {
 
     // Surigao del Sur
     "Barobo": "Surigao del Sur", "Bayabas": "Surigao del Sur", "Cagwait": "Surigao del Sur",
-    "Cantilan": "Surigao del Sur", "Carmen": "Surigao del Sur", "Carrascal": "Surigao del Sur",
+    "Cantilan": "Surigao del Sur", "Carmen (Surigao del Sur)": "Surigao del Sur", "Carrascal": "Surigao del Sur",
     "Cortes": "Surigao del Sur", "Hinatuan": "Surigao del Sur", "Lanuza": "Surigao del Sur",
     "Lianga": "Surigao del Sur", "Lingig": "Surigao del Sur", "Madrid": "Surigao del Sur",
     "Marihatag": "Surigao del Sur", "San Agustin": "Surigao del Sur", "San Miguel": "Surigao del Sur",

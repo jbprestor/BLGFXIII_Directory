@@ -79,19 +79,7 @@ export const validateQrrpaData = (parsedData, config, provinceScope) => {
         }
     }
 
-    // Rule: Validate Assessment Levels (Row-based) for Building, Others
-    if (parsedData.sections && parsedData.sections.taxable) {
-        parsedData.sections.taxable.forEach((record, index) => {
-            // We skip Land here because we use the STRICT Fixed Cell check above
-            // We skip Machinery here because we use the STRICT Fixed Cell check below
-            const prefix = `[Row ${index + 11}]`;
 
-            // Only check Building, OtherImp here
-            checkType("building", record.marketValue.building, record.assessedValue.building, record, prefix, findings, errors, config, provinceScope);
-            // checkType("machinery", record.marketValue.machinery, record.assessedValue.machinery, record, prefix, findings, errors, config, provinceScope);
-            checkType("otherImp", record.marketValue.otherImp, record.assessedValue.otherImp, record, prefix, findings, errors, config, provinceScope);
-        });
-    }
 
     // Rule: Validate Fixed Cell Assessment Levels (Land Only) - STRICT T16/L16 Logic
     if (parsedData.meta && parsedData.meta.mvValidation && parsedData.meta.avValidation) {
