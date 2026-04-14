@@ -395,7 +395,12 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
       };
 
       return config.type === "select" ? (
-        <SelectField label={config.label} options={config.options} {...props} />
+        <SelectField 
+          label={config.label} 
+          options={config.options} 
+          {...props} 
+          onChange={(v) => handleInputChange(v, name)} 
+        />
       ) : (
         <InputField label={config.label} type={config.type} {...props} />
       );

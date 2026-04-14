@@ -321,6 +321,7 @@ export default function EditModal({
             label={config.label}
             options={config.options}
             {...props}
+            onChange={(v) => handleInputChange(v, name)}
           />
         ) : (
           <InputField
