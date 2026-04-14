@@ -448,119 +448,167 @@ export default function LGUDetails({
                 <div className="space-y-6">
                   {/* Key Metrics */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="stat bg-base-200/50 rounded-xl p-4 border border-base-200">
-                      <div className="stat-title text-xs uppercase tracking-wider opacity-60">Population</div>
-                      <div className="stat-value text-lg sm:text-2xl mt-1">{prettyPopulation(lgu?.population)}</div>
+                    {/* Population */}
+                    <div className="bg-gradient-to-br from-primary/10 to-base-100 p-4 rounded-2xl border border-primary/20 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-primary/20 rounded-lg text-primary"><Users className="w-4 h-4" /></div>
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-70">Population</span>
+                      </div>
+                      <div className="text-xl font-extrabold text-base-content break-words">
+                        {prettyPopulation(lgu?.population)}
+                      </div>
                     </div>
-                    <div className="stat bg-base-200/50 rounded-xl p-4 border border-base-200">
-                      <div className="stat-title text-xs uppercase tracking-wider opacity-60">Income Class</div>
-                      <div className="stat-value text-lg sm:text-2xl mt-1">{lgu?.incomeClass || '—'}</div>
+                    {/* Income Class */}
+                    <div className="bg-gradient-to-br from-secondary/10 to-base-100 p-4 rounded-2xl border border-secondary/20 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-secondary/20 rounded-lg text-secondary"><BarChart3 className="w-4 h-4" /></div>
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-70">Income</span>
+                      </div>
+                      <div className="text-xl font-extrabold text-base-content break-words leading-tight">
+                        {lgu?.incomeClass || '—'}
+                      </div>
                     </div>
-                    <div className="stat bg-base-200/50 rounded-xl p-4 border border-base-200">
-                      <div className="stat-title text-xs uppercase tracking-wider opacity-60">Class</div>
-                      <div className="stat-value text-lg sm:text-2xl mt-1">{lgu?.classification || '—'}</div>
+                    {/* Class */}
+                    <div className="bg-gradient-to-br from-info/10 to-base-100 p-4 rounded-2xl border border-info/20 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-info/20 rounded-lg text-info"><Building className="w-4 h-4" /></div>
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-70">Class</span>
+                      </div>
+                      <div className="text-xl font-extrabold text-base-content break-words leading-tight">
+                        {lgu?.classification || '—'}
+                      </div>
                     </div>
-                    <div className="stat bg-base-200/50 rounded-xl p-4 border border-base-200">
-                      <div className="stat-title text-xs uppercase tracking-wider opacity-60">SMV Status</div>
-                      <div className="stat-value text-lg sm:text-lg mt-1 whitespace-nowrap overflow-hidden text-ellipsis text-primary">{lgu?.currentSMVStatus || '—'}</div>
+                    {/* SMV Status */}
+                    <div className="bg-gradient-to-br from-accent/10 to-base-100 p-4 rounded-2xl border border-accent/20 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-accent/20 rounded-lg text-accent"><FileText className="w-4 h-4" /></div>
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-70">SMV Status</span>
+                      </div>
+                      <div className="text-lg font-bold text-accent break-words leading-tight">
+                        {lgu?.currentSMVStatus || '—'}
+                      </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* LCE Card */}
-                    <div className="card bg-base-100 border border-base-200 shadow-sm">
-                      <div className="card-body p-5">
-                        <h3 className="card-title text-base flex items-center gap-2 text-secondary mb-2">
-                          <Users className="w-5 h-5" /> Local Chief Executive
+                    <div className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition-all">
+                      <div className="card-body p-6">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/50 mb-4 flex items-center gap-2 border-b border-base-200 pb-2">
+                          <Users className="w-4 h-4" /> Local Chief Executive
                         </h3>
                         {lgu?.lce ? (
-                          <div className="space-y-3">
-                            <div>
-                              <div className="text-xl font-bold">{[lgu.lce.firstName, lgu.lce.middleName, lgu.lce.lastName].filter(Boolean).join(' ')}</div>
-                              <div className="text-sm opacity-60">Mayor / LCE</div>
+                          <div className="flex items-start gap-4">
+                            <div className="w-14 h-14 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xl font-bold border border-secondary/20 shadow-inner flex-shrink-0">
+                              {lgu.lce.firstName?.charAt(0)}{lgu.lce.lastName?.charAt(0) || "X"}
                             </div>
-                            <div className="text-sm space-y-1">
-                              <div className="flex items-start gap-2 opacity-70">
-                                <span className="font-medium min-w-[60px]">Office:</span>
-                                <span>{lgu.lce.officeAddress || 'No address on record'}</span>
+                            <div className="space-y-3 flex-1 min-w-0">
+                              <div>
+                                <div className="text-lg font-bold leading-tight truncate">{[lgu.lce.firstName, lgu.lce.middleName, lgu.lce.lastName].filter(Boolean).join(' ')}</div>
+                                <div className="badge badge-secondary badge-outline badge-sm mt-1 font-medium">Mayor / LCE</div>
                               </div>
-                              <div className="flex items-start gap-2 opacity-70">
-                                <span className="font-medium min-w-[60px]">Email:</span>
-                                <span>{lgu.lce.officialEmail || '—'}</span>
+                              <div className="space-y-2 text-sm bg-base-200/40 p-3 rounded-xl border border-base-200">
+                                <div className="flex items-center gap-3 opacity-80">
+                                  <Building className="w-4 h-4 flex-shrink-0" />
+                                  <span className="truncate">{lgu.lce.officeAddress || 'No address on record'}</span>
+                                </div>
+                                <div className="flex items-center gap-3 opacity-80">
+                                  <FileText className="w-4 h-4 flex-shrink-0" />
+                                  <span className="truncate">{lgu.lce.officialEmail || '—'}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        ) : <div className="text-base-content/60 italic">No LCE information available.</div>}
+                        ) : <div className="flex items-center justify-center p-6 bg-base-200/30 rounded-xl border border-dashed border-base-300 text-base-content/60 italic">No LCE information available.</div>}
                       </div>
                     </div>
 
                     {/* Local Assessor Card */}
-                    <div className="card bg-base-100 border border-base-200 shadow-sm">
-                      <div className="card-body p-5">
-                        <div className="flex justify-between items-start">
-                          <h3 className="card-title text-base flex items-center gap-2 text-primary mb-2">
-                            <Users className="w-5 h-5" /> Local Assessor
+                    <div className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition-all">
+                      <div className="card-body p-6">
+                        <div className="flex justify-between items-center mb-4 border-b border-base-200 pb-2">
+                          <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/50 flex items-center gap-2">
+                            <Users className="w-4 h-4" /> Local Assessor
                           </h3>
                           {headAssessorVacant && (
-                            <div className="badge badge-error gap-1 font-bold text-white bg-red-500 border-none animate-pulse">
-                              VACANT POSITION
+                            <div className="badge badge-error gap-1 font-bold text-white shadow-sm animate-pulse text-xs">
+                              VACANT
                             </div>
                           )}
                         </div>
 
                         {headAssessor ? (
-                          <div className="space-y-3">
-                            <div>
-                              <div className="text-xl font-bold">
-                                {[headAssessor.firstName, headAssessor.middleName, headAssessor.lastName].filter(Boolean).join(' ')}
-                              </div>
-                              <div className="text-sm opacity-60 flex items-center gap-2">
-                                {headAssessor.officialDesignation || headAssessor.plantillaPosition || 'Assessor'}
-                                {!headAssessorVacant && <span className="badge badge-xs badge-success badge-outline">Filled</span>}
-                              </div>
+                          <div className="flex items-start gap-4">
+                            <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold border border-primary/20 shadow-inner flex-shrink-0">
+                              {headAssessor.firstName?.charAt(0)}{headAssessor.lastName?.charAt(0) || "X"}
                             </div>
-                            <div className="text-sm space-y-1">
-                              <div className="flex items-start gap-2 opacity-70">
-                                <span className="font-medium min-w-[60px]">Status:</span>
-                                <span>{headAssessor.statusOfAppointment || '—'}</span>
+                            <div className="space-y-3 flex-1 min-w-0">
+                              <div>
+                                <div className="text-lg font-bold leading-tight truncate">
+                                  {[headAssessor.firstName, headAssessor.middleName, headAssessor.lastName].filter(Boolean).join(' ')}
+                                </div>
+                                <div className="badge badge-primary badge-outline badge-sm mt-1 font-medium truncate max-w-full">
+                                  {headAssessor.officialDesignation || headAssessor.plantillaPosition || 'Assessor'}
+                                </div>
                               </div>
-                              <div className="flex items-start gap-2 opacity-70">
-                                <span className="font-medium min-w-[60px]">Email:</span>
-                                <span>{headAssessor.officeEmail || '—'}</span>
+                              <div className="space-y-2 text-sm bg-base-200/40 p-3 rounded-xl border border-base-200">
+                                <div className="flex items-center gap-3 opacity-80">
+                                  <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                                  <span className="truncate">Status: {headAssessor.statusOfAppointment || '—'}</span>
+                                </div>
+                                <div className="flex items-center gap-3 opacity-80">
+                                  <FileText className="w-4 h-4 flex-shrink-0" />
+                                  <span className="truncate">{headAssessor.officeEmail || '—'}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
                         ) : (
-                          <div className="text-base-content/60 italic py-2">
-                            No Assessor information available.
+                          <div className="flex flex-col items-center justify-center p-6 bg-base-200/30 rounded-xl border border-dashed border-base-300">
+                             <div className="text-base-content/60 italic">No Assessor information available.</div>
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Geography Card */}
-                    <div className="card bg-base-100 border border-base-200 shadow-sm">
-                      <div className="card-body p-5">
-                        <h3 className="card-title text-base flex items-center gap-2 text-accent mb-2">
-                          <Building className="w-5 h-5" /> Geography & Contact
+                    <div className="card bg-base-100 border border-base-200 shadow-sm lg:col-span-2 hover:shadow-md transition-all">
+                      <div className="card-body p-6">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/50 mb-4 flex items-center gap-2 border-b border-base-200 pb-2">
+                          <Building className="w-4 h-4" /> Geography & Contact Profile
                         </h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <div className="opacity-60 text-xs">Land Area</div>
-                            <div className="font-medium">{prettyNumber(lgu?.landArea)} km²</div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div className="flex items-center gap-3 bg-base-200/30 p-3 rounded-xl border border-base-100">
+                            <div className="bg-base-200 p-2 rounded-lg"><Building className="w-4 h-4 opacity-70" /></div>
+                            <div>
+                               <div className="text-xs opacity-60 font-medium">Land Area</div>
+                               <div className="font-bold text-sm">{prettyNumber(lgu?.landArea)} km²</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="opacity-60 text-xs">ZIP Code</div>
-                            <div className="font-medium">{lgu?.zipCode || '—'}</div>
+
+                          <div className="flex items-center gap-3 bg-base-200/30 p-3 rounded-xl border border-base-100">
+                            <div className="bg-base-200 p-2 rounded-lg"><FileText className="w-4 h-4 opacity-70" /></div>
+                            <div>
+                               <div className="text-xs opacity-60 font-medium">ZIP Code</div>
+                               <div className="font-bold text-sm">{lgu?.zipCode || '—'}</div>
+                            </div>
                           </div>
-                          <div className="col-span-2">
-                            <div className="opacity-60 text-xs">Phone</div>
-                            <div className="font-medium">{lgu?.contactInfo?.phoneNumber || '—'}</div>
+
+                          <div className="flex items-center gap-3 bg-base-200/30 p-3 rounded-xl border border-base-100">
+                            <div className="bg-base-200 p-2 rounded-lg"><Users className="w-4 h-4 opacity-70" /></div>
+                            <div className="min-w-0 flex-1">
+                               <div className="text-xs opacity-60 font-medium">Phone</div>
+                               <div className="font-bold text-sm truncate">{lgu?.contactInfo?.phoneNumber || '—'}</div>
+                            </div>
                           </div>
-                          <div className="col-span-2">
-                            <div className="opacity-60 text-xs">Location</div>
-                            <div className="font-medium truncate" title={lgu?.coordinates?.latitude ? `${lgu.coordinates.latitude}, ${lgu.coordinates.longitude}` : ''}>
-                              {lgu?.coordinates?.latitude ? `${lgu.coordinates.latitude}, ${lgu.coordinates.longitude}` : 'No coordinates'}
+
+                          <div className="flex items-center gap-3 bg-base-200/30 p-3 rounded-xl border border-base-100">
+                            <div className="bg-base-200 p-2 rounded-lg"><Building className="w-4 h-4 opacity-70" /></div>
+                            <div className="min-w-0 flex-1">
+                               <div className="text-xs opacity-60 font-medium">Coordinates</div>
+                               <div className="font-bold text-sm truncate" title={lgu?.coordinates?.latitude ? `${lgu.coordinates.latitude}, ${lgu.coordinates.longitude}` : ''}>
+                                 {lgu?.coordinates?.latitude ? `${lgu.coordinates.latitude}, ${lgu.coordinates.longitude}` : '—'}
+                               </div>
                             </div>
                           </div>
                         </div>
@@ -569,30 +617,54 @@ export default function LGUDetails({
                   </div>
 
                   {/* Performance Metrics */}
-                  <div className="card bg-base-100 border border-base-200 shadow-sm">
-                    <div className="card-body p-5">
-                      <h3 className="card-title text-base mb-4">Performance Metrics</h3>
-                      <div className="overflow-x-auto">
-                        <table className="table table-sm">
-                          <tbody>
-                            <tr>
-                              <td className="text-base-content/60 font-medium">Seal of Good Local Governance</td>
-                              <td className="font-bold text-right">
-                                {lgu?.performanceMetrics?.sealOfGoodLocalGovernance?.hasAward
-                                  ? <span className="badge badge-success badge-sm">Awarded</span>
-                                  : <span className="opacity-50">Not Awarded</span>}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td className="text-base-content/60 font-medium">Business Permit Processing</td>
-                              <td className="text-right">{prettyNumber(lgu?.performanceMetrics?.businessPermitProcessingTime)} days</td>
-                            </tr>
-                            <tr>
-                              <td className="text-base-content/60 font-medium">Tax Collection Efficiency</td>
-                              <td className="text-right font-mono">{lgu?.performanceMetrics?.taxCollectionEfficiency ? `${lgu.performanceMetrics.taxCollectionEfficiency}%` : '—'}</td>
-                            </tr>
-                          </tbody>
-                        </table>
+                  <div className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-md transition-all">
+                    <div className="card-body p-6">
+                       <h3 className="text-sm font-bold uppercase tracking-wider text-base-content/50 mb-4 border-b border-base-200 pb-2">
+                        Performance Insights
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                         
+                         {/* SGLG */}
+                         <div className="flex flex-col items-center p-4 bg-base-200/30 rounded-2xl border border-base-200 text-center">
+                            <div className="mb-3">
+                               {lgu?.performanceMetrics?.sealOfGoodLocalGovernance?.hasAward ? (
+                                  <div className="w-12 h-12 rounded-full bg-success/20 text-success flex items-center justify-center shadow-inner mx-auto mb-2">
+                                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
+                                  </div>
+                               ) : (
+                                  <div className="w-12 h-12 rounded-full bg-base-300/50 text-base-content/40 flex items-center justify-center shadow-inner mx-auto mb-2">
+                                     <XCircle className="w-6 h-6" />
+                                  </div>
+                               )}
+                            </div>
+                            <div className="font-bold text-sm">Seal of Good Local Governance</div>
+                            <div className="text-xs opacity-60 mt-1">
+                               {lgu?.performanceMetrics?.sealOfGoodLocalGovernance?.hasAward ? 'Awarded' : 'Not Awarded'}
+                            </div>
+                         </div>
+                         
+                         {/* Business Permit */}
+                         <div className="flex flex-col items-center p-4 bg-base-200/30 rounded-2xl border border-base-200 text-center">
+                            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shadow-inner mx-auto mb-2">
+                               <FileText className="w-6 h-6" />
+                            </div>
+                            <div className="font-bold text-sm">Business Permit Processing</div>
+                            <div className="font-extrabold text-xl mt-1 text-primary">
+                               {prettyNumber(lgu?.performanceMetrics?.businessPermitProcessingTime)} <span className="text-xs opacity-60 font-normal">days</span>
+                            </div>
+                         </div>
+
+                         {/* Tax Efficiency */}
+                         <div className="flex flex-col items-center p-4 bg-base-200/30 rounded-2xl border border-base-200 text-center">
+                            <div className="w-12 h-12 rounded-full bg-info/10 text-info flex border border-info/20 flex items-center justify-center shadow-inner mx-auto mb-2">
+                               <BarChart3 className="w-6 h-6" />
+                            </div>
+                            <div className="font-bold text-sm">Tax Collection Efficiency</div>
+                            <div className="font-extrabold text-xl mt-1 text-info font-mono">
+                               {lgu?.performanceMetrics?.taxCollectionEfficiency ? `${lgu.performanceMetrics.taxCollectionEfficiency}%` : '—'}
+                            </div>
+                         </div>
+
                       </div>
                     </div>
                   </div>
