@@ -202,6 +202,14 @@ export default function PersonnelTable({
                               ).toLocaleDateString()
                               : "N/A"}
                           </div>
+                          <div>
+                            <strong>Mandatory Retirement:</strong>{" "}
+                            {person.dateOfMandatoryRetirement
+                              ? new Date(
+                                person.dateOfMandatoryRetirement
+                              ).toLocaleDateString()
+                              : "N/A"}
+                          </div>
                         </div>
                       </td>
                     </tr>
