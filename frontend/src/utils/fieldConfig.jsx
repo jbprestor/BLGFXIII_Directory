@@ -19,6 +19,11 @@ export const FIELD_CONFIG = {
     type: "text",
     placeholder: "Enter middle name",
   },
+  nameExtension: {
+    label: "Name Extension",
+    type: "select",
+    options: ["", "Jr.", "Sr.", "II", "III", "IV", "V"],
+  },
   sex: {
     label: "Sex",
     type: "select",
@@ -184,6 +189,7 @@ export const FIELD_GROUPS = {
     "lastName",
     "firstName",
     "middleName",
+    "nameExtension",
     "sex",
     "civilStatus",
     "birthday",

@@ -72,7 +72,7 @@ export default function DirectoryPage() {
 
         return {
           ...p,
-          fullName: [p.firstName, p.middleName, p.lastName].filter(Boolean).join(" "),
+          fullName: [p.firstName, p.middleName, p.lastName, p.nameExtension].filter(Boolean).join(" "),
           lguName: lgu.name || p.lguName,
           lguType: type,
           province: lgu.province || p.province,
@@ -160,7 +160,7 @@ export default function DirectoryPage() {
         ].some((field) => {
           if (field === "name" && !person.name) {
             // Try fullName construction if name missing
-            const fullName = [person.firstName, person.middleName, person.lastName].filter(Boolean).join(" ");
+            const fullName = [person.firstName, person.middleName, person.lastName, person.nameExtension].filter(Boolean).join(" ");
             return fullName.toLowerCase().includes(searchLower);
           }
           return person[field]?.toLowerCase().includes(searchLower)
@@ -253,6 +253,7 @@ export default function DirectoryPage() {
       firstName: data.firstName,
       lastName: data.lastName,
       middleName: data.middleName,
+      nameExtension: data.nameExtension ?? "",
       sex: data.sex,
       civilStatus: data.civilStatus,
       lguType: data.lguType,

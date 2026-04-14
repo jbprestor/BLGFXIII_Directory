@@ -6,6 +6,7 @@ const assessorSchema = new mongoose.Schema(
     lastName: { type: String, trim: true },
     firstName: { type: String, trim: true },
     middleName: { type: String, trim: true },
+    nameExtension: { type: String, trim: true, default: "" },
     sex: { type: String, enum: ["Male", "Female", "Other"] },
     civilStatus: { type: String, enum: ["Single", "Married", "Widowed", "Separated", "Other"] },
     birthday: { type: Date },
