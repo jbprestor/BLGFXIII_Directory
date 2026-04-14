@@ -26,7 +26,6 @@ export default function SMVMonitoringPage() {
   const [progressFilter, setProgressFilter] = useState("all");
   const [selectedYear, setSelectedYear] = useState(2025);
   const [activeTab, setActiveTab] = useState("table");
-  const [viewMode, setViewMode] = useState("detailed"); // 'detailed' or 'simple'
 
   // Timeline modal state
   const [timelineModalOpen, setTimelineModalOpen] = useState(false);
@@ -687,15 +686,12 @@ export default function SMVMonitoringPage() {
                 setComplianceFilter={setComplianceFilter}
                 progressFilter={progressFilter}
                 setProgressFilter={setProgressFilter}
-                viewMode={viewMode}
-                setViewMode={setViewMode}
               />
 
               {/* Summary Table - Dashboard Card Style */}
               <SMVSummaryTable
                 filteredTableData={filteredTableData}
                 stages={stages}
-                viewMode={viewMode}
                 isAdmin={isAdmin}
                 onSetTimeline={handleSetTimeline}
               />
