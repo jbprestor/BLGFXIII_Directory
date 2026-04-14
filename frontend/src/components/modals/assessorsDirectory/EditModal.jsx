@@ -55,15 +55,29 @@ export default function EditModal({
       const matchedRegion = matchedLgu?.region || editingPerson.region || "Caraga";
       const matchedLguName = matchedLgu?.name || editingPerson.lguName || "";
 
+      let mandRet = formatDateForInput(editingPerson.dateOfMandatoryRetirement);
+      let compRet = formatDateForInput(editingPerson.dateOfCompulsoryRetirement);
+      const bdayInput = formatDateForInput(editingPerson.birthday);
+      
+      if (!mandRet && bdayInput) {
+        const bdayDate = new Date(bdayInput);
+        if (!isNaN(bdayDate.getTime())) {
+          const compDate = new Date(bdayDate);
+          compDate.setFullYear(compDate.getFullYear() + 65);
+          mandRet = compDate.toISOString().split("T")[0];
+          compRet = mandRet;
+        }
+      }
+
       setFormData({
         ...editingPerson,
         plantillaPosition: editingPerson.plantillaPosition || "",
         officialDesignation: editingPerson.officialDesignation || "",
-        birthday: formatDateForInput(editingPerson.birthday),
+        birthday: bdayInput,
         dateOfAppointment: formatDateForInput(editingPerson.dateOfAppointment),
         prcLicenseExpiration: formatDateForInput(editingPerson.prcLicenseExpiration),
-        dateOfMandatoryRetirement: formatDateForInput(editingPerson.dateOfMandatoryRetirement),
-        dateOfCompulsoryRetirement: formatDateForInput(editingPerson.dateOfCompulsoryRetirement),
+        dateOfMandatoryRetirement: mandRet,
+        dateOfCompulsoryRetirement: compRet,
         region: matchedRegion,
         province: matchedProvince,
         lguName: matchedLguName,
@@ -225,7 +239,7 @@ export default function EditModal({
             value={selectedRegion}
             options={["Caraga"]}
             onChange={handleRegionChange}
-            compact
+            
           />
         );
       if (name === "province")
@@ -236,7 +250,7 @@ export default function EditModal({
             value={selectedProvince}
             options={provinces}
             onChange={handleProvinceChange}
-            compact
+            
           />
         );
       if (name === "lguName")
@@ -247,7 +261,7 @@ export default function EditModal({
             value={selectedLgu}
             options={lgus}
             onChange={handleLguChange}
-            compact
+            
           />
         );
 
@@ -258,7 +272,7 @@ export default function EditModal({
             name={name}
             value={formData[name] || ""}
             readOnly
-            compact
+            
           />
         );
 
@@ -276,7 +290,7 @@ export default function EditModal({
             value={formData[name] || ""}
             options={options}
             onChange={(v) => handleInputChange(v, name)}
-            compact
+            
           />
         );
       }
@@ -289,29 +303,30 @@ export default function EditModal({
             value={formData.officialDesignation || ""}
             onChange={handleInputChange}
             type="text"
-            compact
+            
           />
         );
       }
+
+      const props = {
+        name,
+        value: formData[name] || "",
+        onChange: handleInputChange,
+        ...config,
+      };
 
       if (config) {
         return config.type === "select" ? (
           <SelectField
             label={config.label}
-            name={name}
-            value={formData[name] || ""}
             options={config.options}
-            onChange={handleInputChange}
-            compact
+            {...props}
           />
         ) : (
           <InputField
             label={config.label}
-            name={name}
-            value={formData[name] || ""}
-            onChange={handleInputChange}
             type={config.type}
-            compact
+            {...props}
           />
         );
       }
@@ -329,37 +344,53 @@ export default function EditModal({
         <ModalHeader onClose={onClose} />
 
         <form id="edit-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
-          <Section title={SECTION_CONFIG.personalInfo.title}>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <FormSection {...SECTION_CONFIG.personalInfo}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {FIELD_GROUPS.personalInfo.map((f) => (
                 <div key={f}>{renderField(f)}</div>
               ))}
             </div>
-          </Section>
+          </FormSection>
 
-          <Section title={SECTION_CONFIG.governmentInfo.title}>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {FIELD_GROUPS.governmentInfo.map((f) => (
-                <div key={f}>{renderField(f)}</div>
-              ))}
+          <FormSection {...SECTION_CONFIG.governmentInfo}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {["region", "province", "lguName", "lguType", "incomeClass"].map(
+                (f) => (
+                  <div key={f}>{renderField(f)}</div>
+                )
+              )}
+              {FIELD_GROUPS.governmentInfo
+                .filter(
+                  (f) =>
+                    ![
+                      "region",
+                      "province",
+                      "lguName",
+                      "lguType",
+                      "incomeClass",
+                    ].includes(f)
+                )
+                .map((f) => (
+                  <div key={f}>{renderField(f)}</div>
+                ))}
             </div>
-          </Section>
+          </FormSection>
 
-          <Section title={SECTION_CONFIG.importantDates.title}>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <FormSection {...SECTION_CONFIG.importantDates}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {FIELD_GROUPS.importantDates.map((f) => (
                 <div key={f}>{renderField(f)}</div>
               ))}
             </div>
-          </Section>
+          </FormSection>
 
-          <Section title={SECTION_CONFIG.education.title}>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <FormSection {...SECTION_CONFIG.education}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {FIELD_GROUPS.education.map((f) => (
                 <div key={f}>{renderField(f)}</div>
               ))}
             </div>
-          </Section>
+          </FormSection>
         </form>
 
         <FormFooter
@@ -374,19 +405,22 @@ export default function EditModal({
 /* ======= SUB COMPONENTS ======= */
 function ModalHeader({ onClose }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-base-300 dark:border-gray-700 bg-base-200/50">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg">
+    <div className="flex items-center justify-between px-6 py-4 border-b border-base-300 dark:border-gray-700 pb-4 bg-base-200/50">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-xl shadow-sm">
           ✏️
         </div>
         <div>
-          <h2 className="text-xl font-bold text-base-content leading-tight">
+          <h2 className="text-2xl font-bold text-base-content leading-tight">
             Edit Personnel
           </h2>
+          <p className="text-base-content/70 font-medium">
+            Update existing BLGF personnel record
+          </p>
         </div>
       </div>
       <button
-        className="btn btn-ghost btn-circle btn-sm"
+        className="btn btn-ghost btn-circle text-lg"
         onClick={onClose}
         aria-label="Close modal"
       >
@@ -396,12 +430,37 @@ function ModalHeader({ onClose }) {
   );
 }
 
-function Section({ title, children }) {
+function FormSection({ title, children, color = "primary", icon }) {
+  const colorClasses = {
+    primary: "bg-primary/10 dark:bg-primary/20 border-l-4 border-primary",
+    secondary:
+      "bg-secondary/10 dark:bg-secondary/20 border-l-4 border-secondary",
+    accent: "bg-accent/10 dark:bg-accent/20 border-l-4 border-accent",
+    info: "bg-info/10 dark:bg-info/20 border-l-4 border-info",
+  };
+  const textColorClasses = {
+    primary: "text-primary",
+    secondary: "text-secondary",
+    accent: "text-accent",
+    info: "text-info",
+  };
+  const iconBgClasses = {
+    primary: "bg-primary/20 text-primary",
+    secondary: "bg-secondary/20 text-secondary",
+    accent: "bg-accent/20 text-accent",
+    info: "bg-info/20 text-info",
+  };
+
   return (
-    <div>
-      <h3 className="text-sm font-bold uppercase text-base-content/50 mb-3 border-b border-base-200 pb-1 tracking-wider">
-        {title}
-      </h3>
+    <div className={`rounded-lg p-5 ${colorClasses[color]} shadow-sm`}>
+      <div className="flex items-center mb-4">
+        <div className={`p-2 rounded-lg mr-3 ${iconBgClasses[color]}`}>
+          {icon}
+        </div>
+        <h3 className={`text-lg font-semibold ${textColorClasses[color]}`}>
+          {title}
+        </h3>
+      </div>
       {children}
     </div>
   );
@@ -416,13 +475,13 @@ function FormFooter({ loading, onClose }) {
       <div className="flex gap-2 w-full sm:w-auto justify-end">
         <button
           type="button"
-          className="btn btn-ghost btn-sm"
+          className="btn btn-ghost btn-sm sm:btn-md"
           onClick={onClose}
           disabled={loading}
         >
           Cancel
         </button>
-        <button type="submit" form="edit-form" className="btn btn-primary btn-sm" disabled={loading}>
+        <button type="submit" form="edit-form" className="btn btn-primary btn-sm sm:btn-md" disabled={loading}>
           {loading ? (
             <>
               <span className="loading loading-spinner loading-xs mr-2"></span>

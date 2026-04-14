@@ -24,21 +24,22 @@ export default function DetailsModal({
         {/* Scrollable Content */}
         <div className="overflow-y-auto p-6 space-y-6 flex-1">
           {/* Personal Information */}
-          <Section title={SECTION_CONFIG.personalInfo.title}>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3">
+          <FormSection {...SECTION_CONFIG.personalInfo}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {FIELD_GROUPS.personalInfo.map((fieldName) => (
                 <DetailField
                   key={fieldName}
                   label={FIELD_CONFIG[fieldName].label}
                   value={selectedPerson[fieldName]}
+                  compact={false}
                 />
               ))}
             </div>
-          </Section>
+          </FormSection>
 
           {/* Government Information */}
-          <Section title={SECTION_CONFIG.governmentInfo.title}>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3">
+          <FormSection {...SECTION_CONFIG.governmentInfo}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {FIELD_GROUPS.governmentInfo.map((fieldName) => (
                 <DetailField
                   key={fieldName}
@@ -48,14 +49,15 @@ export default function DetailsModal({
                       ? formatDate(selectedPerson[fieldName])
                       : selectedPerson[fieldName]
                   }
+                  compact={false}
                 />
               ))}
             </div>
-          </Section>
+          </FormSection>
 
           {/* Important Dates */}
-          <Section title={SECTION_CONFIG.importantDates.title}>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3">
+          <FormSection {...SECTION_CONFIG.importantDates}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {FIELD_GROUPS.importantDates.map((fieldName) => (
                 <DetailField
                   key={fieldName}
@@ -65,23 +67,25 @@ export default function DetailsModal({
                       ? formatDate(selectedPerson[fieldName])
                       : "N/A"
                   }
+                  compact={false}
                 />
               ))}
             </div>
-          </Section>
+          </FormSection>
 
           {/* Educational Attainment */}
-          <Section title={SECTION_CONFIG.education.title}>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3">
+          <FormSection {...SECTION_CONFIG.education}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {FIELD_GROUPS.education.map((fieldName) => (
                 <DetailField
                   key={fieldName}
                   label={FIELD_CONFIG[fieldName].label}
                   value={selectedPerson[fieldName]}
+                  compact={false}
                 />
               ))}
             </div>
-          </Section>
+          </FormSection>
         </div>
 
         {/* Footer */}
@@ -98,12 +102,37 @@ export default function DetailsModal({
 
 // Extracted components
 
-function Section({ title, children }) {
+function FormSection({ title, children, color = "primary", icon }) {
+  const colorClasses = {
+    primary: "bg-primary/10 dark:bg-primary/20 border-l-4 border-primary",
+    secondary:
+      "bg-secondary/10 dark:bg-secondary/20 border-l-4 border-secondary",
+    accent: "bg-accent/10 dark:bg-accent/20 border-l-4 border-accent",
+    info: "bg-info/10 dark:bg-info/20 border-l-4 border-info",
+  };
+  const textColorClasses = {
+    primary: "text-primary",
+    secondary: "text-secondary",
+    accent: "text-accent",
+    info: "text-info",
+  };
+  const iconBgClasses = {
+    primary: "bg-primary/20 text-primary",
+    secondary: "bg-secondary/20 text-secondary",
+    accent: "bg-accent/20 text-accent",
+    info: "bg-info/20 text-info",
+  };
+
   return (
-    <div>
-      <h3 className="text-sm font-bold uppercase text-base-content/50 mb-3 border-b border-base-200 pb-1 tracking-wider">
-        {title}
-      </h3>
+    <div className={`rounded-lg p-5 ${colorClasses[color]} shadow-sm`}>
+      <div className="flex items-center mb-4">
+        <div className={`p-2 rounded-lg mr-3 ${iconBgClasses[color]}`}>
+          {icon}
+        </div>
+        <h3 className={`text-lg font-semibold ${textColorClasses[color]}`}>
+          {title}
+        </h3>
+      </div>
       {children}
     </div>
   );
@@ -113,11 +142,11 @@ function ModalHeader({ selectedPerson, onClose }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b border-base-300 dark:border-gray-700 bg-base-200/50">
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg shadow-sm">
+        <div className="w-12 h-12 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-xl shadow-sm">
           {selectedPerson.fullName?.charAt(0) || "U"}
         </div>
         <div>
-          <h2 className="text-xl font-bold text-base-content leading-tight">
+          <h2 className="text-2xl font-bold text-base-content leading-tight">
             {selectedPerson.fullName}
           </h2>
           <div className="flex items-center space-x-2 mt-0.5">
