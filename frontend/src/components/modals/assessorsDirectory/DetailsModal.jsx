@@ -30,7 +30,11 @@ export default function DetailsModal({
                 <DetailField
                   key={fieldName}
                   label={FIELD_CONFIG[fieldName].label}
-                  value={selectedPerson[fieldName]}
+                  value={
+                    fieldName === "birthday" && selectedPerson[fieldName]
+                      ? formatDate(selectedPerson[fieldName])
+                      : selectedPerson[fieldName]
+                  }
                   compact={false}
                 />
               ))}
