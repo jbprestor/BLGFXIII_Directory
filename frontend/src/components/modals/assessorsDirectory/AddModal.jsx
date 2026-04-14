@@ -98,7 +98,30 @@ export default function AddModal({ isOpen, onClose, refreshAssessors }) {
     if (name === "stepIncrement") sanitized = value.replace(/[^0-9]/g, "");
 
     setErrors((prev) => ({ ...prev, [name]: validateField(name, sanitized) }));
-    setFormData((prev) => ({ ...prev, [name]: sanitized }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: sanitized };
+      
+      // Auto-calculate compulsory/mandatory retirement dates (65 yrs old in PH law)
+      if (name === "birthday") {
+        if (sanitized) {
+          const bdayDate = new Date(sanitized);
+          if (!isNaN(bdayDate.getTime())) {
+            const compDate = new Date(bdayDate);
+            compDate.setFullYear(compDate.getFullYear() + 65);
+            const formattedCompDate = compDate.toISOString().split("T")[0];
+            
+            // Note: Optional is 60, but user requested Mandatory(65)/Compulsory(65)
+            updated.dateOfMandatoryRetirement = formattedCompDate;
+            updated.dateOfCompulsoryRetirement = formattedCompDate;
+          }
+        } else {
+          updated.dateOfMandatoryRetirement = "";
+          updated.dateOfCompulsoryRetirement = "";
+        }
+      }
+      
+      return updated;
+    });
   }, []);
 
   // Handle region change
