@@ -26,18 +26,63 @@ export default function SMVSummaryTable({
   };
 
   // Calculate days until next deadline
-  const getNextDeadline = (timeline) => {
+  const getNextDeadline = (row) => {
+    const { timeline, reviewPublicationActivities } = row;
     if (!timeline) return null;
     
     const today = new Date();
+    const activities = reviewPublicationActivities || [];
+    
+    // Helper to check if an activity is completed (matches by partial name)
+    const isDone = (namePart) => {
+      const act = activities.find(a => a.name.toLowerCase().includes(namePart.toLowerCase()));
+      return act?.status === "Completed";
+    };
+
     const deadlines = [
-      { name: "RO Submission", date: timeline.regionalOfficeSubmissionDeadline, priority: 1 },
-      { name: "Publication", date: timeline.publicationDeadline, priority: 2 },
-      { name: "Public Consultation", date: timeline.publicConsultationDeadline, priority: 3 },
-      { name: "Sanggunian", date: timeline.sanggunianSubmissionDeadline, priority: 4 },
-      { name: "BLGF Approval", date: timeline.blgfApprovalDeadline, priority: 5 },
-      { name: "Effectivity", date: timeline.effectivityDate, priority: 6 },
-    ].filter(d => d.date);
+      { 
+        name: "RO Submission", 
+        date: timeline.regionalOfficeSubmissionDeadline, 
+        priority: 1,
+        done: isDone("Submission to Regional Office")
+      },
+      { 
+        name: "1st Publication", 
+        date: timeline.firstPublicationDate, 
+        priority: 2,
+        done: isDone("Official website") || isDone("Two (2) conspicuous") // Heuristic for publication
+      },
+      { 
+        name: "RO Review", 
+        date: timeline.roReviewDeadline, 
+        priority: 3,
+        done: isDone("Regional Office Review")
+      },
+      { 
+        name: "CO Review", 
+        date: timeline.blgfCentralOfficeReviewDeadline, 
+        priority: 4,
+        done: isDone("Central Office Review")
+      },
+      { 
+        name: "SoF Approval", 
+        date: timeline.secretaryOfFinanceReviewDeadline, 
+        priority: 5,
+        done: isDone("Indorsement / Certification to SOF")
+      },
+    ].filter(d => d.date && !d.done); // Only show pending deadlines
+
+    // If no pending deadlines set, check if at least Notice Date is present
+    if (deadlines.length === 0) {
+      if (timeline.blgfNoticeDate) {
+        // Check if overall complete
+        if (row.overallProgress === 100) {
+          return { name: "Completed", isCompleted: true };
+        }
+        return { name: "Set Deadlines", isNoticeOnly: true };
+      }
+      return null;
+    }
 
     // Find upcoming deadlines (future dates)
     const upcomingDeadlines = deadlines
@@ -122,7 +167,7 @@ export default function SMVSummaryTable({
           <tbody className="divide-y divide-base-200/60">
             {filteredTableData.map((row) => {
               const daysSinceNotice = calculateDaysFromNotice(row.timeline);
-              const nextDeadline = getNextDeadline(row.timeline);
+              const nextDeadline = getNextDeadline(row);
 
               return (
                 <tr key={row.lguId} className="hover:bg-base-200/30 transition-colors group">
@@ -196,22 +241,48 @@ export default function SMVSummaryTable({
                   {/* Deadline Metrics */}
                   <td className="py-4">
                      {nextDeadline ? (
-                      <div className={`flex items-center gap-1.5 ${nextDeadline.daysUntil < 0 ? 'text-error font-bold' : nextDeadline.daysUntil < 30 ? 'text-warning font-semibold' : 'text-success font-semibold'}`}>
-                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       nextDeadline.isCompleted ? (
+                        <div className="flex items-center gap-1.5 text-success font-bold">
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-sm">Completed ✅</span>
+                        </div>
+                       ) : nextDeadline.isNoticeOnly ? (
+                        <div className="flex items-center gap-1.5 text-secondary font-semibold">
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-xs truncate">Initial Notice Set</span>
+                        </div>
+                       ) : (
+                        <div className={`flex flex-col gap-0.5 ${nextDeadline.daysUntil < 0 ? 'text-error' : nextDeadline.daysUntil < 30 ? 'text-warning' : 'text-success'}`}>
+                          <div className="flex items-center gap-1.5 font-bold">
+                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-sm">
+                              {nextDeadline.daysUntil < 0 
+                                ? `${Math.abs(nextDeadline.daysUntil)}d overdue`
+                                : `${nextDeadline.daysUntil}d remaining`}
+                            </span>
+                          </div>
+                          <div className="text-[10px] opacity-70 ml-5 font-medium uppercase tracking-tighter truncate max-w-[120px]">
+                            {nextDeadline.name}
+                          </div>
+                        </div>
+                       )
+                     ) : (
+                      <div className="flex items-center gap-1.5 text-base-content/30 italic">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span className="text-sm truncate max-w-[150px]">
-                          {nextDeadline.daysUntil < 0 
-                            ? `${Math.abs(nextDeadline.daysUntil)}d overdue`
-                            : `${nextDeadline.daysUntil}d remaining`}
-                        </span>
+                        <span className="text-xs">Timeline not set</span>
                       </div>
-                     ) : (
-                      <span className="text-xs text-base-content/40 italic">Timeline not set</span>
                      )}
                      
                      {daysSinceNotice !== null && (
-                      <div className="flex items-center gap-1 mt-1 text-[10px] opacity-60 uppercase tracking-wider font-mono">
+                      <div className="flex items-center gap-1 mt-2 text-[10px] opacity-60 uppercase tracking-widest font-mono">
                         <span className="w-1.5 h-1.5 bg-current rounded-full"></span>
                         Day {daysSinceNotice}
                       </div>

@@ -16,6 +16,8 @@ const formatDateLong = (dateString) => {
 };
 
 // Helper function to calculate countdown for deadlines
+// If a date is recorded (in the past), it means they have already complied → show Completed.
+// If a date is set in the future → show countdown reminder.
 const calculateCountdown = (deadlineDate) => {
   if (!deadlineDate) return null;
   
@@ -37,6 +39,41 @@ const calculateCountdown = (deadlineDate) => {
   } else if (diffDays === 0) {
     return { 
       text: 'Due today!', 
+      color: 'badge-warning',
+      icon: '⚠️'
+    };
+  } else {
+    // Date is in the past → they have already complied with this requirement
+    return { 
+      text: 'Completed', 
+      color: 'badge-success',
+      icon: '✅'
+    };
+  }
+};
+
+// Warning countdown for UNFILLED fields — shows overdue/remaining based on a recommended deadline
+const calculateDeadlineWarning = (recommendedDate) => {
+  if (!recommendedDate) return null;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const deadline = new Date(recommendedDate);
+  deadline.setHours(0, 0, 0, 0);
+  
+  const diffTime = deadline - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays > 0) {
+    return { 
+      text: `${diffDays} ${diffDays === 1 ? 'day' : 'days'} left`, 
+      color: diffDays > 14 ? 'badge-warning' : 'badge-error',
+      icon: '⏳'
+    };
+  } else if (diffDays === 0) {
+    return { 
+      text: 'Due today!', 
       color: 'badge-error',
       icon: '⚠️'
     };
@@ -50,28 +87,28 @@ const calculateCountdown = (deadlineDate) => {
 };
 
 // Custom DateInput component with formatted display
-const DateInput = ({ name, value, onChange, className, min, placeholder = "Select date..." }) => {
+const DateInput = ({ name, value, onChange, className, min, max, placeholder = "Select date..." }) => {
   const dateInputRef = useRef(null);
 
   const handleClick = () => {
-    // Try to use showPicker if available (modern browsers)
-    if (dateInputRef.current?.showPicker) {
+    if (dateInputRef.current) {
       try {
         dateInputRef.current.showPicker();
-      } catch (error) {
-        // Fallback: focus the input to show native date picker
-        dateInputRef.current?.focus();
-        dateInputRef.current?.click();
+      } catch {
+        dateInputRef.current.focus();
+        dateInputRef.current.click();
       }
-    } else {
-      // Fallback for older browsers
-      dateInputRef.current?.focus();
-      dateInputRef.current?.click();
     }
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation(); // Don't open the picker
+    onChange({ target: { name, value: "" } });
   };
 
   return (
     <div className="relative">
+      {/* Hidden native date input — sr-only so it never blocks clicks */}
       <input
         ref={dateInputRef}
         type="date"
@@ -79,21 +116,37 @@ const DateInput = ({ name, value, onChange, className, min, placeholder = "Selec
         value={value}
         onChange={onChange}
         min={min}
-        className="absolute inset-0 opacity-0 cursor-pointer z-10"
-        style={{ pointerEvents: 'auto' }}
+        max={max}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
       />
+      {/* Visible button — sole click target */}
       <button
         type="button"
         onClick={handleClick}
-        className={`${className} text-left flex items-center justify-between gap-2 w-full relative z-0`}
-        tabIndex={-1}
+        className={`${className} text-left flex items-center justify-between gap-2 w-full cursor-pointer`}
       >
         <span className={value ? "text-base-content" : "text-base-content/40"}>
           {value ? formatDateLong(value) : placeholder}
         </span>
-        <svg className="w-4 h-4 text-base-content/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
+        <span className="flex items-center gap-1 flex-shrink-0">
+          {value && (
+            <span
+              role="button"
+              onClick={handleClear}
+              className="w-5 h-5 rounded-full flex items-center justify-center hover:bg-error/20 text-base-content/40 hover:text-error transition-colors"
+              title="Clear date"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </span>
+          )}
+          <svg className="w-4 h-4 text-base-content/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </span>
       </button>
     </div>
   );
@@ -219,22 +272,37 @@ export default function SetTimelineModal({
         ? new Date(lguData.timeline.regionalOfficeSubmissionDeadline).toISOString().split('T')[0]
         : "";
       
-      // Auto-calculate RO Review deadline (45 days after RO Submission)
+      // Use saved values from DB if they exist; only auto-calculate for brand-new records
       let roReview = "";
       let blgfCOReview = "";
       let sofReview = "";
       
-      if (roSubmission) {
+      // Check if these fields exist in saved data (even if null/undefined means cleared)
+      const hasReviewData = 'roReviewDeadline' in (lguData.timeline || {}) 
+        || 'blgfCentralOfficeReviewDeadline' in (lguData.timeline || {})
+        || 'secretaryOfFinanceReviewDeadline' in (lguData.timeline || {});
+      
+      if (hasReviewData) {
+        // Use whatever is saved (including empty string for cleared dates)
+        roReview = lguData.timeline.roReviewDeadline
+          ? new Date(lguData.timeline.roReviewDeadline).toISOString().split('T')[0]
+          : "";
+        blgfCOReview = lguData.timeline.blgfCentralOfficeReviewDeadline
+          ? new Date(lguData.timeline.blgfCentralOfficeReviewDeadline).toISOString().split('T')[0]
+          : "";
+        sofReview = lguData.timeline.secretaryOfFinanceReviewDeadline
+          ? new Date(lguData.timeline.secretaryOfFinanceReviewDeadline).toISOString().split('T')[0]
+          : "";
+      } else if (roSubmission) {
+        // No saved review data at all — auto-calculate defaults for a new record
         const roDate = new Date(roSubmission);
         roDate.setDate(roDate.getDate() + 45);
         roReview = roDate.toISOString().split('T')[0];
         
-        // Auto-calculate BLGF CO Review (RO Review + 30 days)
         const coDate = new Date(roDate);
         coDate.setDate(coDate.getDate() + 30);
         blgfCOReview = coDate.toISOString().split('T')[0];
         
-        // Auto-calculate SOF Review (BLGF CO + 30 days)
         const sofDate = new Date(coDate);
         sofDate.setDate(sofDate.getDate() + 30);
         sofReview = sofDate.toISOString().split('T')[0];
@@ -339,46 +407,9 @@ export default function SetTimelineModal({
     }
   }, [lguData, defaultActivities, defaultProposedPublicationActivities, defaultReviewPublicationActivities]);
 
-  // Auto-calculate all review deadlines when RO Submission date changes
-  useEffect(() => {
-    if (formData.regionalOfficeSubmissionDeadline) {
-      const roDate = new Date(formData.regionalOfficeSubmissionDeadline + 'T00:00:00');
-      roDate.setDate(roDate.getDate() + 45); // Add 45 days per RPVARA IRR Section 29
-      const newRoReview = roDate.toISOString().split('T')[0];
-      
-      // Calculate BLGF CO Review (RO Review + 30 days)
-      const coDate = new Date(roDate);
-      coDate.setDate(coDate.getDate() + 30);
-      const newCOReview = coDate.toISOString().split('T')[0];
-      
-      // Calculate SOF Review (BLGF CO + 30 days)
-      const sofDate = new Date(coDate);
-      sofDate.setDate(sofDate.getDate() + 30);
-      const newSOFReview = sofDate.toISOString().split('T')[0];
-      
-      // Only update if different to prevent infinite loop
-      if (newRoReview !== formData.roReviewDeadline || 
-          newCOReview !== formData.blgfCentralOfficeReviewDeadline ||
-          newSOFReview !== formData.secretaryOfFinanceReviewDeadline) {
-        setFormData(prev => ({
-          ...prev,
-          roReviewDeadline: newRoReview,
-          blgfCentralOfficeReviewDeadline: newCOReview,
-          secretaryOfFinanceReviewDeadline: newSOFReview
-        }));
-      }
-    } else {
-      // Clear all review deadlines if RO Submission is cleared
-      if (formData.roReviewDeadline || formData.blgfCentralOfficeReviewDeadline || formData.secretaryOfFinanceReviewDeadline) {
-        setFormData(prev => ({
-          ...prev,
-          roReviewDeadline: "",
-          blgfCentralOfficeReviewDeadline: "",
-          secretaryOfFinanceReviewDeadline: ""
-        }));
-      }
-    }
-  }, [formData.regionalOfficeSubmissionDeadline]);
+  // Note: Review deadlines (RO Review, CO Review, SoF) are no longer auto-calculated.
+  // Users can manually set/clear them. The "Recommended Date" hint below each field
+  // shows them what the calculated value would be.
 
   // Note: Cascading auto-calculation removed - now handled by Auto-Calculate button with 4 separate fields
 
@@ -707,8 +738,15 @@ export default function SetTimelineModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
-      <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-slideUp">
+    <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-fadeIn"
+        onClick={onClose}
+      ></div>
+
+      {/* Drawer Panel */}
+      <div className="relative bg-base-100 shadow-2xl w-full max-w-5xl h-full flex flex-col animate-[slideLeft_0.3s_ease-out]">
         {/* Header - Sticky at top */}
         <div className="flex-shrink-0 bg-gradient-to-r from-primary to-secondary p-4 rounded-t-2xl">
           <div className="flex items-center justify-between mb-2">
@@ -738,14 +776,14 @@ export default function SetTimelineModal({
               </div>
               
               <div>
-                <div className="text-[9px] font-semibold text-primary uppercase tracking-wider mb-0.5">
+                <div className="text-[10px] font-bold text-primary/80 uppercase tracking-widest mb-0.5">
                   SMV Monitoring Details
                 </div>
-                <h2 className="text-xl font-bold text-secondary tracking-tight leading-tight">
+                <h2 className="text-2xl font-black text-base-content tracking-tight leading-none mb-1">
                   {lguData?.lguName}
                 </h2>
-                <p className="text-[11px] text-primary-100/70 mt-0.5 flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <p className="text-[12px] text-base-content/60 flex items-center gap-1.5 font-medium">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -775,142 +813,92 @@ export default function SetTimelineModal({
               </button>
             </div>
           </div>
+        </div>
 
-          {/* Tab Navigation - 4 tabs with locking logic */}
-          <div className="flex gap-1.5">
-            {/* Tab 1: Timeline - Always accessible */}
-            <button
-              type="button"
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${activeTab === "timeline"
-                ? "bg-base-100 text-base-content shadow-lg"
-                : "text-primary/70 hover:text-primary hover:bg-white/10"
-                }`}
-              onClick={() => setActiveTab("timeline")}
-            >
-              <div className="flex items-center justify-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Timeline
-              </div>
-            </button>
+          {/* Main Content Area - Split Layout (Sidebar + Form) */}
+          <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+            
+            {/* Sidebar Navigation */}
+            <div className="w-full md:w-64 bg-base-200/30 border-b md:border-b-0 md:border-r border-base-300 flex flex-row md:flex-col flex-shrink-0 p-2 md:p-4 gap-2 md:gap-0 md:space-y-2 overflow-x-auto md:overflow-y-auto">
+              {/* Tab 1: Timeline */}
+              <button
+                type="button"
+                className={`min-w-fit flex-1 md:flex-none md:w-full text-left p-2.5 md:p-3 rounded-lg transition-all duration-200 flex items-center gap-3 ${activeTab === "timeline"
+                  ? "bg-primary/10 text-primary font-bold shadow-sm"
+                  : "text-base-content/70 hover:bg-base-200"
+                  }`}
+                onClick={() => setActiveTab("timeline")}
+              >
+                <span className="text-xl md:text-2xl drop-shadow-sm">🗓️</span>
+                <span className="font-medium whitespace-nowrap text-[13px] md:text-sm tracking-wide">Timeline Dates</span>
+              </button>
 
             {/* Tab 2: Development - Locked until BLGF Notice Date is set */}
-            <div className="flex-1 relative group">
+            <div className="relative group">
               <button
                 type="button"
                 disabled={!formData.blgfNoticeDate}
-                className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
-                  ? "opacity-50 cursor-not-allowed bg-base-300 text-base-content/40"
+                className={`min-w-fit flex-1 md:flex-none md:w-full text-left p-2.5 md:p-3 rounded-lg transition-all duration-200 flex items-center gap-3 ${!formData.blgfNoticeDate
+                  ? "opacity-40 cursor-not-allowed grayscale"
                   : activeTab === "development"
-                    ? "bg-base-100 text-base-content shadow-lg"
-                    : "text-primary/70 hover:text-primary hover:bg-white/10"
+                    ? "bg-primary/10 text-primary font-bold shadow-sm"
+                    : "text-base-content/70 hover:bg-base-200"
                   }`}
                 onClick={() => formData.blgfNoticeDate && setActiveTab("development")}
               >
-                <div className="flex items-center justify-center gap-1.5">
-                  {!formData.blgfNoticeDate && (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  )}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
-                  Development
-                </div>
+                <span className="text-xl md:text-2xl drop-shadow-sm">🏗️</span>
+                <span className="font-medium whitespace-nowrap text-[13px] md:text-sm tracking-wide">Development</span>
               </button>
               {!formData.blgfNoticeDate && (
-                <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-base-100 text-base-content text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 px-3 py-2 bg-base-100 text-base-content text-xs font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 border border-base-200">
                   <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Please set BLGF Notice Date in Timeline tab first
+                    <span className="text-sm">🔒</span>
+                    Set BLGF Notice Date First
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Tab 3: Proposed Publication - Locked until BLGF Notice Date is set */}
-            <div className="flex-1 relative group">
+            {/* Tab 3: Proposed Publication */}
+            <div className="relative group">
               <button
                 type="button"
                 disabled={!formData.blgfNoticeDate}
-                className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
-                  ? "opacity-50 cursor-not-allowed bg-base-300 text-base-content/40"
+                className={`min-w-fit flex-1 md:flex-none md:w-full text-left p-2.5 md:p-3 rounded-lg transition-all duration-200 flex items-center gap-3 ${!formData.blgfNoticeDate
+                  ? "opacity-40 cursor-not-allowed grayscale"
                   : activeTab === "proposed-publication"
-                    ? "bg-base-100 text-base-content shadow-lg"
-                    : "text-primary/70 hover:text-primary hover:bg-white/10"
+                    ? "bg-primary/10 text-primary font-bold shadow-sm"
+                    : "text-base-content/70 hover:bg-base-200"
                   }`}
                 onClick={() => formData.blgfNoticeDate && setActiveTab("proposed-publication")}
               >
-                <div className="flex items-center justify-center gap-1.5">
-                  {!formData.blgfNoticeDate && (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  )}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Proposed Pub.
-                </div>
+                <span className="text-xl md:text-2xl drop-shadow-sm">📰</span>
+                <span className="font-medium whitespace-nowrap text-[13px] md:text-sm tracking-wide">Publication</span>
               </button>
-              {!formData.blgfNoticeDate && (
-                <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-base-100 text-base-content text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Please set BLGF Notice Date in Timeline tab first
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Tab 4: Review & Publication - Locked until BLGF Notice Date is set */}
-            <div className="flex-1 relative group">
+            {/* Tab 4: Review & Publication */}
+            <div className="relative group">
               <button
                 type="button"
                 disabled={!formData.blgfNoticeDate}
-                className={`w-full py-2 px-3 rounded-lg text-sm font-medium transition-all ${!formData.blgfNoticeDate
-                  ? "opacity-50 cursor-not-allowed bg-base-300 text-base-content/40"
+                className={`min-w-fit flex-1 md:flex-none md:w-full text-left p-2.5 md:p-3 rounded-lg transition-all duration-200 flex items-center gap-3 ${!formData.blgfNoticeDate
+                  ? "opacity-40 cursor-not-allowed grayscale"
                   : activeTab === "review-publication"
-                    ? "bg-base-100 text-base-content shadow-lg"
-                    : "text-primary/70 hover:text-primary hover:bg-white/10"
+                    ? "bg-primary/10 text-primary font-bold shadow-sm"
+                    : "text-base-content/70 hover:bg-base-200"
                   }`}
                 onClick={() => formData.blgfNoticeDate && setActiveTab("review-publication")}
               >
-                <div className="flex items-center justify-center gap-1.5">
-                  {!formData.blgfNoticeDate && (
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  )}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Review & Pub.
-                </div>
+                <span className="text-xl md:text-2xl drop-shadow-sm">✅</span>
+                <span className="font-medium whitespace-nowrap text-[13px] md:text-sm tracking-wide">Review Phase</span>
               </button>
-              {!formData.blgfNoticeDate && (
-                <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-base-100 text-base-content text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Please set BLGF Notice Date in Timeline tab first
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
-        </div>
+            </div>
 
-        {/* Scrollable Content Area */}
-        <div className={`flex-1 overflow-y-auto ${activeTab === "review-publication" ? "" : "p-5"}`}>
-          {/* Timeline Tab Content */}
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto bg-base-100 p-6 md:p-10 relative">
+              {/* Timeline Tab Content */}
           {activeTab === "timeline" && (
             <div className="space-y-3">
               {/* Info Banner */}
@@ -945,327 +933,287 @@ export default function SetTimelineModal({
                 </label>
               </div>
 
-              {/* Other Timeline Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Publication */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold">
-                      � 1st Publication Deadline
-                    </span>
-                  </label>
+              {/* Other Timeline Fields - Vertical Clean Flow */}
+              <div className="flex flex-col gap-4 mt-2">
+                {/* 1st Publication */}
+                <div className="form-control bg-base-100 p-4 rounded-xl border border-base-200 hover:border-base-300 transition-colors shadow-sm relative">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
+                    <label className="font-bold flex items-center gap-2 text-sm md:text-base">
+                      <span className="text-lg">📰</span> 1st Publication Deadline
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info" data-tip="First publication of the proposed Schedule of Market Values (SMV)">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                    </label>
+                  </div>
                   <DateInput
                     name="firstPublicationDate"
                     value={formData.firstPublicationDate}
                     onChange={handleChange}
-                    className="input input-bordered input-sm"
+                    className="input input-bordered input-sm md:input-md w-full md:max-w-md"
                     placeholder="Select 1st publication date..."
                   />
-                  <label className="label">
-                    <span className="label-text-alt text-xs text-base-content/50">
-                      First publication of proposed SMV
-                    </span>
-                  </label>
                 </div>
 
-                {/* 2nd Publication - automatically named */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold">
-                      📰 2nd Publication Date
-                    </span>
-                  </label>
+                {/* 2nd Publication */}
+                <div className="form-control bg-base-100 p-4 rounded-xl border border-base-200 hover:border-base-300 transition-colors shadow-sm relative">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
+                    <label className="font-bold flex items-center gap-2 text-sm md:text-base">
+                      <span className="text-lg">📰</span> 2nd Publication Date
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info" data-tip="Second publication can occur on the exact same day as the 1st publication, or later.">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                    </label>
+                  </div>
                   <DateInput
                     name="secondPublicationDate"
                     value={formData.secondPublicationDate}
                     onChange={handleChange}
-                    className="input input-bordered input-sm"
+                    className="input input-bordered input-sm md:input-md w-full md:max-w-md"
                     min={formData.firstPublicationDate}
                     placeholder="Select 2nd publication date..."
                   />
-                  <label className="label">
-                    <span className="label-text-alt text-xs text-base-content/50">
-                      {formData.firstPublicationDate ? (
-                        <>
-                          Second publication (can be same day as 1st)
-                          <span className="block text-info font-medium mt-1">
-                            Same day or after: {formatDateLong(formData.firstPublicationDate)}
-                          </span>
-                        </>
-                      ) : (
-                        "Second publication (can be same day as 1st)"
-                      )}
+                  {formData.firstPublicationDate && (
+                    <span className="text-xs text-info font-medium mt-2 ml-1">
+                      Same day or after: {formatDateLong(formData.firstPublicationDate)}
                     </span>
-                  </label>
+                  )}
                 </div>
 
                 {/* 1st Public Consultation */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold">
-                      👥 1st Public Consultation and Hearing
-                    </span>
-                  </label>
+                <div className={`form-control bg-base-100 p-4 rounded-xl border ${errors.firstPublicConsultationDate ? 'border-error shadow-error/10' : 'border-base-200 hover:border-base-300'} transition-colors shadow-sm relative`}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
+                    <label className="font-bold flex items-center gap-2 text-sm md:text-base">
+                      <span className="text-lg">👥</span> 1st Public Consultation
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info z-50 text-left" data-tip="Must occur at least 2 weeks after the 2nd Publication.">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                    </label>
+                  </div>
                   <DateInput
                     name="firstPublicConsultationDate"
                     value={formData.firstPublicConsultationDate}
                     onChange={handleChange}
-                    className={`input input-bordered input-sm ${errors.firstPublicConsultationDate ? 'input-error' : ''}`}
+                    className={`input input-bordered input-sm md:input-md w-full md:max-w-md ${errors.firstPublicConsultationDate ? 'input-error' : ''}`}
                     min={(() => {
-                      // Calculate minimum: whichever is LATER between (1st pub + 14 days) OR (2nd pub)
-                      const dates = [];
-                      if (formData.firstPublicationDate) {
-                        const firstPubPlus14 = new Date(new Date(formData.firstPublicationDate).getTime() + 14 * 24 * 60 * 60 * 1000);
-                        dates.push(firstPubPlus14);
-                      }
                       if (formData.secondPublicationDate) {
-                        dates.push(new Date(formData.secondPublicationDate));
+                        return new Date(new Date(formData.secondPublicationDate).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
                       }
-                      return dates.length > 0 ? new Date(Math.max(...dates)).toISOString().split('T')[0] : undefined;
+                      return undefined;
                     })()}
                     placeholder="Select 1st consultation date..."
                   />
-                  <label className="label">
-                    {errors.firstPublicConsultationDate ? (
-                      <span className="label-text-alt text-xs text-error">
-                        ⚠️ {errors.firstPublicConsultationDate}
+                  {errors.firstPublicConsultationDate ? (
+                    <span className="label-text-alt text-xs text-error mt-2 font-medium">⚠️ {errors.firstPublicConsultationDate}</span>
+                  ) : (
+                    formData.secondPublicationDate ? (
+                      <span className="text-xs text-warning font-medium mt-2 ml-1">
+                        Minimum Date: {formatDateLong((() => {
+                          const secondPubDate = new Date(formData.secondPublicationDate);
+                          return new Date(secondPubDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                        })())}
                       </span>
                     ) : (
-                      <span className="label-text-alt text-xs text-base-content/50">
-                        {formData.firstPublicationDate && formData.secondPublicationDate ? (
-                          <>
-                            At least 2 weeks after 1st Publication AND not before 2nd Publication
-                            <span className="block text-warning font-medium mt-1">
-                              ⚠️ Minimum date: {formatDateLong((() => {
-                                const firstPubPlus14 = new Date(new Date(formData.firstPublicationDate).getTime() + 14 * 24 * 60 * 60 * 1000);
-                                const secondPubDate = new Date(formData.secondPublicationDate);
-                                return new Date(Math.max(firstPubPlus14, secondPubDate)).toISOString().split('T')[0];
-                              })())}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-warning">
-                            ⚠️ Please set both Publication Dates first
-                          </span>
-                        )}
+                      <span className="text-xs text-warning mt-2 ml-1 opacity-70">
+                        ⚠️ Please set the 2nd Publication Date first
                       </span>
-                    )}
-                  </label>
+                    )
+                  )}
                 </div>
 
                 {/* 2nd Public Consultation */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold">
-                      � 2nd Public Consultation and Hearing
-                    </span>
-                  </label>
+                <div className={`form-control bg-base-100 p-4 rounded-xl border ${errors.secondPublicConsultationDate ? 'border-error shadow-error/10' : 'border-base-200 hover:border-base-300'} transition-colors shadow-sm relative`}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
+                    <label className="font-bold flex items-center gap-2 text-sm md:text-base">
+                      <span className="text-lg">👥</span> 2nd Public Consultation
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info z-50 text-left" data-tip="Can be conducted on the same day as the 1st Consultation, or afterwards.">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                    </label>
+                  </div>
                   <DateInput
                     name="secondPublicConsultationDate"
                     value={formData.secondPublicConsultationDate}
                     onChange={handleChange}
-                    className={`input input-bordered input-sm ${errors.secondPublicConsultationDate ? 'input-error' : ''}`}
+                    className={`input input-bordered input-sm md:input-md w-full md:max-w-md ${errors.secondPublicConsultationDate ? 'input-error' : ''}`}
                     min={formData.firstPublicConsultationDate}
                     placeholder="Select 2nd consultation date..."
                   />
-                  <label className="label">
-                    {errors.secondPublicConsultationDate ? (
-                      <span className="label-text-alt text-xs text-error">
-                        ⚠️ {errors.secondPublicConsultationDate}
-                      </span>
-                    ) : (
-                      <span className="label-text-alt text-xs text-base-content/50">
-                        {formData.firstPublicConsultationDate ? (
-                          <>
-                            Same day or after 1st Consultation (can be done together)
-                            <span className="block text-info font-medium mt-1">
-                              Same day or after: {formatDateLong(formData.firstPublicConsultationDate)}
-                            </span>
-                          </>
-                        ) : (
-                          "Same day or after 1st Consultation (can be done together)"
-                        )}
-                      </span>
-                    )}
-                  </label>
+                  {errors.secondPublicConsultationDate ? (
+                    <span className="label-text-alt text-xs text-error mt-2 font-medium">⚠️ {errors.secondPublicConsultationDate}</span>
+                  ) : formData.firstPublicConsultationDate && (
+                    <span className="text-xs text-info font-medium mt-2 ml-1">
+                      Same day or after: {formatDateLong(formData.firstPublicConsultationDate)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Submission to BLGF Regional Office */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold">
-                      � Submission of Proposed SMV to BLGF Regional Office
-                    </span>
-                  </label>
+                <div className={`form-control bg-base-100 p-4 rounded-xl border ${errors.regionalOfficeSubmissionDeadline ? 'border-error shadow-error/10' : 'border-base-200 hover:border-base-300'} transition-colors shadow-sm relative`}>
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
+                    <label className="font-bold flex items-center gap-2 text-sm md:text-base">
+                      <span className="text-lg">📤</span> RO Submission
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info z-50 text-left" data-tip="Submission of Proposed SMV to BLGF Regional Office. Must occur within 60 days of the 1st Public Consultation (RPVARA Section 27).">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                    </label>
+                  </div>
                   <DateInput
                     name="regionalOfficeSubmissionDeadline"
                     value={formData.regionalOfficeSubmissionDeadline}
                     onChange={handleChange}
-                    className={`input input-bordered input-sm ${errors.regionalOfficeSubmissionDeadline ? 'input-error' : ''}`}
+                    className={`input input-bordered input-sm md:input-md w-full md:max-w-md ${errors.regionalOfficeSubmissionDeadline ? 'input-error' : ''}`}
                     min={formData.firstPublicConsultationDate}
-                    placeholder="Select RO submission date..."
+                    placeholder="Select submission date..."
                   />
-                  <label className="label">
-                    {errors.regionalOfficeSubmissionDeadline ? (
-                      <span className="label-text-alt text-xs text-error">
-                        ⚠️ {errors.regionalOfficeSubmissionDeadline}
-                      </span>
-                    ) : (
-                      <span className="label-text-alt text-xs text-base-content/50">
-                        {formData.firstPublicConsultationDate ? (
-                          <>
-                            Within 60 days from 1st Public Consultation (RPVARA Section 27)
-                            <span className="block text-info font-medium mt-1">
-                              Valid submission range: {formatDateLong(formData.firstPublicConsultationDate)} to {formatDateLong(new Date(new Date(formData.firstPublicConsultationDate).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])}
-                            </span>
-                          </>
-                        ) : (
-                          "Within 60 days from 1st Public Consultation (RPVARA Section 27)"
-                        )}
-                      </span>
-                    )}
-                  </label>
+                  {errors.regionalOfficeSubmissionDeadline ? (
+                    <span className="label-text-alt text-xs text-error mt-2 font-medium">⚠️ {errors.regionalOfficeSubmissionDeadline}</span>
+                  ) : formData.firstPublicConsultationDate && (
+                    <span className="text-xs text-info font-medium mt-2 ml-1">
+                      Valid Range: {formatDateLong(formData.firstPublicConsultationDate)} to {formatDateLong(new Date(new Date(formData.firstPublicConsultationDate).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])}
+                    </span>
+                  )}
                 </div>
 
-                {/* BLGF RO Review and Endorsement - Editable */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold flex items-center gap-2">
-                      📋 BLGF Regional Office Review and Endorsement
-                      {formData.roReviewDeadline && calculateCountdown(formData.roReviewDeadline) && (
-                        <span className={`badge badge-sm ${calculateCountdown(formData.roReviewDeadline).color}`}>
-                          {calculateCountdown(formData.roReviewDeadline).icon} {calculateCountdown(formData.roReviewDeadline).text}
-                        </span>
-                      )}
-                    </span>
-                  </label>
+                {/* BLGF RO Review and Endorsement */}
+                <div className="form-control bg-base-100 p-4 rounded-xl border border-base-200 hover:border-base-300 transition-colors shadow-sm relative">
+                  <div className="flex justify-between items-start mb-2 pr-2">
+                    <label className="font-bold flex items-center gap-2 text-sm md:text-base">
+                      <span className="text-lg">📋</span> RO Review & Endorsement
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info z-50 text-left" data-tip="BLGF Regional Office Review and Endorsement. Expected within 45 days of RO Submission (RPVARA IRR Section 29).">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                    </label>
+                    {(() => {
+                      if (formData.roReviewDeadline) {
+                        const cd = calculateCountdown(formData.roReviewDeadline);
+                        return cd && <span className={`badge badge-sm flex-shrink-0 whitespace-nowrap ml-4 ${cd.color}`}>{cd.icon} {cd.text}</span>;
+                      } else if (formData.regionalOfficeSubmissionDeadline) {
+                        const recDate = new Date(formData.regionalOfficeSubmissionDeadline);
+                        recDate.setDate(recDate.getDate() + 45);
+                        const warn = calculateDeadlineWarning(recDate.toISOString().split('T')[0]);
+                        return warn && <span className={`badge badge-sm flex-shrink-0 whitespace-nowrap ml-4 ${warn.color}`}>{warn.icon} {warn.text}</span>;
+                      }
+                      return null;
+                    })()}
+                  </div>
                   <DateInput
                     name="roReviewDeadline"
                     value={formData.roReviewDeadline}
                     onChange={handleChange}
-                    className="input input-bordered input-sm"
-                    placeholder="Select RO review deadline..."
+                    className="input input-bordered input-sm md:input-md w-full md:max-w-md"
+                    placeholder="Select review deadline..."
                     max={formData.regionalOfficeSubmissionDeadline ? (() => {
-                      const maxDate = new Date(formData.regionalOfficeSubmissionDeadline + 'T00:00:00');
+                      const maxDate = new Date(formData.regionalOfficeSubmissionDeadline);
                       maxDate.setDate(maxDate.getDate() + 45);
                       return maxDate.toISOString().split('T')[0];
                     })() : undefined}
                     min={formData.regionalOfficeSubmissionDeadline}
                   />
-                  <label className="label">
-                    <span className="label-text-alt text-xs text-base-content/50">
-                      Auto-calculated: RO Submission + 45 days (RPVARA IRR Section 29)
-                      {formData.regionalOfficeSubmissionDeadline && (
-                        <span className="block text-info font-medium mt-1">
-                          Review Deadline: {formatDateLong((() => {
-                            const d = new Date(formData.regionalOfficeSubmissionDeadline + 'T00:00:00');
-                            d.setDate(d.getDate() + 45);
-                            return d.toISOString().split('T')[0];
-                          })())}
-                        </span>
-                      )}
+                  {formData.regionalOfficeSubmissionDeadline && (
+                    <span className="text-xs text-base-content/50 font-medium mt-2 ml-1">
+                      Recommended Date: {formatDateLong((() => {
+                        const d = new Date(formData.regionalOfficeSubmissionDeadline);
+                        d.setDate(d.getDate() + 45);
+                        return d.toISOString().split('T')[0];
+                      })())}
                     </span>
-                  </label>
+                  )}
                 </div>
 
-                {/* BLGF Central Office Review - Editable */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold flex items-center gap-2">
-                      📋 BLGF Central Office Review and Endorsement
-                      {formData.blgfCentralOfficeReviewDeadline && calculateCountdown(formData.blgfCentralOfficeReviewDeadline) && (
-                        <span className={`badge badge-sm ${calculateCountdown(formData.blgfCentralOfficeReviewDeadline).color}`}>
-                          {calculateCountdown(formData.blgfCentralOfficeReviewDeadline).icon} {calculateCountdown(formData.blgfCentralOfficeReviewDeadline).text}
-                        </span>
-                      )}
-                    </span>
-                  </label>
+                {/* BLGF Central Office Review */}
+                <div className="form-control bg-base-100 p-4 rounded-xl border border-base-200 hover:border-base-300 transition-colors shadow-sm relative">
+                  <div className="flex justify-between items-start mb-2 pr-2">
+                    <label className="font-bold flex items-center gap-2 text-sm md:text-base">
+                      <span className="text-lg">🏢</span> CO Review & Endorsement
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info z-50 text-left" data-tip="BLGF Central Office Review and Endorsement. Expected within 30 days of RO Endorsement (RPVARA IRR).">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                    </label>
+                    {(() => {
+                      if (formData.blgfCentralOfficeReviewDeadline) {
+                        const cd = calculateCountdown(formData.blgfCentralOfficeReviewDeadline);
+                        return cd && <span className={`badge badge-sm flex-shrink-0 whitespace-nowrap ml-4 ${cd.color}`}>{cd.icon} {cd.text}</span>;
+                      } else if (formData.roReviewDeadline) {
+                        const recDate = new Date(formData.roReviewDeadline);
+                        recDate.setDate(recDate.getDate() + 30);
+                        const warn = calculateDeadlineWarning(recDate.toISOString().split('T')[0]);
+                        return warn && <span className={`badge badge-sm flex-shrink-0 whitespace-nowrap ml-4 ${warn.color}`}>{warn.icon} {warn.text}</span>;
+                      }
+                      return null;
+                    })()}
+                  </div>
                   <DateInput
                     name="blgfCentralOfficeReviewDeadline"
                     value={formData.blgfCentralOfficeReviewDeadline}
                     onChange={handleChange}
-                    className="input input-bordered input-sm"
-                    placeholder="Select BLGF CO review deadline..."
+                    className="input input-bordered input-sm md:input-md w-full md:max-w-md"
+                    placeholder="Select CO review deadline..."
                     max={formData.roReviewDeadline ? (() => {
-                      const maxDate = new Date(formData.roReviewDeadline + 'T00:00:00');
+                      const maxDate = new Date(formData.roReviewDeadline);
                       maxDate.setDate(maxDate.getDate() + 30);
                       return maxDate.toISOString().split('T')[0];
                     })() : undefined}
                     min={formData.roReviewDeadline}
                   />
-                  <label className="label">
-                    <span className="label-text-alt text-xs text-base-content/50">
-                      Auto-calculated: RO Review + 30 days (RPVARA IRR)
-                      {formData.roReviewDeadline && (
-                        <span className="block text-info font-medium mt-1">
-                          Review Deadline: {formatDateLong((() => {
-                            const d = new Date(formData.roReviewDeadline + 'T00:00:00');
-                            d.setDate(d.getDate() + 30);
-                            return d.toISOString().split('T')[0];
-                          })())}
-                        </span>
-                      )}
+                  {formData.roReviewDeadline && (
+                    <span className="text-xs text-base-content/50 font-medium mt-2 ml-1">
+                      Recommended Date: {formatDateLong((() => {
+                        const d = new Date(formData.roReviewDeadline);
+                        d.setDate(d.getDate() + 30);
+                        return d.toISOString().split('T')[0];
+                      })())}
                     </span>
-                  </label>
+                  )}
                 </div>
 
-                {/* Secretary of Finance Review - Editable */}
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold flex items-center gap-2">
-                      📋 Secretary of Finance Review and Approval
-                      {formData.secretaryOfFinanceReviewDeadline && calculateCountdown(formData.secretaryOfFinanceReviewDeadline) && (
-                        <span className={`badge badge-sm ${calculateCountdown(formData.secretaryOfFinanceReviewDeadline).color}`}>
-                          {calculateCountdown(formData.secretaryOfFinanceReviewDeadline).icon} {calculateCountdown(formData.secretaryOfFinanceReviewDeadline).text}
-                        </span>
-                      )}
-                    </span>
-                  </label>
+                {/* Secretary of Finance Review */}
+                <div className="form-control bg-base-100 p-4 rounded-xl border border-base-200 hover:border-base-300 transition-colors shadow-sm relative">
+                  <div className="flex justify-between items-start mb-2 pr-2">
+                    <label className="font-bold flex items-center gap-2 text-sm md:text-base">
+                      <span className="text-lg">⚖️</span> SoF Approval
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info z-50 text-left" data-tip="Secretary of Finance Review and Approval. Expected within 30 days of CO Endorsement (RPVARA IRR).">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                    </label>
+                    {(() => {
+                      if (formData.secretaryOfFinanceReviewDeadline) {
+                        const cd = calculateCountdown(formData.secretaryOfFinanceReviewDeadline);
+                        return cd && <span className={`badge badge-sm flex-shrink-0 whitespace-nowrap ml-4 ${cd.color}`}>{cd.icon} {cd.text}</span>;
+                      } else if (formData.blgfCentralOfficeReviewDeadline) {
+                        const recDate = new Date(formData.blgfCentralOfficeReviewDeadline);
+                        recDate.setDate(recDate.getDate() + 30);
+                        const warn = calculateDeadlineWarning(recDate.toISOString().split('T')[0]);
+                        return warn && <span className={`badge badge-sm flex-shrink-0 whitespace-nowrap ml-4 ${warn.color}`}>{warn.icon} {warn.text}</span>;
+                      }
+                      return null;
+                    })()}
+                  </div>
                   <DateInput
                     name="secretaryOfFinanceReviewDeadline"
                     value={formData.secretaryOfFinanceReviewDeadline}
                     onChange={handleChange}
-                    className="input input-bordered input-sm"
-                    placeholder="Select SOF review deadline..."
+                    className="input input-bordered input-sm md:input-md w-full md:max-w-md"
+                    placeholder="Select SoF approval deadline..."
                     max={formData.blgfCentralOfficeReviewDeadline ? (() => {
-                      const maxDate = new Date(formData.blgfCentralOfficeReviewDeadline + 'T00:00:00');
+                      const maxDate = new Date(formData.blgfCentralOfficeReviewDeadline);
                       maxDate.setDate(maxDate.getDate() + 30);
                       return maxDate.toISOString().split('T')[0];
                     })() : undefined}
                     min={formData.blgfCentralOfficeReviewDeadline}
                   />
-                  <label className="label">
-                    <span className="label-text-alt text-xs text-base-content/50">
-                      Auto-calculated: BLGF CO Review + 30 days (RPVARA IRR)
-                      {formData.secretaryOfFinanceReviewDeadline && (
-                        <span className="block text-info font-medium mt-1">
-                          Review Deadline: {formatDateLong(formData.secretaryOfFinanceReviewDeadline)}
-                        </span>
-                      )}
+                  {formData.blgfCentralOfficeReviewDeadline && (
+                    <span className="text-xs text-base-content/50 font-medium mt-2 ml-1">
+                      Recommended Date: {formatDateLong((() => {
+                        const d = new Date(formData.blgfCentralOfficeReviewDeadline);
+                        d.setDate(d.getDate() + 30);
+                        return d.toISOString().split('T')[0];
+                      })())}
                     </span>
-                  </label>
+                  )}
                 </div>
               </div>
 
-              {/* Auto-Calculate Button at Bottom */}
-              {/* <div className="mt-6 pt-4 border-t border-base-300">
-                <button
-                  type="button"
-                  onClick={handleAutoCalculate}
-                  className="btn btn-secondary btn-sm w-full"
-                  disabled={!formData.blgfNoticeDate}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  Auto-Calculate All Deadlines from BLGF Notice
-                </button>
-                {!formData.blgfNoticeDate && (
-                  <p className="text-xs text-warning text-center mt-2">
-                    ⚠️ Set BLGF Notice Date first to use auto-calculation
-                  </p>
-                )}
-              </div> */}
+
             </div>
           )}
 
@@ -1316,54 +1264,51 @@ export default function SetTimelineModal({
                     {/* Activity Table - EDITABLE */}
                     <div className="collapse-content p-0">
                       <div className="overflow-x-auto">
-                      <table className="table table-xs w-full">
-                        <thead className="bg-base-200">
-                          <tr>
-                            <th className="w-12 text-base-content">#</th>
-                            <th className="text-base-content">Activity</th>
-                            <th className="text-center w-40 text-base-content">Status</th>
-                            <th className="text-center w-48 text-base-content">Date Completed</th>
-                            <th className="w-64 text-base-content">Remarks</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stageActivities.map((activity, idx) => (
-                            <tr key={activity._id || idx} className="hover:bg-base-200/50">
-                              <td className="font-mono text-xs text-base-content">{String.fromCharCode(97 + idx)}.</td>
-                              <td className="text-xs text-base-content">{activity.name}</td>
-                              <td className="text-center">
-                                <select
-                                  value={activity.status}
-                                  onChange={(e) => handleActivityChange(stageName, idx, 'status', e.target.value)}
-                                  className="select select-xs select-bordered w-full text-base-content"
-                                >
-                                  <option value="Not Started">Not Started</option>
-                                  <option value="In Progress">In Progress</option>
-                                  <option value="Completed">Completed</option>
-                                </select>
-                              </td>
-                              <td className="text-center text-xs">
+                      <div className="flex flex-col bg-base-100 divide-y divide-base-200 rounded-b-xl">
+                        {stageActivities.map((activity, idx) => (
+                          <div key={activity._id || idx} className="flex flex-col lg:flex-row lg:items-center py-2.5 px-4 hover:bg-base-200/30 transition-colors gap-3 group">
+                            {/* Left Side: Status & Name */}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <select
+                                value={activity.status}
+                                onChange={(e) => handleActivityChange(stageName, idx, 'status', e.target.value)}
+                                className={`select select-sm border focus:ring-2 focus:ring-offset-1 rounded-full px-4 h-8 min-h-0 text-[11px] font-bold transition-all shadow-sm ${
+                                  activity.status === 'Completed' ? 'bg-success/10 text-success border-success/30 hover:border-success focus:ring-success/30' :
+                                  activity.status === 'In Progress' ? 'bg-warning/10 text-warning-content border-warning/50 hover:border-warning focus:ring-warning/30' :
+                                  'bg-base-200 text-base-content/60 border-transparent hover:border-base-300 focus:ring-base-content/20'
+                                }`}
+                              >
+                                <option value="Not Started" className="font-medium">Pending</option>
+                                <option value="In Progress" className="font-medium text-warning">Working</option>
+                                <option value="Completed" className="font-medium text-success">Done</option>
+                              </select>
+                              <span className={`text-sm font-medium transition-colors line-clamp-2 ${activity.status === 'Completed' ? 'text-base-content/40 line-through decoration-base-content/20' : 'text-base-content'}`}>
+                                {activity.name}
+                              </span>
+                            </div>
+
+                            {/* Right Side: Inputs */}
+                            <div className="flex items-center gap-3 lg:justify-end lg:w-[400px] flex-shrink-0 ml-10 lg:ml-0 lg:opacity-50 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                              <div className="w-[110px] flex-shrink-0">
                                 <DateInput
                                   name={`activity-${stageName}-${idx}`}
                                   value={activity.dateCompleted || ''}
                                   onChange={(e) => handleActivityChange(stageName, idx, 'dateCompleted', e.target.value)}
-                                  className="input input-xs input-bordered w-full text-base-content text-xs"
-                                  placeholder="Select date..."
+                                  className="w-full text-[11px] bg-transparent border-b border-transparent hover:border-base-300 focus:border-primary hover:bg-base-200/50 px-1 py-1 transition-all text-base-content cursor-pointer"
+                                  placeholder="Set Date"
                                 />
-                              </td>
-                              <td className="text-xs">
-                                <input
-                                  type="text"
-                                  value={activity.remarks || ''}
-                                  onChange={(e) => handleActivityChange(stageName, idx, 'remarks', e.target.value)}
-                                  placeholder="Add remarks..."
-                                  className="input input-xs input-bordered w-full text-base-content"
-                                />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </div>
+                              <input
+                                type="text"
+                                value={activity.remarks || ''}
+                                onChange={(e) => handleActivityChange(stageName, idx, 'remarks', e.target.value)}
+                                placeholder="Add remarks..."
+                                className="flex-1 min-w-[140px] text-xs bg-transparent border-b border-base-200 hover:border-base-300 focus:border-primary focus:bg-base-200/30 hover:bg-base-200/50 focus:outline-none px-2 py-1 transition-all text-base-content"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                       </div>
                     </div>
                   </div>
@@ -1444,7 +1389,7 @@ export default function SetTimelineModal({
                               </svg>
                               {group.header.name.replace(':', '')}
                             </span>
-                            <span className="badge badge-sm badge-primary">
+                            <span className="badge badge-sm badge-primary flex-shrink-0 whitespace-nowrap">
                               {completedCount} / {totalCount}
                             </span>
                           </h4>
@@ -1453,69 +1398,68 @@ export default function SetTimelineModal({
                         {/* Activities Table */}
                         <div className="collapse-content p-0">
                           <div className="overflow-x-auto">
-                            <table className="table table-sm w-full">
-                              <thead className="bg-base-200">
-                                <tr>
-                                  <th className="text-base-content">Activity</th>
-                                  <th className="text-center w-48 text-base-content">Status</th>
-                                  <th className="text-center w-48 text-base-content">Date Completed</th>
-                                  <th className="w-64 text-base-content">Remarks</th>
-                                </tr>
-                              </thead>
-                              <tbody>
+                              <div className="flex flex-col bg-base-100 divide-y divide-base-200 rounded-b-xl">
                                 {group.activities.map((activity) => {
                                   // Note rows
                                   if (activity.isNote) {
                                     return (
-                                      <tr key={activity.originalIdx} className="bg-warning/10">
-                                        <td colSpan="4" className="text-sm italic text-base-content">{activity.name}</td>
-                                      </tr>
+                                      <div key={activity.originalIdx} className="py-2.5 px-4 bg-warning/10 text-sm italic text-base-content/70">
+                                        {activity.name}
+                                      </div>
                                     );
                                   }
                                   // Regular activity rows
                                   return (
-                                    <tr key={activity.originalIdx} className="hover:bg-base-200/50">
-                                      <td className="text-sm text-base-content">{activity.name}</td>
-                                      <td className="text-center">
+                                    <div key={activity.originalIdx} className="flex flex-col lg:flex-row lg:items-center py-2.5 px-4 hover:bg-base-200/30 transition-colors gap-3 group">
+                                      {/* Left Side: Status & Name */}
+                                      <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <select
                                           value={activity.status}
                                           onChange={(e) => handleProposedPublicationChange(activity.originalIdx, 'status', e.target.value)}
-                                          className="select select-sm select-bordered w-full text-base-content"
+                                          className={`select select-sm border focus:ring-2 focus:ring-offset-1 rounded-full px-2 w-[110px] flex-shrink-0 h-8 min-h-0 text-[11px] font-bold transition-all shadow-sm ${
+                                            activity.status === 'Completed' ? 'bg-success/10 text-success border-success/30 hover:border-success focus:ring-success/30' :
+                                            activity.status === 'In Progress' ? 'bg-warning/10 text-warning-content border-warning/50 hover:border-warning focus:ring-warning/30' :
+                                            'bg-base-200 text-base-content/60 border-transparent hover:border-base-300 focus:ring-base-content/20'
+                                          }`}
                                         >
-                                          <option value="Not Started">Not Started</option>
-                                          <option value="In Progress">In Progress</option>
-                                          <option value="Completed">Completed</option>
+                                          <option value="Not Started" className="font-medium">Pending</option>
+                                          <option value="In Progress" className="font-medium text-warning">Working</option>
+                                          <option value="Completed" className="font-medium text-success">Done</option>
                                         </select>
-                                      </td>
-                                      <td className="text-center">
-                                        <input
-                                          type="text"
-                                          value={activity.dateCompleted || ''}
-                                          onChange={(e) => handleProposedPublicationChange(activity.originalIdx, 'dateCompleted', e.target.value)}
-                                          placeholder="Date or date range"
-                                          className="input input-sm input-bordered w-full text-base-content"
-                                        />
-                                      </td>
-                                      <td>
+                                        <span className={`text-sm font-medium transition-colors line-clamp-2 ${activity.status === 'Completed' ? 'text-base-content/40 line-through decoration-base-content/20' : 'text-base-content'}`}>
+                                          {activity.name}
+                                        </span>
+                                      </div>
+
+                                      {/* Right Side: Inputs */}
+                                      <div className="flex items-center gap-3 lg:justify-end lg:w-[300px] flex-shrink-0 ml-10 lg:ml-0 lg:opacity-50 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                        <div className="w-[110px] flex-shrink-0">
+                                          <input
+                                            type="text"
+                                            value={activity.dateCompleted || ''}
+                                            onChange={(e) => handleProposedPublicationChange(activity.originalIdx, 'dateCompleted', e.target.value)}
+                                            placeholder="Date or range"
+                                            className="w-full text-[11px] bg-transparent border-b border-base-200 hover:border-base-300 focus:border-primary focus:bg-base-200/30 hover:bg-base-200/50 focus:outline-none px-1 py-1 transition-all text-base-content"
+                                          />
+                                        </div>
                                         <input
                                           type="text"
                                           value={activity.remarks || ''}
                                           onChange={(e) => handleProposedPublicationChange(activity.originalIdx, 'remarks', e.target.value)}
                                           placeholder="Add remarks..."
-                                          className="input input-sm input-bordered w-full text-base-content"
+                                          className="flex-1 min-w-[140px] text-xs bg-transparent border-b border-base-200 hover:border-base-300 focus:border-primary focus:bg-base-200/30 hover:bg-base-200/50 focus:outline-none px-2 py-1 transition-all text-base-content"
                                         />
-                                      </td>
-                                    </tr>
+                                      </div>
+                                    </div>
                                   );
                                 })}
-                              </tbody>
-                            </table>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  });
-                })()}
+                      );
+                    });
+                  })()}
               </div>
 
             </div>
@@ -1614,55 +1558,54 @@ export default function SetTimelineModal({
                           {/* Activities Table */}
                           <div className="collapse-content p-0">
                             <div className="overflow-x-auto">
-                              <table className="table table-sm w-full">
-                                <thead className="bg-base-200">
-                                  <tr>
-                                    <th className="text-base-content">Activity</th>
-                                    <th className="text-center w-48 text-base-content">Status</th>
-                                    <th className="text-center w-48 text-base-content">Date Completed</th>
-                                    <th className="w-64 text-base-content">Remarks</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {groupActivities.map((activity, relIdx) => {
-                                    const idx = group.startIdx + relIdx;
-                                    return (
-                                      <tr key={idx} className="hover:bg-base-200/50">
-                                        <td className="text-sm text-base-content">{activity.name}</td>
-                                        <td className="text-center">
-                                          <select
-                                            value={activity.status}
-                                            onChange={(e) => handleReviewPublicationChange(idx, 'status', e.target.value)}
-                                            className="select select-sm select-bordered w-full text-base-content"
-                                          >
-                                            <option value="Not Started">Not Started</option>
-                                            <option value="In Progress">In Progress</option>
-                                            <option value="Completed">Completed</option>
-                                          </select>
-                                        </td>
-                                        <td className="text-center">
-                                          <DateInput
-                                            name={`review-publication-${idx}`}
-                                            value={activity.dateCompleted || ''}
-                                            onChange={(e) => handleReviewPublicationChange(idx, 'dateCompleted', e.target.value)}
-                                            className="input input-sm input-bordered w-full text-base-content"
-                                            placeholder="Select date..."
-                                          />
-                                        </td>
-                                        <td>
+                              <div className="flex flex-col bg-base-100 divide-y divide-base-200 rounded-b-xl">
+                                {groupActivities.map((activity, relIdx) => {
+                                  const idx = group.startIdx + relIdx;
+                                  return (
+                                    <div key={idx} className="flex flex-col lg:flex-row lg:items-center py-2.5 px-4 hover:bg-base-200/30 transition-colors gap-3 group">
+                                      {/* Left Side: Status & Name */}
+                                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <select
+                                          value={activity.status}
+                                          onChange={(e) => handleReviewPublicationChange(idx, 'status', e.target.value)}
+                                          className={`select select-sm border focus:ring-2 focus:ring-offset-1 rounded-full px-2 w-[110px] flex-shrink-0 h-8 min-h-0 text-[11px] font-bold transition-all shadow-sm ${
+                                            activity.status === 'Completed' ? 'bg-success/10 text-success border-success/30 hover:border-success focus:ring-success/30' :
+                                            activity.status === 'In Progress' ? 'bg-warning/10 text-warning-content border-warning/50 hover:border-warning focus:ring-warning/30' :
+                                            'bg-base-200 text-base-content/60 border-transparent hover:border-base-300 focus:ring-base-content/20'
+                                          }`}
+                                        >
+                                          <option value="Not Started" className="font-medium">Pending</option>
+                                          <option value="In Progress" className="font-medium text-warning">Working</option>
+                                          <option value="Completed" className="font-medium text-success">Done</option>
+                                        </select>
+                                        <span className={`text-sm font-medium transition-colors line-clamp-2 ${activity.status === 'Completed' ? 'text-base-content/40 line-through decoration-base-content/20' : 'text-base-content'}`}>
+                                          {activity.name}
+                                        </span>
+                                      </div>
+
+                                      {/* Right Side: Inputs */}
+                                      <div className="flex items-center gap-3 lg:justify-end lg:w-[300px] flex-shrink-0 ml-10 lg:ml-0 lg:opacity-50 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                        <div className="w-[110px] flex-shrink-0">
                                           <input
                                             type="text"
-                                            value={activity.remarks || ''}
-                                            onChange={(e) => handleReviewPublicationChange(idx, 'remarks', e.target.value)}
-                                            placeholder="Add remarks..."
-                                            className="input input-sm input-bordered w-full text-base-content"
+                                            value={activity.dateCompleted || ''}
+                                            onChange={(e) => handleReviewPublicationChange(idx, 'dateCompleted', e.target.value)}
+                                            placeholder="Date or range"
+                                            className="w-full text-[11px] bg-transparent border-b border-base-200 hover:border-base-300 focus:border-primary focus:bg-base-200/30 hover:bg-base-200/50 focus:outline-none px-1 py-1 transition-all text-base-content"
                                           />
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
+                                        </div>
+                                        <input
+                                          type="text"
+                                          value={activity.remarks || ''}
+                                          onChange={(e) => handleReviewPublicationChange(idx, 'remarks', e.target.value)}
+                                          placeholder="Add remarks..."
+                                          className="flex-1 min-w-[140px] text-xs bg-transparent border-b border-base-200 hover:border-base-300 focus:border-primary focus:bg-base-200/30 hover:bg-base-200/50 focus:outline-none px-2 py-1 transition-all text-base-content"
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1673,6 +1616,7 @@ export default function SetTimelineModal({
               </div>
             </div>
           )}
+        </div>
         </div>
 
         {/* Sticky Footer - Only show when changes made */}

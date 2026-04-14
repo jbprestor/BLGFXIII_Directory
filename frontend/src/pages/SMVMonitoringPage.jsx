@@ -426,14 +426,17 @@ export default function SMVMonitoringPage() {
       // Prepare the update data
       const updateData = {};
 
-      // Handle timeline data (convert to ISO dates if needed)
+      // Handle timeline data (convert to ISO dates if needed, send null for cleared dates)
       if (allData.timeline) {
         const timeline = {};
         Object.keys(allData.timeline).forEach(key => {
-          if (allData.timeline[key]) {
-            // Check if it's already a date string or needs conversion
-            const value = allData.timeline[key];
+          const value = allData.timeline[key];
+          if (value) {
+            // Has a value — convert to ISO date
             timeline[key] = value.includes('T') ? value : new Date(value).toISOString();
+          } else {
+            // Cleared/empty — explicitly send null so backend removes it
+            timeline[key] = null;
           }
         });
         updateData.timeline = timeline;

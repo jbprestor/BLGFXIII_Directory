@@ -155,10 +155,22 @@ export async function updateSMVMonitoring(req, res) {
 
     // Handle nested objects properly - merge instead of replace
     if (req.body.timeline) {
-      monitoring.timeline = {
-        ...monitoring.timeline?.toObject?.() || monitoring.timeline || {},
-        ...req.body.timeline
-      };
+      const existingTimeline = monitoring.timeline?.toObject?.() || monitoring.timeline || {};
+      const incomingTimeline = req.body.timeline;
+      
+      // Merge: keep existing values, override with incoming, remove nulls
+      const merged = { ...existingTimeline };
+      Object.keys(incomingTimeline).forEach(key => {
+        if (incomingTimeline[key] === null || incomingTimeline[key] === '') {
+          // Cleared field — remove it
+          delete merged[key];
+        } else {
+          merged[key] = incomingTimeline[key];
+        }
+      });
+      
+      monitoring.timeline = merged;
+      monitoring.markModified('timeline');
     }
 
     // Handle stageMap
