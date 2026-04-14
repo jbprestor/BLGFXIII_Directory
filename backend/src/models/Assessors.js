@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const assessorSchema = new mongoose.Schema(
   {
     // Personal Information
-    lastName: { type: String, trim: true },
-    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true, index: true },
+    firstName: { type: String, trim: true, index: true },
     middleName: { type: String, trim: true },
     nameExtension: { type: String, trim: true, default: "" },
     sex: { type: String, enum: ["Male", "Female", "Other"] },
@@ -12,7 +12,7 @@ const assessorSchema = new mongoose.Schema(
     birthday: { type: Date },
 
     // Reference to LGU
-    lgu: { type: mongoose.Schema.Types.ObjectId, ref: "LGU" },
+    lgu: { type: mongoose.Schema.Types.ObjectId, ref: "LGU", index: true },
 
     // Professional Information
     plantillaPosition: { type: String, trim: true },

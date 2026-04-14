@@ -12,15 +12,18 @@ const lguSchema = new mongoose.Schema(
     province: {
       type: String,
       required: true,
+      index: true,
     },
     region: {
       type: String,
       required: true,
+      index: true,
     },
     classification: {
       type: String,
       enum: ["HUC", "CC", "Municipality", "Province", "ICC"],
       required: true,
+      index: true,
     },
     incomeClass: {
       type: String,

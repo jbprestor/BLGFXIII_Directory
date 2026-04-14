@@ -18,7 +18,7 @@ export async function getAllLGUs(req, res) {
 
     // 👇 if all=true, return all LGUs without pagination
     if (all === "true") {
-      const lgus = await LGU.find(query).sort({ name: 1 });
+      const lgus = await LGU.find(query).sort({ name: 1 }).lean();
       return res.status(200).json({ lgus, total: lgus.length });
     }
 
@@ -26,7 +26,8 @@ export async function getAllLGUs(req, res) {
     const lgus = await LGU.find(query)
       .sort({ name: 1 })
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
 
     const total = await LGU.countDocuments(query);
 

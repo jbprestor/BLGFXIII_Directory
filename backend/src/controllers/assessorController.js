@@ -22,7 +22,8 @@ export async function getAllAssessors(req, res) {
       .populate('lgu', 'name province region classification')
       .sort({ lastName: 1, firstName: 1 })
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
 
     res.status(200).json(assessors); // ✅ return plain array only
   } catch (error) {
