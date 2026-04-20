@@ -25,90 +25,131 @@ export default function SMVSummaryTable({
     return daysSinceNotice;
   };
 
-  // Calculate days until next deadline
+  // Find the NEXT unfilled milestone and calculate its recommended deadline.
+  // A filled date = that step is DONE. We look for the first EMPTY step.
   const getNextDeadline = (row) => {
-    const { timeline, reviewPublicationActivities } = row;
+    const { timeline } = row;
     if (!timeline) return null;
-    
+    if (!timeline.blgfNoticeDate) return null; // No process started
+
     const today = new Date();
-    const activities = reviewPublicationActivities || [];
-    
-    // Helper to check if an activity is completed (matches by partial name)
-    const isDone = (namePart) => {
-      const act = activities.find(a => a.name.toLowerCase().includes(namePart.toLowerCase()));
-      return act?.status === "Completed";
-    };
+    today.setHours(0, 0, 0, 0);
 
-    const deadlines = [
-      { 
-        name: "RO Submission", 
-        date: timeline.regionalOfficeSubmissionDeadline, 
-        priority: 1,
-        done: isDone("Submission to Regional Office")
-      },
-      { 
-        name: "1st Publication", 
-        date: timeline.firstPublicationDate, 
-        priority: 2,
-        done: isDone("Official website") || isDone("Two (2) conspicuous") // Heuristic for publication
-      },
-      { 
-        name: "RO Review", 
-        date: timeline.roReviewDeadline, 
-        priority: 3,
-        done: isDone("Regional Office Review")
-      },
-      { 
-        name: "CO Review", 
-        date: timeline.blgfCentralOfficeReviewDeadline, 
-        priority: 4,
-        done: isDone("Central Office Review")
-      },
-      { 
-        name: "SoF Approval", 
-        date: timeline.secretaryOfFinanceReviewDeadline, 
-        priority: 5,
-        done: isDone("Indorsement / Certification to SOF")
-      },
-    ].filter(d => d.date && !d.done); // Only show pending deadlines
-
-    // If no pending deadlines set, check if at least Notice Date is present
-    if (deadlines.length === 0) {
-      if (timeline.blgfNoticeDate) {
-        // Check if overall complete
-        if (row.overallProgress === 100) {
-          return { name: "Completed", isCompleted: true };
+    // Ordered milestones: each has a name, its date field, and how to calculate
+    // its recommended deadline from previous dates.
+    const milestones = [
+      {
+        name: "RO Submission",
+        value: timeline.regionalOfficeSubmissionDeadline,
+        // Recommended: within 12 months of BLGF Notice
+        getRecommended: () => {
+          if (!timeline.blgfNoticeDate) return null;
+          const d = new Date(timeline.blgfNoticeDate);
+          d.setFullYear(d.getFullYear() + 1);
+          return d;
         }
-        return { name: "Set Deadlines", isNoticeOnly: true };
+      },
+      {
+        name: "1st Publication",
+        value: timeline.firstPublicationDate,
+        // No strict deadline — just mark as "Next" without countdown
+        getRecommended: () => null
+      },
+      {
+        name: "2nd Publication",
+        value: timeline.secondPublicationDate,
+        // Recommended: 1 week after 1st Publication
+        getRecommended: () => {
+          if (!timeline.firstPublicationDate) return null;
+          const d = new Date(timeline.firstPublicationDate);
+          d.setDate(d.getDate() + 7);
+          return d;
+        }
+      },
+      {
+        name: "1st Consultation",
+        value: timeline.firstPublicConsultationDate,
+        // Recommended: 2 weeks after 2nd Publication
+        getRecommended: () => {
+          if (!timeline.secondPublicationDate) return null;
+          const d = new Date(timeline.secondPublicationDate);
+          d.setDate(d.getDate() + 14);
+          return d;
+        }
+      },
+      {
+        name: "2nd Consultation",
+        value: timeline.secondPublicConsultationDate,
+        // Recommended: within 60 days before RO Submission
+        getRecommended: () => {
+          if (!timeline.regionalOfficeSubmissionDeadline) return null;
+          const d = new Date(timeline.regionalOfficeSubmissionDeadline);
+          d.setDate(d.getDate() - 60);
+          return d;
+        }
+      },
+      {
+        name: "RO Review",
+        value: timeline.roReviewDeadline,
+        // Recommended: RO Submission + 45 days
+        getRecommended: () => {
+          if (!timeline.regionalOfficeSubmissionDeadline) return null;
+          const d = new Date(timeline.regionalOfficeSubmissionDeadline);
+          d.setDate(d.getDate() + 45);
+          return d;
+        }
+      },
+      {
+        name: "CO Review",
+        value: timeline.blgfCentralOfficeReviewDeadline,
+        // Recommended: RO Review + 30 days
+        getRecommended: () => {
+          if (!timeline.roReviewDeadline) return null;
+          const d = new Date(timeline.roReviewDeadline);
+          d.setDate(d.getDate() + 30);
+          return d;
+        }
+      },
+      {
+        name: "SoF Approval",
+        value: timeline.secretaryOfFinanceReviewDeadline,
+        // Recommended: CO Review + 30 days
+        getRecommended: () => {
+          if (!timeline.blgfCentralOfficeReviewDeadline) return null;
+          const d = new Date(timeline.blgfCentralOfficeReviewDeadline);
+          d.setDate(d.getDate() + 30);
+          return d;
+        }
+      },
+    ];
+
+    // Walk through milestones in order. Find the first one that is NOT filled.
+    for (const milestone of milestones) {
+      if (!milestone.value) {
+        // This is the next goal to achieve
+        const recommended = milestone.getRecommended();
+
+        if (recommended) {
+          recommended.setHours(0, 0, 0, 0);
+          const diffDays = Math.ceil((recommended - today) / (1000 * 60 * 60 * 24));
+          return {
+            name: milestone.name,
+            daysUntil: diffDays,
+            isNextGoal: true,
+          };
+        }
+
+        // No recommended date calculable — just show as next goal
+        return {
+          name: milestone.name,
+          isNextGoal: true,
+          noDeadline: true,
+        };
       }
-      return null;
     }
 
-    // Find upcoming deadlines (future dates)
-    const upcomingDeadlines = deadlines
-      .map(d => ({
-        ...d,
-        deadline: new Date(d.date),
-        daysUntil: Math.ceil((new Date(d.date) - today) / (1000 * 60 * 60 * 24))
-      }))
-      .filter(d => d.daysUntil >= 0)
-      .sort((a, b) => a.daysUntil - b.daysUntil);
-
-    // If no upcoming, check overdue
-    if (upcomingDeadlines.length === 0) {
-      const overdueDeadlines = deadlines
-        .map(d => ({
-          ...d,
-          deadline: new Date(d.date),
-          daysUntil: Math.ceil((new Date(d.date) - today) / (1000 * 60 * 60 * 24))
-        }))
-        .filter(d => d.daysUntil < 0)
-        .sort((a, b) => b.daysUntil - a.daysUntil); // Most recent overdue first
-
-      return overdueDeadlines[0] || null;
-    }
-
-    return upcomingDeadlines[0];
+    // All milestones filled → process is complete
+    return { name: "Completed", isCompleted: true };
   };
 
   // Get current stage based on stageMap completion
@@ -248,14 +289,21 @@ export default function SMVSummaryTable({
                           </svg>
                           <span className="text-sm">Completed ✅</span>
                         </div>
-                       ) : nextDeadline.isNoticeOnly ? (
-                        <div className="flex items-center gap-1.5 text-secondary font-semibold">
-                          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="text-xs truncate">Initial Notice Set</span>
+                       ) : nextDeadline.noDeadline ? (
+                        /* Next goal but no calculable deadline */
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 text-info font-semibold">
+                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                            <span className="text-xs">Next Goal</span>
+                          </div>
+                          <div className="text-[10px] opacity-70 ml-5 font-medium uppercase tracking-tighter truncate max-w-[130px]">
+                            {nextDeadline.name}
+                          </div>
                         </div>
                        ) : (
+                        /* Next goal with a calculable recommended deadline */
                         <div className={`flex flex-col gap-0.5 ${nextDeadline.daysUntil < 0 ? 'text-error' : nextDeadline.daysUntil < 30 ? 'text-warning' : 'text-success'}`}>
                           <div className="flex items-center gap-1.5 font-bold">
                             <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,11 +312,13 @@ export default function SMVSummaryTable({
                             <span className="text-sm">
                               {nextDeadline.daysUntil < 0 
                                 ? `${Math.abs(nextDeadline.daysUntil)}d overdue`
+                                : nextDeadline.daysUntil === 0
+                                ? `Due today!`
                                 : `${nextDeadline.daysUntil}d remaining`}
                             </span>
                           </div>
-                          <div className="text-[10px] opacity-70 ml-5 font-medium uppercase tracking-tighter truncate max-w-[120px]">
-                            {nextDeadline.name}
+                          <div className="text-[10px] opacity-70 ml-5 font-medium uppercase tracking-tighter truncate max-w-[130px]">
+                            Next: {nextDeadline.name}
                           </div>
                         </div>
                        )

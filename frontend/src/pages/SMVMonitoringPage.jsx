@@ -565,7 +565,7 @@ export default function SMVMonitoringPage() {
   if (error) return <ErrorDisplay error={error} onRetry={fetchMonitorings} />;
 
   return (
-    <div className="min-h-screen bg-base-200/30">
+    <div className="min-h-screen bg-transparent">
       {/* Tab Navigation - Like QRRPA */}
       <div className="px-3 pt-3 pb-4 sm:px-6">
         <div className="flex bg-base-100 rounded-xl p-1 shadow-lg border border-base-300/50 w-full max-w-4xl mx-auto backdrop-blur-sm" role="tablist" aria-label="SMV Tabs">

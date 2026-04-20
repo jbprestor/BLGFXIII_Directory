@@ -1,17 +1,16 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useLGUImages } from "../../assets/LguImages";
 
-function formatDateTimePhilippines(value) {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatDate(value) {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
   if (isNaN(date.getTime())) return null;
   try {
     return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
+      year: "numeric", month: "short", day: "numeric",
+      hour: "numeric", minute: "2-digit", hour12: true,
       timeZone: "Asia/Manila",
     }).format(date);
   } catch {
@@ -19,365 +18,487 @@ function formatDateTimePhilippines(value) {
   }
 }
 
-function getRankIcon(rank) {
-  switch(rank) {
-    case 1: return "🏆";
-    case 2: return "🥈";
-    case 3: return "🥉";
-    case 4: return "4️⃣";
-    case 5: return "5️⃣";
-    default: return "🏅";
-  }
+function getInitials(name) {
+  if (!name) return "??";
+  return name
+    .split(" ")
+    .filter(word => !["del", "de", "the", "City", "Province", "Municipality", "Sur", "Norte"].includes(word))
+    .map(word => word[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 3) || name.slice(0, 2).toUpperCase();
 }
 
-function getRankColor(rank) {
-  switch(rank) {
-    case 1: return "text-warning bg-warning/10 border-warning/20";
-    case 2: return "text-base-content/70 bg-base-200 border-base-300";
-    case 3: return "text-accent bg-accent/10 border-accent/20";
-    case 4: return "text-info bg-info/10 border-info/20";
-    case 5: return "text-success bg-success/10 border-success/20";
-    default: return "text-base-content bg-base-200 border-base-300";
-  }
-}
+const RANK_CONFIG = [
+  { medal: "🥇", gradient: "from-yellow-400 to-amber-500", ring: "ring-yellow-400/40", text: "text-amber-700 dark:text-amber-300", bg: "bg-yellow-50 dark:bg-yellow-500/10", border: "border-yellow-200 dark:border-yellow-500/30" },
+  { medal: "🥈", gradient: "from-slate-300 to-slate-400", ring: "ring-slate-400/40", text: "text-slate-700 dark:text-slate-300", bg: "bg-slate-50 dark:bg-slate-500/10", border: "border-slate-200 dark:border-slate-500/30" },
+  { medal: "🥉", gradient: "from-orange-400 to-amber-600", ring: "ring-orange-400/40", text: "text-orange-700 dark:text-orange-300", bg: "bg-orange-50 dark:bg-orange-500/10", border: "border-orange-200 dark:border-orange-500/30" },
+];
 
-function getCompletionBadge(completionRate, isCompleted) {
-  if (isCompleted) {
-    return <span className="text-xs bg-success text-success-content px-2 py-1 rounded-full font-semibold">✓ Complete</span>;
-  } else if (completionRate >= 75) {
-    return <span className="text-xs bg-warning text-warning-content px-2 py-1 rounded-full font-semibold">{completionRate}% Nearly Done</span>;
-  } else if (completionRate >= 50) {
-    return <span className="text-xs bg-info text-info-content px-2 py-1 rounded-full font-semibold">{completionRate}% In Progress</span>;
-  } else if (completionRate > 0) {
-    return <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full font-semibold">{completionRate}% Started</span>;
-  } else {
-    return <span className="text-xs bg-base-300 text-base-content px-2 py-1 rounded-full font-semibold">0% Not Started</span>;
-  }
-}
+const CONGRATULATORY_MESSAGES = [
+  "Setting the standard for excellence in QRRPA reporting! Your commitment to timely and accurate property assessment data is commendable.",
+  "Congratulations on being a leader in RPU data submission! Your efficiency in completing the QRRPA requirements is truly impressive.",
+  "Exemplary performance in Real Property Assessment monitoring! Your early QRRPA submission demonstrates proactive local administration.",
+  "A benchmark for QRRPA compliance! Thank you for your dedication to maintaining the integrity of regional assessment records.",
+  "Outstanding achievement in QRRPA submission! Your LGU leads the way in transparent and efficient property assessment reporting."
+];
 
-function getProgressBarColor(completionRate, isCompleted) {
-  if (isCompleted) return "bg-success";
-  if (completionRate >= 75) return "bg-warning";
-  if (completionRate >= 50) return "bg-info";
-  if (completionRate > 0) return "bg-orange-400";
-  return "bg-base-300";
-}
-
-export default function QrrpaOverview({ records }) {
-  // Debug: Let's see what we're working with
-  console.log('QRRPA Records:', records);
-  console.log('Sample record:', records[0]);
+function CongratulatoryBanner({ topProvince, topCity, topMunicipality }) {
+  const lguImages = useLGUImages();
   
-  // Filter submitted records and sort by submission date (earliest first)
-  const submittedRecords = records
-    .filter(r => r.status === 'Submitted' && r.dateSubmitted)
-    .map(r => ({
+  const performers = React.useMemo(() => {
+    const list = [];
+    if (topProvince) list.push({ type: "Top Performing Province", name: topProvince, tagColor: "#10b981", gradient: "linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)" });
+    if (topCity) list.push({ type: "Top Performing City", name: topCity, tagColor: "#f59e0b", gradient: "linear-gradient(135deg, #059669 0%, #10b981 100%)" });
+    if (topMunicipality) list.push({ type: "Top Performing Municipality", name: topMunicipality, tagColor: "#ec4899", gradient: "linear-gradient(135deg, #e11d48 0%, #be123c 100%)" });
+    return list;
+  }, [topProvince, topCity, topMunicipality]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [messages, setMessages] = useState([]);
+  const [logoErrors, setLogoErrors] = useState({});
+
+  const handleLogoError = (name) => {
+    setLogoErrors(prev => ({ ...prev, [name]: true }));
+  };
+
+  useEffect(() => {
+    const shuffled = [...CONGRATULATORY_MESSAGES].sort(() => 0.5 - Math.random());
+    setMessages(performers.map((_, i) => shuffled[i % shuffled.length]));
+  }, [performers.length]);
+
+  useEffect(() => {
+    if (performers.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % performers.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [performers.length]);
+
+  const handlePrev = () => {
+    setCurrentIndex(prev => (prev === 0 ? performers.length - 1 : prev - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex(prev => (prev + 1) % performers.length);
+  };
+
+  if (performers.length === 0) return null;
+
+  return (
+    <div className="relative mb-8 w-full overflow-hidden rounded-3xl shadow-xl border border-black/5 dark:border-white/10">
+      <div 
+        className="flex transition-transform duration-700 ease-in-out"
+        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+      >
+        {performers.map((perf, index) => {
+          const logoUrl = lguImages[perf.name];
+          return (
+            <div 
+              key={perf.name}
+              className="w-full shrink-0 relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 p-6 sm:p-10 group"
+              style={{
+                background: perf.gradient,
+                color: "#ffffff"
+              }}
+            >
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+                <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+              </div>
+              
+              <div className="relative shrink-0 flex items-center justify-center z-10 w-24 h-24 sm:w-28 sm:h-28">
+                <div className="absolute inset-0 bg-white/20 rounded-full blur-xl animate-pulse"></div>
+                {logoUrl && !logoErrors[perf.name] ? (
+                  <img 
+                    src={logoUrl} 
+                    alt={`${perf.name} logo`} 
+                    className="w-full h-full object-contain relative z-10 drop-shadow-xl hover:scale-105 transition-transform duration-300 rounded-full border-4 border-white/20 bg-white/10 backdrop-blur-sm p-1"
+                    onError={() => handleLogoError(perf.name)}
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-full border-4 border-white/20 bg-white/10 backdrop-blur-md flex items-center justify-center relative z-10 shadow-inner group-hover:scale-105 transition-transform">
+                    <span className="text-3xl sm:text-4xl font-black tracking-tighter text-white drop-shadow-md">
+                      {getInitials(perf.name)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 text-center sm:text-left relative z-10">
+                <span 
+                  className="inline-flex items-center gap-1.5 px-3 py-1 mb-3 tracking-widest text-[10px] sm:text-xs font-bold uppercase shadow-sm rounded-full"
+                  style={{ backgroundColor: perf.tagColor, color: '#ffffff' }}
+                >
+                  <svg className="w-3.5 h-3.5 drop-shadow-sm" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                  {perf.type}
+                </span>
+                <h2 
+                  className="tracking-tighter drop-shadow-2xl mb-4 sm:mb-6" 
+                  style={{ 
+                    color: '#ffffff', 
+                    fontSize: 'clamp(2.5rem, 10vw, 6rem)', 
+                    fontWeight: 950,
+                    lineHeight: '1.05',
+                    paddingBottom: '0.15em',
+                    textShadow: '0 10px 20px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  {perf.name}
+                </h2>
+                <p className="text-sm sm:text-base lg:text-lg font-medium max-w-2xl leading-relaxed italic relative z-10" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                  "{messages[index] || CONGRATULATORY_MESSAGES[0]}"
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {performers.length > 1 && (
+        <>
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-20">
+            {performers.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentIndex(idx)}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  idx === currentIndex ? "bg-white w-6 opacity-100" : "bg-white/50 opacity-60 hover:opacity-100 hover:bg-white"
+                }`}
+                aria-label={`Go to slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+          
+          <button 
+            onClick={handlePrev} 
+            className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 z-30 opacity-0 cursor-pointer"
+            aria-label="Previous LGU"
+          />
+          <button 
+            onClick={handleNext} 
+            className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 z-30 opacity-0 cursor-pointer"
+            aria-label="Next LGU"
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function getRankConfig(i) {
+  return RANK_CONFIG[i] ?? { medal: `#${i + 1}`, gradient: "from-primary to-secondary", ring: "ring-primary/30", text: "text-base-content", bg: "bg-base-200", border: "border-base-300" };
+}
+
+const KNOWN_MUNICIPALITIES_COUNT = {
+  "Agusan del Sur": 13,
+  "Agusan del Norte": 9,
+  "Surigao del Norte": 20,
+  "Surigao del Sur": 17,
+  "Dinagat Islands": 7,
+};
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export default function QrrpaOverview({ records = [] }) {
+  // Period filter states (synced with localStorage)
+  const [selectedYear, setSelectedYear] = useState(() => {
+    return localStorage.getItem('qrrpa-year') || "2025";
+  });
+  const [selectedQuarter, setSelectedQuarter] = useState(() => {
+    return localStorage.getItem('qrrpa-quarter') || "Q3";
+  });
+
+  // Calculate dynamic year options
+  const getYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = 2025; y <= currentYear; y++) {
+      years.push(y.toString());
+    }
+    return years;
+  };
+  const yearOptions = getYearOptions();
+
+  const quarterOptions = [
+    { value: "Q1", label: "Q1 (Jan-Mar)" },
+    { value: "Q2", label: "Q2 (Apr-Jun)" },
+    { value: "Q3", label: "Q3 (Jul-Sep)" },
+    { value: "Q4", label: "Q4 (Oct-Dec)" }
+  ];
+
+  const handleYearChange = (e) => {
+    const val = e.target.value;
+    setSelectedYear(val);
+    localStorage.setItem('qrrpa-year', val);
+  };
+
+  const handleQuarterChange = (e) => {
+    const val = e.target.value;
+    setSelectedQuarter(val);
+    localStorage.setItem('qrrpa-quarter', val);
+  };
+
+  // Filter records by period
+  const currentPeriod = `${selectedYear}-${selectedQuarter}`;
+  const periodRecords = records.filter(r => r.period === currentPeriod);
+
+  // Submitted records correctly transformed
+  const submittedRecords = periodRecords
+    .filter((r) => r.status === "Submitted" && r.dateSubmitted)
+    .map((r) => ({
       ...r,
-      lguName: r.lguId?.name || r.lguName || 'Unknown LGU',
-      province: r.lguId?.province || r.province || 'Unknown Province',
-      classification: r.lguId?.classification || r.classification || 'Unknown',
-      submissionDate: new Date(r.dateSubmitted)
+      lguName: r.lguId?.name || r.lguName || "Unknown LGU",
+      province: r.lguId?.province || r.province || "Unknown Province",
+      classification: r.lguId?.classification || r.classification || "Unknown",
+      submissionDate: new Date(r.dateSubmitted),
     }))
     .sort((a, b) => a.submissionDate - b.submissionDate);
 
-  // Top 5 LGUs (first to submit)
-  const top5LGUs = submittedRecords.slice(0, 5);
+  // 1. Top 3 Municipalities
+  const topMunicipalitiesObj = [...submittedRecords]
+    .filter((r) => r.classification?.toLowerCase() === "municipality")
+    .reduce((acc, r) => {
+      if (!acc[r.lguName]) acc[r.lguName] = r;
+      return acc;
+    }, {});
+  const municipalityList = Object.values(topMunicipalitiesObj)
+    .sort((a, b) => a.submissionDate - b.submissionDate)
+    .slice(0, 3);
 
-  // We need to get the total municipalities from the LGU database, not just from QRRPA records
-  // For now, let's create a mapping of known municipalities per province
-  const KNOWN_MUNICIPALITIES_COUNT = {
-    'Agusan del Sur': 13,
-    'Agusan del Norte': 9, // Adjust these numbers based on your actual data
-    'Surigao del Norte': 20,
-    'Surigao del Sur': 17,
-    'Dinagat Islands': 7
-  };
+  // 2. Top 3 Cities
+  const topCitiesObj = [...submittedRecords]
+    .filter((r) => r.classification?.toLowerCase().includes("city"))
+    .reduce((acc, r) => {
+      if (!acc[r.lguName]) acc[r.lguName] = r;
+      return acc;
+    }, {});
+  const cityList = Object.values(topCitiesObj)
+    .sort((a, b) => a.submissionDate - b.submissionDate)
+    .slice(0, 3);
 
-  // Group all records by province to check completion (municipalities only)
-  const provinceStats = records.reduce((acc, record) => {
-    const province = record.province || record.lguId?.province || 'Unknown Province';
-    const classification = record.classification || record.lguId?.classification || '';
-    
-    console.log(`Record: ${record.lguName || record.lguId?.name}, Province: ${province}, Classification: ${classification}`);
-    
-    // Only count municipalities (exact match with "Municipality")
-    const isMunicipality = classification === 'Municipality';
-    
+  // 3. Province Stats & Top 3 Provinces (100% Submission)
+  const provinceStats = periodRecords.reduce((acc, record) => {
+    const province = record.province || record.lguId?.province || "Unknown Province";
+    const classification = record.classification || record.lguId?.classification || "";
+    const isMunicipality = classification === "Municipality";
+
     if (!acc[province]) {
       acc[province] = {
-        total: KNOWN_MUNICIPALITIES_COUNT[province] || 0, // Use known count
+        total: KNOWN_MUNICIPALITIES_COUNT[province] || 0,
         submitted: 0,
-        submittedRecords: [],
-        lastSubmissionDate: null
+        lastSubmissionDate: null,
       };
     }
-    
-    if (isMunicipality && record.status === 'Submitted' && record.dateSubmitted) {
+    if (isMunicipality && record.status === "Submitted" && record.dateSubmitted) {
       acc[province].submitted++;
-      acc[province].submittedRecords.push(record);
-      const submissionDate = new Date(record.dateSubmitted);
-      if (!acc[province].lastSubmissionDate || submissionDate > acc[province].lastSubmissionDate) {
-        acc[province].lastSubmissionDate = submissionDate;
+      const d = new Date(record.dateSubmitted);
+      if (!acc[province].lastSubmissionDate || d > acc[province].lastSubmissionDate) {
+        acc[province].lastSubmissionDate = d;
       }
     }
     return acc;
   }, {});
 
-  console.log('Province Stats:', provinceStats);
-
-  // Get all provinces with their completion status, sort completed provinces first, then by completion percentage
-  const topProvinces = Object.entries(provinceStats)
+  const allProvinces = Object.entries(provinceStats)
     .map(([province, stats]) => ({
       province,
-      totalLGUs: stats.total,
-      submittedCount: stats.submitted,
-      completionDate: stats.lastSubmissionDate,
-      completionRate: Math.round((stats.submitted / stats.total) * 100),
-      isCompleted: stats.submitted === stats.total && stats.submitted > 0
-    }))
-    .sort((a, b) => {
-      // First sort by completion status (completed first)
-      if (a.isCompleted && !b.isCompleted) return -1;
-      if (!a.isCompleted && b.isCompleted) return 1;
-      
-      // If both completed, sort by completion date
-      if (a.isCompleted && b.isCompleted) {
-        return a.completionDate - b.completionDate;
-      }
-      
-      // If both incomplete, sort by completion percentage (higher first)
-      return b.completionRate - a.completionRate;
-    });
+      total: stats.total,
+      submitted: stats.submitted,
+      lastDate: stats.lastSubmissionDate,
+      pct: stats.total > 0 ? Math.round((stats.submitted / stats.total) * 100) : 0,
+      isComplete: stats.submitted >= stats.total && stats.submitted > 0,
+    }));
 
-  // Group by cities and get earliest submission per city
-  const citySubmissions = submittedRecords
-    .filter(r => r.classification && r.classification.toLowerCase().includes('city'))
-    .reduce((acc, record) => {
-      const cityName = record.lguName;
-      if (!acc[cityName] || record.submissionDate < acc[cityName].submissionDate) {
-        acc[cityName] = record;
-      }
-      return acc;
-    }, {});
+  const completedProvinces = allProvinces
+    .filter(p => p.isComplete)
+    .sort((a, b) => a.lastDate - b.lastDate);
 
-  const topCities = Object.values(citySubmissions)
-    .sort((a, b) => a.submissionDate - b.submissionDate);
-
-  // Overall statistics
-  const totalRecords = records.length;
-  const submittedCount = submittedRecords.length;
-  const submissionRate = totalRecords > 0 ? ((submittedCount / totalRecords) * 100).toFixed(1) : 0;
+  const top3Provinces = completedProvinces.slice(0, 3);
+  const top1ProvinceName = top3Provinces.length > 0 ? top3Provinces[0].province : null;
+  const top1CityName = cityList.length > 0 ? cityList[0].lguName : null;
+  const top1MunicipalityName = municipalityList.length > 0 ? municipalityList[0].lguName : null;
 
   return (
-    <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-4 border border-primary/20">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/20 rounded-lg">
-              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-primary">{submittedCount}</p>
-              <p className="text-sm text-base-content/70">LGUs Submitted</p>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-8 animate-fade-in pb-10">
 
-        <div className="bg-gradient-to-r from-secondary/10 to-secondary/5 rounded-xl p-4 border border-secondary/20">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-secondary/20 rounded-lg">
-              <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-secondary">{submissionRate}%</p>
-              <p className="text-sm text-base-content/70">Completion Rate</p>
-            </div>
-          </div>
-        </div>
+      {/* ── Congratulatory Hero Banner ── */}
+      {(top1ProvinceName || top1CityName || top1MunicipalityName) && (
+        <CongratulatoryBanner 
+          topProvince={top1ProvinceName} 
+          topCity={top1CityName} 
+          topMunicipality={top1MunicipalityName} 
+        />
+      )}
 
-        <div className="bg-gradient-to-r from-accent/10 to-accent/5 rounded-xl p-4 border border-accent/20">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-accent/20 rounded-lg">
-              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* ── Header Filters ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-base-100 p-4 rounded-2xl border border-base-300 shadow-sm">
+        <div className="flex items-center gap-2">
+          <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span className="font-semibold text-base-content text-sm sm:text-base">Filter Submissions by Period</span>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <select 
+            value={selectedYear} 
+            onChange={handleYearChange}
+            className="select select-bordered select-sm w-full sm:w-32 bg-base-100 font-medium"
+          >
+            {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select 
+            value={selectedQuarter} 
+            onChange={handleQuarterChange}
+            className="select select-bordered select-sm w-full sm:w-40 bg-base-100 font-medium"
+          >
+            {quarterOptions.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* ── Top 3 Boards (Columns) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+        {/* 1. Top 3 Provinces */}
+        <div className="bg-base-100 rounded-2xl border border-base-300 shadow-sm overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
+          <div className="p-5 border-b border-base-200 bg-base-200/30 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 text-white shadow-sm">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m0 0h2m0 0h4" />
               </svg>
             </div>
             <div>
-              <p className="text-2xl font-bold text-accent">{totalRecords}</p>
-              <p className="text-sm text-base-content/70">Total LGUs</p>
+              <h3 className="font-extrabold text-base-content text-lg">Top 3 Provinces</h3>
+              <p className="text-xs text-base-content/50 font-medium">First to complete all municipalities</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Top 5 LGUs Rankings */}
-      <div className="bg-base-100 rounded-xl p-6 shadow-lg border border-base-300/50">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-yellow-100 rounded-lg">
-            <span className="text-2xl">🏆</span>
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-base-content">Top 5 Earliest Submissions</h3>
-            <p className="text-sm text-base-content/60">LGUs who submitted first</p>
-          </div>
-        </div>
-
-        {top5LGUs.length > 0 ? (
-          <div className="space-y-3">
-            {top5LGUs.map((record, index) => (
-              <div 
-                key={record._id || index} 
-                className={`flex items-center justify-between p-4 rounded-lg border-2 ${getRankColor(index + 1)} transition-all duration-200 hover:shadow-md`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="text-2xl">{getRankIcon(index + 1)}</div>
-                  <div>
-                    <p className="font-bold text-lg">{record.lguName}</p>
-                    <p className="text-sm opacity-75">{record.province} • {record.classification}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">{formatDateTimePhilippines(record.dateSubmitted)}</p>
-                  <p className="text-xs opacity-75">#{index + 1} to submit</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-base-content/50">
-            <div className="text-4xl mb-2">📋</div>
-            <p>No submissions yet</p>
-          </div>
-        )}
-      </div>
-
-      {/* Province Rankings */}
-      <div className="bg-base-100 rounded-xl p-6 shadow-lg border border-base-300/50">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <span className="text-2xl">🏛️</span>
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-base-content">Province Submission Status</h3>
-            <p className="text-sm text-base-content/60">All provinces showing municipalities only (excludes cities)</p>
-          </div>
-        </div>
-
-        {topProvinces.length > 0 ? (
-          <div className="space-y-4">
-            {topProvinces.map((provinceData, index) => (
-              <div 
-                key={provinceData.province} 
-                className="p-5 bg-base-200/50 rounded-xl border border-base-300/30 hover:bg-base-200/70 transition-all duration-200 shadow-sm"
-              >
-                {/* Province Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-primary text-primary-content rounded-full flex items-center justify-center font-bold text-lg">
-                      {index + 1}
+          <div className="p-4 flex-1 flex flex-col gap-3">
+            {top3Provinces.length > 0 ? (
+              top3Provinces.map((p, i) => {
+                const cfg = getRankConfig(i);
+                return (
+                  <div key={p.province} className={`flex items-center gap-4 p-4 rounded-xl border ${cfg.border} ${cfg.bg} transition-transform hover:scale-[1.02]`}>
+                    <div className="text-3xl shrink-0 w-10 text-center drop-shadow-sm">{cfg.medal}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-base-content text-base truncate">{p.province}</p>
+                      <p className={`text-xs font-semibold ${cfg.text} truncate`}>{p.total} Municipalities</p>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-xl text-base-content">{provinceData.province}</h4>
-                      <p className="text-base text-base-content/70">
-                        <span className="font-semibold text-primary">{provinceData.submittedCount}</span> of <span className="font-semibold">{provinceData.totalLGUs}</span> municipalities submitted
-                      </p>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-bold text-base-content/80">{formatDate(p.lastDate)}</p>
+                      <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold bg-emerald-100/80 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full mt-1">
+                        100% Done
+                      </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    {getCompletionBadge(provinceData.completionRate, provinceData.isCompleted)}
-                    {provinceData.completionDate && (
-                      <p className="text-sm text-base-content/60 mt-2">
-                        Last submission: {formatDateTimePhilippines(provinceData.completionDate)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Statistics Row */}
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="text-center p-3 bg-base-100 rounded-lg">
-                    <p className="text-2xl font-bold text-primary">{provinceData.totalLGUs}</p>
-                    <p className="text-xs text-base-content/60">Total Municipalities</p>
-                  </div>
-                  <div className="text-center p-3 bg-base-100 rounded-lg">
-                    <p className="text-2xl font-bold text-success">{provinceData.submittedCount}</p>
-                    <p className="text-xs text-base-content/60">Submitted</p>
-                  </div>
-                  <div className="text-center p-3 bg-base-100 rounded-lg">
-                    <p className="text-2xl font-bold text-warning">{provinceData.totalLGUs - provinceData.submittedCount}</p>
-                    <p className="text-xs text-base-content/60">Pending</p>
-                  </div>
-                </div>
-                
-                {/* Progress Bar */}
-                <div className="w-full bg-base-300/50 rounded-full h-3 mb-2">
-                  <div 
-                    className={`h-3 rounded-full transition-all duration-500 ${getProgressBarColor(provinceData.completionRate, provinceData.isCompleted)}`}
-                    style={{ width: `${provinceData.completionRate}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between text-sm text-base-content/60">
-                  <span>0%</span>
-                  <span className="font-semibold">{provinceData.completionRate}% Complete</span>
-                  <span>100%</span>
+                );
+              })
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-base-content/40 py-10">
+                <div className="text-center">
+                  <svg className="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span className="text-sm font-semibold">No finished provinces yet</span>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-base-content/50">
-            <div className="text-4xl mb-2">🏛️</div>
-            <p>No province data available</p>
-          </div>
-        )}
-      </div>
-
-      {/* City Rankings */}
-      <div className="bg-base-100 rounded-xl p-6 shadow-lg border border-base-300/50">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <span className="text-2xl">🏙️</span>
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-base-content">City Rankings</h3>
-            <p className="text-sm text-base-content/60">Cities ranked by submission order</p>
+            )}
           </div>
         </div>
 
-        {topCities.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {topCities.map((record, index) => (
-              <div 
-                key={record.lguName} 
-                className="flex items-center justify-between p-4 bg-base-200/50 rounded-lg border border-base-300/30 hover:bg-base-200/70 transition-all duration-200"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-secondary text-secondary-content rounded-full flex items-center justify-center font-bold text-sm">
-                    {index + 1}
+        {/* 2. Top 3 Cities */}
+        <div className="bg-base-100 rounded-2xl border border-base-300 shadow-sm overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
+          <div className="p-5 border-b border-base-200 bg-base-200/30 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10l9-7 9 7v11a1 1 0 01-1 1h-5a1 1 0 01-1-1v-4H9v4a1 1 0 01-1 1H3a1 1 0 01-1-1V10z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-extrabold text-base-content text-lg">Top 3 Cities</h3>
+              <p className="text-xs text-base-content/50 font-medium">Earliest city submissions</p>
+            </div>
+          </div>
+          <div className="p-4 flex-1 flex flex-col gap-3">
+            {cityList.length > 0 ? (
+              cityList.map((record, i) => {
+                const cfg = getRankConfig(i);
+                return (
+                  <div key={record.lguName} className={`flex items-center gap-4 p-4 rounded-xl border ${cfg.border} ${cfg.bg} transition-transform hover:scale-[1.02]`}>
+                    <div className="text-3xl shrink-0 w-10 text-center drop-shadow-sm">{cfg.medal}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-base-content text-base truncate">{record.lguName}</p>
+                      <p className={`text-xs font-semibold ${cfg.text} truncate`}>{record.province}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-bold text-base-content/80">{formatDate(record.submissionDate)}</p>
+                      <p className="text-[10px] text-base-content/40 font-medium mt-1">Submission Date</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold">{record.lguName}</p>
-                    <p className="text-xs text-base-content/60">{record.province}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">{formatDateTimePhilippines(record.dateSubmitted)}</p>
+                );
+              })
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-base-content/40 py-10">
+                <div className="text-center">
+                  <svg className="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span className="text-sm font-semibold">No cities have submitted yet</span>
                 </div>
               </div>
-            ))}
+            )}
           </div>
-        ) : (
-          <div className="text-center py-8 text-base-content/50">
-            <div className="text-4xl mb-2">🏙️</div>
-            <p>No city submissions yet</p>
+        </div>
+
+        {/* 3. Top 3 Municipalities */}
+        <div className="bg-base-100 rounded-2xl border border-base-300 shadow-sm overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
+          <div className="p-5 border-b border-base-200 bg-base-200/30 flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-extrabold text-base-content text-lg">Top 3 Municipalities</h3>
+              <p className="text-xs text-base-content/50 font-medium">Earliest municipality submissions</p>
+            </div>
           </div>
-        )}
+          <div className="p-4 flex-1 flex flex-col gap-3">
+            {municipalityList.length > 0 ? (
+              municipalityList.map((record, i) => {
+                const cfg = getRankConfig(i);
+                return (
+                  <div key={record.lguName} className={`flex items-center gap-4 p-4 rounded-xl border ${cfg.border} ${cfg.bg} transition-transform hover:scale-[1.02]`}>
+                    <div className="text-3xl shrink-0 w-10 text-center drop-shadow-sm">{cfg.medal}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-base-content text-base truncate">{record.lguName}</p>
+                      <p className={`text-xs font-semibold ${cfg.text} truncate`}>{record.province}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-bold text-base-content/80">{formatDate(record.submissionDate)}</p>
+                      <p className="text-[10px] text-base-content/40 font-medium mt-1">Submission Date</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-base-content/40 py-10">
+                <div className="text-center">
+                  <svg className="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span className="text-sm font-semibold">No municipalities submitted yet</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
+
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+      `}</style>
     </div>
   );
 }

@@ -91,20 +91,21 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
 
   // Period state (must be declared before other state that depends on it)
   const [selectedYear, setSelectedYear] = useState(() => {
-    // Load year from localStorage or use current year
     const savedYear = localStorage.getItem('qrrpa-year');
     return savedYear || "2025";
   });
   const [selectedQuarter, setSelectedQuarter] = useState(() => {
-    // Load quarter from localStorage or use Q3 (current quarter for most data)
     const savedQuarter = localStorage.getItem('qrrpa-quarter');
     return savedQuarter || "Q3";
   });
   const [deadline, setDeadline] = useState(() => {
-    // Load deadline from localStorage or use default
     const savedDeadline = localStorage.getItem('qrrpa-deadline');
     return savedDeadline || "2025-12-31";
   });
+
+  // Draft state for period selection before applying
+  const [draftYear, setDraftYear] = useState(() => localStorage.getItem('qrrpa-year') || "2025");
+  const [draftQuarter, setDraftQuarter] = useState(() => localStorage.getItem('qrrpa-quarter') || "Q3");
 
   // Local state for current records
   const [localRecords, setLocalRecords] = useState([]);
@@ -199,13 +200,11 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
   };
 
   const updateYear = (newYear) => {
-    setSelectedYear(newYear);
-    // Don't save to localStorage immediately - wait for save button
+    setDraftYear(newYear);
   };
 
   const updateQuarter = (newQuarter) => {
-    setSelectedQuarter(newQuarter);
-    // Don't save to localStorage immediately - wait for save button
+    setDraftQuarter(newQuarter);
   };
 
   // Clear all local data when period changes
@@ -214,7 +213,6 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
     setPendingChanges(new Map());
     setEditingCell(null);
     setEditValue('');
-    // Trigger refresh if onRefresh is available
     if (onRefresh) {
       onRefresh();
     }
@@ -222,9 +220,12 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
 
   // Save period changes and apply them
   const savePeriodChanges = () => {
+    setSelectedYear(draftYear);
+    setSelectedQuarter(draftQuarter);
+    
     // Save to localStorage
-    localStorage.setItem('qrrpa-year', selectedYear);
-    localStorage.setItem('qrrpa-quarter', selectedQuarter);
+    localStorage.setItem('qrrpa-year', draftYear);
+    localStorage.setItem('qrrpa-quarter', draftQuarter);
     localStorage.setItem('qrrpa-deadline', deadline);
 
     // Clear data for the new period
@@ -236,12 +237,10 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
 
   // Cancel period changes and revert to saved values
   const cancelPeriodChanges = () => {
-    const savedYear = localStorage.getItem('qrrpa-year') || "2025";
-    const savedQuarter = localStorage.getItem('qrrpa-quarter') || "Q4";
+    setDraftYear(selectedYear);
+    setDraftQuarter(selectedQuarter);
+    
     const savedDeadline = localStorage.getItem('qrrpa-deadline') || "2025-12-31";
-
-    setSelectedYear(savedYear);
-    setSelectedQuarter(savedQuarter);
     setDeadline(savedDeadline);
 
     // Close the editor
@@ -250,10 +249,8 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
 
   // Check if period has changed from saved values
   const hasPeriodChanges = () => {
-    const savedYear = localStorage.getItem('qrrpa-year') || "2025";
-    const savedQuarter = localStorage.getItem('qrrpa-quarter') || "Q4";
     const savedDeadline = localStorage.getItem('qrrpa-deadline') || "2025-12-31";
-    return selectedYear !== savedYear || selectedQuarter !== savedQuarter || deadline !== savedDeadline;
+    return draftYear !== selectedYear || draftQuarter !== selectedQuarter || deadline !== savedDeadline;
   };
 
   // Reset function to delete all records for the current period
@@ -369,18 +366,12 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
     });
   };
 
-  // Generate year options (current year ± 5 years, with minimum range)
+  // Generate year options (current year only starting 2025)
   const getYearOptions = () => {
     const currentYear = new Date().getFullYear();
     const years = [];
-
-    // Calculate range: at least 5 years before and 5 years after current year
-    // But also ensure we include the selected year if it's outside this range
-    const selectedYearNum = parseInt(selectedYear) || currentYear;
-    const minYear = Math.min(currentYear - 5, selectedYearNum - 2, 2020); // At least back to 2020
-    const maxYear = Math.max(currentYear + 5, selectedYearNum + 2, currentYear + 10); // At least 10 years ahead
-
-    for (let year = minYear; year <= maxYear; year++) {
+    
+    for (let year = 2025; year <= currentYear; year++) {
       years.push(year.toString());
     }
 
@@ -1144,171 +1135,183 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
   if (loading) return (<div className="flex justify-center items-center p-8"><span className="loading loading-spinner loading-lg"></span></div>);
 
   return (
-    <div className="space-y-3 sm:space-y-4" data-qrrpa-checklist="true">
-      <div className="flex flex-col gap-4 mb-4" data-qrrpa-checklist="true">
-        {/* Unified Control Panel */}
-        <div className="bg-base-100 rounded-xl shadow-sm border border-base-300 p-4">
-          <div className="flex flex-col xl:flex-row flex-wrap gap-6 justify-between items-start xl:items-center bg-base-200/30 p-4 rounded-xl border border-base-200/50">
+    <div className="space-y-4" data-qrrpa-checklist="true">
+      <div className="flex flex-col gap-4">
+        {/* ── Unified Control Panel ── */}
+        <div className="bg-base-100 border border-base-200 rounded-lg">
+          <div className="flex flex-col xl:flex-row gap-4 p-4 justify-between items-start xl:items-center">
 
             {/* Left: Period & Context */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-base-100 rounded-lg p-2 pr-4 border border-base-200 shadow-sm">
-                  <div className={`w-3 h-3 rounded-full ml-1 ${hasPeriodChanges() ? 'bg-warning animate-pulse' : 'bg-success'}`}></div>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => updateYear(e.target.value)}
-                    className="select select-ghost text-lg font-bold text-primary focus:bg-transparent px-3 h-auto min-h-0 min-w-[110px]"
-                  >
-                    {getYearOptions().map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                  <div className="h-6 w-px bg-base-content/10 mx-1"></div>
-                  <select
-                    value={selectedQuarter}
-                    onChange={(e) => updateQuarter(e.target.value)}
-                    className="select select-ghost text-lg font-bold text-primary focus:bg-transparent px-3 h-auto min-h-0 min-w-[200px]"
-                  >
-                    {quarterOptions.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}
-                  </select>
-                </div>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full xl:w-auto">
+              <div className="flex items-center gap-2">
+                <select
+                  value={draftYear}
+                  onChange={(e) => updateYear(e.target.value)}
+                  className="select select-bordered select-sm font-medium rounded-md w-24"
+                >
+                  {getYearOptions().map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <select
+                  value={draftQuarter}
+                  onChange={(e) => updateQuarter(e.target.value)}
+                  className="select select-bordered select-sm font-medium rounded-md w-36"
+                >
+                  {quarterOptions.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}
+                </select>
 
                 {hasPeriodChanges() && (
-                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
-                    <button onClick={savePeriodChanges} className="btn btn-primary shadow-md">Apply</button>
-                    <button onClick={cancelPeriodChanges} className="btn btn-ghost">Cancel</button>
+                  <div className="flex items-center gap-1 ml-1 animate-in zoom-in-95 duration-200">
+                    <button
+                      onClick={savePeriodChanges}
+                      className="btn btn-sm btn-primary rounded-md px-3"
+                    >
+                      Apply
+                    </button>
+                    <button
+                      onClick={cancelPeriodChanges}
+                      className="btn btn-sm btn-ghost rounded-md px-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-sm text-base-content/70 px-1 whitespace-nowrap ml-1">
-                <span className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-base-content/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  Deadline: <span className={`${new Date() > new Date(deadline) ? 'text-error font-bold' : 'font-medium text-base-content'}`}>{formatDateOnly(deadline)}</span>
-                </span>
-                <button onClick={() => setShowDeadlineEditor(!showDeadlineEditor)} className="btn btn-xs btn-ghost text-primary">Edit</button>
+
+              <div className="flex items-center gap-2 group">
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase tracking-wider font-semibold text-base-content/50 leading-none">Submission Deadline</span>
+                  <span className={`text-sm font-semibold mt-0.5 ${new Date() > new Date(deadline) ? 'text-error' : 'text-base-content'}`}>
+                    {formatDateOnly(deadline)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowDeadlineEditor(!showDeadlineEditor)}
+                  className="btn btn-xs btn-circle btn-ghost text-base-content/50 hover:text-primary transition-all"
+                  title="Change Deadline"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
               </div>
             </div>
 
             {/* Right: Search & Filters */}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full xl:w-auto justify-end">
-              <div className="relative w-full sm:w-72">
+            <div className="flex flex-wrap gap-2 w-full xl:w-auto xl:justify-end">
+              <div className="relative w-full sm:w-64">
+                <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                  <svg className="w-4 h-4 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </div>
                 <input
                   type="text"
-                  placeholder="Search LGU..."
+                  placeholder="Find an LGU..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="input input-bordered w-full pl-10 bg-base-100 shadow-sm"
+                  className="input input-bordered input-sm w-full pl-8 rounded-md font-normal"
                 />
-                <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
 
-              <select className="select select-bordered w-full sm:w-40 bg-base-100 shadow-sm" value={filters.region} onChange={(e) => setFilters(prev => ({ ...prev, region: e.target.value, province: '' }))}>
-                <option value="">All Regions</option>
-                {regions.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <select
+                  className="select select-bordered select-sm flex-1 sm:w-32 rounded-md font-normal"
+                  value={filters.region}
+                  onChange={(e) => setFilters(prev => ({ ...prev, region: e.target.value, province: '' }))}
+                >
+                  <option value="">All Regions</option>
+                  {regions.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
 
-              <select className="select select-bordered w-full sm:w-40 bg-base-100 shadow-sm" value={filters.province} onChange={(e) => setFilters(prev => ({ ...prev, province: e.target.value }))}>
-                <option value="">All Provinces</option>
-                {provinces.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
+                <select
+                  className="select select-bordered select-sm flex-1 sm:w-36 rounded-md font-normal"
+                  value={filters.province}
+                  onChange={(e) => setFilters(prev => ({ ...prev, province: e.target.value }))}
+                >
+                  <option value="">All Provinces</option>
+                  {provinces.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
 
-              <select className="select select-bordered w-full sm:w-40 bg-base-100 shadow-sm" value={filters.status} onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}>
-                <option value="">All Status</option>
-                <option value="Submitted">Submitted</option>
-                <option value="Not Submitted">Missing</option>
-              </select>
+                <select
+                  className="select select-bordered select-sm flex-1 sm:w-28 rounded-md font-normal"
+                  value={filters.status}
+                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                >
+                  <option value="">All Status</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="Not Submitted">Missing</option>
+                </select>
+              </div>
             </div>
-
           </div>
 
           {/* Deadline Editor Expansion */}
           {showDeadlineEditor && (
-            <div className="mt-4 pt-4 border-t border-base-200 animate-in slide-in-from-top-2">
+            <div className="p-4 border-t border-base-200 bg-base-50/50">
               <div className="flex items-end gap-3 max-w-xs">
                 <div className="form-control w-full">
-                  <label className="label py-1"><span className="label-text text-xs">Update Deadline</span></label>
-                  <input type="date" value={deadline} onChange={(e) => updateDeadline(e.target.value)} className="input input-bordered input-sm w-full" />
+                  <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase text-base-content/50">Update Deadline</span></label>
+                  <input type="date" value={deadline} onChange={(e) => updateDeadline(e.target.value)} className="input input-bordered input-sm w-full rounded-md" />
                 </div>
-                <button onClick={() => setShowDeadlineEditor(false)} className="btn btn-sm btn-ghost">Done</button>
+                <button onClick={() => setShowDeadlineEditor(false)} className="btn btn-sm btn-primary rounded-md font-medium">Done</button>
               </div>
             </div>
           )}
         </div>
 
-        {showResults ? (
-          <div className="bg-base-100 rounded-lg shadow-sm border border-base-300">
+      {showResults ? (
+          <div className="bg-base-100 rounded-lg border border-base-200 overflow-hidden">
             {/* Header with controls */}
-            <div className="p-3 border-b border-base-300">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                  <h4 className="text-lg font-semibold text-base-content">
-                    Filtered Results ({filteredLgus.length} LGUs)
-                    {searchQuery && (
-                      <span className="text-sm font-normal text-base-content/60 ml-2">
-                        - searching for "{searchQuery}"
-                      </span>
-                    )}
-                  </h4>
-                  <p className="text-sm text-base-content/60">
-                    Showing {paginatedLgus.length} of {totalItems} LGUs (Page {currentPage} of {totalPages})
-                  </p>
-                </div>
+            <div className="px-4 py-3 border-b border-base-200 bg-base-100/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-base-content">
+                  Checklist
+                </h4>
+                <span className="badge badge-neutral badge-sm rounded bg-base-200 text-base-content/70 border-none font-medium">
+                  {filteredLgus.length} LGUs
+                </span>
+              </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                   {/* Smart Toggle All Button */}
                   {(() => {
-                    // Calculate current state of displayed LGUs
                     const currentPeriod = getCurrentPeriod();
                     const submittedCount = paginatedLgus.filter(lgu => {
                       const record = localRecords.find(r =>
-                        ((r.lguId === lgu._id) ||
-                          (r.lguId && r.lguId._id === lgu._id) ||
-                          (typeof r.lguId === 'object' && r.lguId._id === lgu._id)) &&
+                        String(typeof r.lguId === 'object' ? r.lguId._id : r.lguId) === String(lgu._id) &&
                         r.period === currentPeriod
                       );
                       return record?.status === 'Submitted';
                     }).length;
 
                     const isToggleToSubmit = submittedCount <= paginatedLgus.length / 2;
-                    const buttonText = isToggleToSubmit ? 'Toggle All' : 'Untoggle All';
+                    const buttonText = isToggleToSubmit ? 'Mark Page' : 'Unmark Page';
                     const buttonIcon = isToggleToSubmit ? (
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     ) : (
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
                     );
 
                     return (
                       <button
                         onClick={handleToggleAll}
                         disabled={isTogglingAll || paginatedLgus.length === 0}
-                        className={`btn btn-sm ${isToggleToSubmit ? 'btn-primary' : 'btn-warning'}`}
-                        title={`${buttonText} - ${isToggleToSubmit ? 'Mark' : 'Unmark'} all ${paginatedLgus.length} LGUs on this page`}
+                        className={`btn btn-sm px-3 rounded-md border-none font-medium text-xs ${isToggleToSubmit ? 'bg-primary text-white hover:bg-primary/90' : 'bg-warning text-warning-content hover:bg-warning/90'}`}
                       >
-                        {isTogglingAll ? (
-                          <span className="loading loading-spinner loading-xs"></span>
-                        ) : (
-                          buttonIcon
-                        )}
-                        {buttonText}
+                        {isTogglingAll ? <span className="loading loading-spinner loading-xs"></span> : buttonIcon}
+                        <span>{buttonText}</span>
                       </button>
                     );
                   })()}
 
-                  {/* Items per page selector */}
+                  <div className="h-6 w-px bg-base-300 hidden sm:block"></div>
+
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-base-content/70">Per page:</label>
                     <select
                       value={itemsPerPage}
                       onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
-                      className="select select-sm select-bordered"
+                      className="select select-sm select-bordered rounded-md font-medium text-xs h-8 min-h-0"
                     >
-                      <option value={10}>10</option>
-                      <option value={25}>25</option>
-                      <option value={50}>50</option>
-                      <option value={100}>100</option>
+                      <option value={10}>10 / page</option>
+                      <option value={25}>25 / page</option>
+                      <option value={50}>50 / page</option>
+                      <option value={100}>100 / page</option>
                     </select>
                   </div>
 
@@ -1320,7 +1323,7 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
                         setIsToggling(false);
                         setStaticDisplayOrder(originalOrder.length > 0 ? originalOrder : filteredLgus);
                       }}
-                      className="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content"
+                      className="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content h-10 px-3 rounded-xl"
                       title="Restore original order (stop auto-sorting)"
                     >
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1330,7 +1333,6 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
                     </button>
                   )}
                 </div>
-              </div>
             </div>
             <div className="overflow-x-auto relative">
               {/* Loading Overlay during Toggle All */}
@@ -1355,16 +1357,14 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
                 </div>
               )}
 
-              <table className={`table table-pin-rows w-full ${(isTogglingAll || isBatchSaving) ? 'pointer-events-none opacity-60' : ''}`}>
+              <table className={`table table-pin-rows w-full ${(isTogglingAll || isBatchSaving || hasPeriodChanges()) ? 'pointer-events-none opacity-60 transition-opacity duration-300' : 'transition-opacity duration-300'}`}>
                 <thead>
-                  <tr className="bg-base-100 shadow-sm z-30 sticky top-16">
-                    <th className="bg-base-100/95 backdrop-blur-md text-base-content/70 font-bold p-3">LGU Name</th>
-                    <th className="bg-base-100/95 backdrop-blur-md text-base-content/70 font-bold p-3 cursor-pointer hover:bg-base-200 transition-colors" onClick={() => { setSortBy('province'); setPreserveOrder(false); }} title="Group by Province">Province {sortBy === 'province' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                    <th className="bg-base-100/95 backdrop-blur-md text-base-content/70 font-bold p-3">Class</th>
-                    <th className="bg-base-100/95 backdrop-blur-md text-base-content/70 font-bold p-3">Region</th>
-                    <th className="bg-base-100/95 backdrop-blur-md text-base-content/70 font-bold p-3">Status</th>
-                    <th className="bg-base-100/95 backdrop-blur-md text-base-content/70 font-bold p-3">Submission Date</th>
-                    <th className="bg-base-100/95 backdrop-blur-md text-base-content/70 font-bold p-3">Remarks</th>
+                  <tr className="bg-base-50/80 border-b border-base-200 z-30 sticky top-0 backdrop-blur-sm">
+                    <th className="text-base-content/60 font-semibold p-3 text-xs uppercase tracking-wider bg-transparent">LGU / Province</th>
+                    <th className="text-base-content/60 font-semibold p-3 text-xs uppercase tracking-wider bg-transparent hidden lg:table-cell">Region</th>
+                    <th className="text-base-content/60 font-semibold p-3 text-xs uppercase tracking-wider bg-transparent">Status</th>
+                    <th className="text-base-content/60 font-semibold p-3 text-xs uppercase tracking-wider bg-transparent">Date</th>
+                    <th className="text-base-content/60 font-semibold p-3 text-xs uppercase tracking-wider bg-transparent hidden sm:table-cell">Remarks</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1399,41 +1399,47 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
                     return [
                       showGroupHeader && (
                         <tr key={`group-${lgu.province}-${index}`} className="bg-base-200/40">
-                          <td colSpan="7" className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary/70 bg-base-200/40 sticky top-28 z-20 backdrop-blur-sm shadow-sm">
+                          <td colSpan="5" className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary/70 bg-base-200/40 sticky top-28 z-20 backdrop-blur-sm shadow-sm hidden md:table-cell">
                             {lgu.province}
                           </td>
                         </tr>
                       ),
                       <tr
                         key={lgu._id}
-                        className={`hover:bg-base-100 transition-colors border-b border-base-200/50 ${hasPendingChanges ? 'border-l-4 border-l-warning' : ''}`}
+                        className={`hover:bg-base-200/50 transition-all border-b border-base-200/60 ${hasPendingChanges ? 'border-l-4 border-l-warning bg-warning/5' : ''}`}
                         title={getPendingTooltip()}
                       >
-                        <td className="p-3 font-medium">{lgu.name}</td>
-                        <td className="p-3 text-sm text-base-content/70">{lgu.province}</td>
-                        <td className="p-3 text-sm text-base-content/70">{lgu.classification || '-'}</td>
-                        <td className="p-3 text-sm text-base-content/70">{lgu.region || '-'}</td>
+                        <td className="px-4 sm:px-6 py-3">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-base-content text-sm leading-tight">{lgu.name}</span>
+                            <span className="text-[11px] text-base-content/60 mt-0.5">{lgu.province} {lgu.classification ? `• ${lgu.classification}` : ''}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3 text-xs text-base-content/60 hidden lg:table-cell">{lgu.region || '-'}</td>
 
-                        <td className="p-3">
+                        <td className="px-4 sm:px-6 py-3">
                           <div
                             onClick={() => !(isTogglingAll || isBatchSaving) && handleStatusChange(lgu._id, currentStatus === 'Submitted' ? 'Not Submitted' : 'Submitted')}
-                            className={`badge gap-2 cursor-pointer px-3 py-3 h-auto min-w-[120px] transition-all duration-200 ${currentStatus === 'Submitted'
-                              ? 'badge-success text-white shadow-md hover:bg-green-600'
-                              : 'badge-ghost border-base-300 bg-base-200/50 hover:bg-base-300'
+                            className={`group inline-flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-full transition-colors border select-none sm:w-auto w-full justify-center ${currentStatus === 'Submitted'
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                              : 'bg-base-100 border-base-300 text-base-content/50 hover:bg-base-200'
                               } ${togglingLgu === lgu._id ? 'opacity-70 cursor-wait' : ''}`}
                           >
-                            {togglingLgu === lgu._id ? (
-                              <span className="loading loading-spinner loading-xs"></span>
-                            ) : (
-                              currentStatus === 'Submitted'
-                                ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                                : <svg className="w-4 h-4 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            )}
-                            <span className="font-semibold text-xs">{currentStatus === 'Submitted' ? 'Submitted' : 'Pending'}</span>
+                            <div className="flex items-center gap-1.5">
+                              {togglingLgu === lgu._id ? (
+                                <span className="loading loading-spinner loading-xs text-current"></span>
+                              ) : (
+                                currentStatus === 'Submitted'
+                                  ? <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                                  : <div className="w-2.5 h-2.5 rounded-full border border-current"></div>
+                              )}
+                              <span className="font-medium text-xs whitespace-nowrap">{currentStatus === 'Submitted' ? 'Submitted' : 'Pending'}</span>
+                            </div>
+                            {hasPendingChanges && <span className="w-1.5 h-1.5 rounded-full bg-warning" title="Staged change"></span>}
                           </div>
                         </td>
 
-                        <td className="p-3">
+                        <td className="px-4 sm:px-6 py-3">
                           {isEditing && editingCell.field === 'dateSubmitted' ? (
                             <div className="flex items-center gap-1">
                               <input
@@ -1441,43 +1447,46 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
                                 value={editValue || ''}
                                 onChange={(e) => setEditValue(e.target.value)}
                                 onKeyDown={(e) => handleKeyPress(e, lgu._id)}
-                                className="input input-bordered input-xs w-full"
+                                className="input input-bordered input-sm w-full min-w-[140px] text-xs bg-base-100"
                                 autoFocus
                                 disabled={saving || isTogglingAll}
-                                max="2099-12-31T23:59"
-                                min="2020-01-01T00:00"
                               />
-                              <button onClick={() => saveEdit(lgu._id)} disabled={saving || isTogglingAll || isBatchSaving} className="btn btn-success btn-xs">✓</button>
-                              <button onClick={cancelEdit} disabled={saving || isTogglingAll || isBatchSaving} className="btn btn-error btn-xs">✕</button>
+                              <div className="flex flex-col sm:flex-row gap-1">
+                                <button onClick={() => saveEdit(lgu._id)} disabled={saving} className="btn btn-square btn-success btn-xs">✓</button>
+                                <button onClick={cancelEdit} disabled={saving} className="btn btn-square btn-ghost btn-xs">✕</button>
+                              </div>
                             </div>
                           ) : (
-                            <div className={`text-xs ${currentDate ? 'text-base-content' : 'text-base-content/40 italic cursor-pointer hover:text-primary'}`}
-                              onClick={() => !(isTogglingAll || isBatchSaving) && startEditing(lgu._id, 'dateSubmitted', currentDate)}>
-                              {currentDate ? formatDateTimePhilippines(currentDate) : 'Set Date'}
+                            <div
+                              className={`group/date flex items-center gap-1.5 text-xs transition-colors cursor-pointer whitespace-nowrap ${currentDate ? 'text-base-content/80' : 'text-base-content/30'}`}
+                              onClick={() => !(isTogglingAll || isBatchSaving) && startEditing(lgu._id, 'dateSubmitted', currentDate)}
+                            >
+                              <svg className="w-3 h-3 opacity-50 group-hover/date:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {currentDate ? formatDateTimePhilippines(currentDate) : 'Set'}
                             </div>
                           )}
                         </td>
 
-
-
-                        <td className="p-3">
+                        <td className="px-4 sm:px-6 py-3 hidden sm:table-cell">
                           {isEditing && editingCell.field === 'description' ? (
-                            <div className="flex bg-base-100 rounded-lg border border-primary p-1">
+                            <div className="flex bg-base-100 border border-base-300 rounded p-1">
                               <textarea
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && e.ctrlKey && saveEdit(lgu._id) || e.key === 'Escape' && cancelEdit()}
-                                className="textarea textarea-xs w-full min-h-[40px] bg-transparent focus:outline-none resize-none"
+                                className="textarea textarea-xs w-full min-h-[36px] bg-transparent focus:outline-none resize-none px-1"
                                 placeholder="..."
                                 autoFocus
                               />
-                              <button onClick={() => saveEdit(lgu._id)} className="btn btn-ghost btn-xs text-success">✓</button>
+                              <div className="flex flex-col gap-0.5 ml-1">
+                                <button onClick={() => saveEdit(lgu._id)} className="btn btn-ghost btn-xs text-success h-5 min-h-0 px-1">✓</button>
+                                <button onClick={cancelEdit} className="btn btn-ghost btn-xs text-error h-5 min-h-0 px-1">✕</button>
+                              </div>
                             </div>
                           ) : (
                             <div
-                              className={`text-xs max-w-[200px] truncate ${!currentRemarks && 'text-base-content/30 italic'} cursor-pointer hover:text-primary transition-colors`}
+                              className={`text-xs max-w-[150px] truncate py-1 px-2 rounded cursor-pointer ${currentRemarks ? 'bg-base-200 text-base-content/80' : 'text-base-content/40 hover:bg-base-200/50'}`}
                               onClick={() => !(isTogglingAll || isBatchSaving) && startEditing(lgu._id, 'description', currentRemarks)}
-                              title={currentRemarks || 'Click to add remarks'}
                             >
                               {currentRemarks || 'Add...'}
                             </div>
@@ -1487,7 +1496,7 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
                     ];
                   }) : (
                     <tr>
-                      <td colSpan="7" className="text-center p-8 bg-base-100">
+                      <td colSpan="5" className="text-center p-8 bg-base-100">
                         <div className="flex flex-col items-center justify-center opacity-50">
                           <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
                           <span>No LGUs found. Try adjusting filters.</span>
@@ -1591,38 +1600,53 @@ export default function QrrpaChecklist({ records = [], lgus = [], loading, onRef
         {/* NEW: Enhanced Sticky Save Button - Always visible at bottom when changes exist */}
         {pendingChanges.size > 0 && createPortal(
           <div
-            className="fixed bottom-0 left-0 right-0 lg:left-64 bg-slate-900 border-t-4 border-yellow-400 shadow-2xl p-4 animate-in slide-in-from-bottom duration-300 backdrop-blur-sm"
-            style={{
-              zIndex: 40,
-            }}
+            className="fixed bottom-0 left-0 right-0 lg:left-64 z-[100] p-4 animate-in slide-in-from-bottom duration-500 ease-out"
           >
-            <div className="container mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3 text-white">
-                <div className="p-2 bg-yellow-400/20 rounded-full animate-pulse">
-                  <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <div className="max-w-5xl mx-auto">
+              <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-5 overflow-hidden relative">
+                {/* Decorative background glow */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -ml-10 -mb-10"></div>
+
+                <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center relative">
+                       <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 text-[10px] font-black text-slate-900 items-center justify-center">
+                          {pendingChanges.size}
+                        </span>
+                      </span>
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-white font-black text-lg tracking-tight leading-none uppercase italic">Changes Detected</h3>
+                      <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1.5">Staged {pendingChanges.size} record(s) for the current period</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full md:w-auto">
+                    <button
+                      onClick={handleClearPending}
+                      className="btn bg-transparent border-2 border-white/20 !text-white font-black px-6 rounded-2xl h-12 hover:bg-white/10 hover:border-white/40 transition-all flex-1 md:flex-none uppercase text-xs tracking-widest"
+                      disabled={isBatchSaving}
+                    >
+                      Discard
+                    </button>
+                    <button
+                      onClick={handleBatchSave}
+                      className="btn bg-white hover:bg-white/90 text-slate-900 border-none rounded-2xl flex-1 md:flex-none h-12 shadow-2xl shadow-white/20 font-black px-12 transition-all active:scale-95 group uppercase text-xs tracking-widest"
+                      disabled={isBatchSaving}
+                    >
+                      {isBatchSaving ? <span className="loading loading-spinner loading-sm"></span> : (
+                        <>
+                          <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                          Save Changes
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg">{pendingChanges.size} Changes Pending</h3>
-                  <p className="text-sm text-slate-400">Changes staged in memory - not yet saved to your blgf_db database</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <button
-                  onClick={handleClearPending}
-                  className="btn btn-ghost text-red-400 hover:bg-white/10 flex-1 sm:flex-none border border-red-500/30"
-                  disabled={isBatchSaving}
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Clear All
-                </button>
-                <button
-                  onClick={handleBatchSave}
-                  className="btn bg-teal-400 hover:bg-teal-500 text-slate-900 border-none font-bold px-8 flex-1 sm:flex-none border border-teal-500/20"
-                  disabled={isBatchSaving}
-                >
-                  {isBatchSaving ? <span className="loading loading-spinner text-slate-900"></span> : <Save className="w-5 h-5 mr-2" />}
-                  Save All Changes ({pendingChanges.size})
-                </button>
               </div>
             </div>
           </div>,

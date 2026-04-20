@@ -26,6 +26,43 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  // Inactivity Auto-Logout Effect
+  useEffect(() => {
+    if (!user) return;
+
+    const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+    let isLoggedOut = false;
+
+    const updateActivity = () => {
+      if (isLoggedOut) return;
+      localStorage.setItem("lastActivity", Date.now().toString());
+    };
+
+    // Initialize activity on mount
+    updateActivity();
+
+    // Check inactivity periodically
+    const intervalId = setInterval(() => {
+      const lastActivity = localStorage.getItem("lastActivity");
+      if (lastActivity && Date.now() - parseInt(lastActivity, 10) > INACTIVITY_LIMIT) {
+        if (!isLoggedOut) {
+          isLoggedOut = true;
+          console.log("Session expired due to inactivity");
+          logout();
+        }
+      }
+    }, 60000); // Check every minute
+
+    // Update activity on user interaction
+    const events = ["mousemove", "keydown", "click", "scroll"];
+    events.forEach(eventName => window.addEventListener(eventName, updateActivity));
+
+    return () => {
+      clearInterval(intervalId);
+      events.forEach(eventName => window.removeEventListener(eventName, updateActivity));
+    };
+  }, [user]);
+
   const login = async (email, password) => {
     try {
       // use the helper function

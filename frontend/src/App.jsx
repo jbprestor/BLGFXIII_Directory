@@ -153,17 +153,38 @@ export default function App() {
         className={`
           min-h-screen transition-all duration-300 pt-16
           ${user ? (sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64') : ''}
-          p-4 sm:p-6
+          px-4 sm:px-6 lg:px-8 pb-8 pt-20 sm:pt-24
         `}
       >
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/directory" element={<DirectoryPage />} />
-          <Route path="/create" element={<CreatePage />} />
-          <Route path="/lgu-profile" element={<LGUPage />} />
 
           {/* Protected Routes */}
+          <Route
+            path="/directory"
+            element={
+              <ProtectedRoute>
+                <DirectoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create"
+            element={
+              <ProtectedRoute>
+                <CreatePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/lgu-profile"
+            element={
+              <ProtectedRoute>
+                <LGUPage />
+              </ProtectedRoute>
+            }
+          />
           {/* <Route
             path="/dashboard"
             element={
