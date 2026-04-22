@@ -33,44 +33,129 @@ export default function SMVCompactTable({
   };
 
   // Calculate days until next deadline
-  const getNextDeadline = (timeline) => {
+  // A filled date in the past = completed. 
+  // An empty date or a filled date in the future = the active bottleneck.
+  const getNextDeadline = (row) => {
+    const { timeline } = row;
     if (!timeline) return null;
+    if (!timeline.blgfNoticeDate) return null;
     
     const today = new Date();
-    const deadlines = [
-      { name: "RO Submission", date: timeline.regionalOfficeSubmissionDeadline, priority: 1 },
-      { name: "Publication", date: timeline.publicationDeadline, priority: 2 },
-      { name: "Public Consultation", date: timeline.publicConsultationDeadline, priority: 3 },
-      { name: "Sanggunian", date: timeline.sanggunianSubmissionDeadline, priority: 4 },
-      { name: "BLGF Approval", date: timeline.blgfApprovalDeadline, priority: 5 },
-      { name: "Effectivity", date: timeline.effectivityDate, priority: 6 },
-    ].filter(d => d.date);
+    today.setHours(0, 0, 0, 0);
 
-    // Find upcoming deadlines (future dates)
-    const upcomingDeadlines = deadlines
-      .map(d => ({
-        ...d,
-        deadline: new Date(d.date),
-        daysUntil: Math.ceil((new Date(d.date) - today) / (1000 * 60 * 60 * 24))
-      }))
-      .filter(d => d.daysUntil >= 0)
-      .sort((a, b) => a.daysUntil - b.daysUntil);
+    const milestones = [
+      {
+        name: "1st Publication",
+        value: timeline.firstPublicationDate,
+        getRecommended: () => null
+      },
+      {
+        name: "2nd Publication",
+        value: timeline.secondPublicationDate,
+        getRecommended: () => {
+          if (!timeline.firstPublicationDate) return null;
+          const d = new Date(timeline.firstPublicationDate);
+          d.setDate(d.getDate() + 7);
+          return d;
+        }
+      },
+      {
+        name: "1st Consultation",
+        value: timeline.firstPublicConsultationDate,
+        getRecommended: () => {
+          if (!timeline.secondPublicationDate) return null;
+          const d = new Date(timeline.secondPublicationDate);
+          d.setDate(d.getDate() + 14);
+          return d;
+        }
+      },
+      {
+        name: "2nd Consultation",
+        value: timeline.secondPublicConsultationDate,
+        getRecommended: () => null
+      },
+      {
+        name: "RO Submission",
+        value: timeline.regionalOfficeSubmissionDeadline,
+        getRecommended: () => {
+          if (!timeline.secondPublicConsultationDate) return null;
+          const d = new Date(timeline.secondPublicConsultationDate);
+          d.setDate(d.getDate() + 60);
+          return d;
+        }
+      },
+      {
+        name: "RO Review",
+        value: timeline.roReviewDeadline,
+        getRecommended: () => {
+          if (!timeline.regionalOfficeSubmissionDeadline) return null;
+          const d = new Date(timeline.regionalOfficeSubmissionDeadline);
+          d.setDate(d.getDate() + 45);
+          return d;
+        }
+      },
+      {
+        name: "CO Review",
+        value: timeline.blgfCentralOfficeReviewDeadline,
+        getRecommended: () => {
+          if (!timeline.roReviewDeadline) return null;
+          const d = new Date(timeline.roReviewDeadline);
+          d.setDate(d.getDate() + 30);
+          return d;
+        }
+      },
+      {
+        name: "SoF Approval",
+        value: timeline.secretaryOfFinanceReviewDeadline,
+        getRecommended: () => {
+          if (!timeline.blgfCentralOfficeReviewDeadline) return null;
+          const d = new Date(timeline.blgfCentralOfficeReviewDeadline);
+          d.setDate(d.getDate() + 30);
+          return d;
+        }
+      },
+    ];
 
-    // If no upcoming, check overdue
-    if (upcomingDeadlines.length === 0) {
-      const overdueDeadlines = deadlines
-        .map(d => ({
-          ...d,
-          deadline: new Date(d.date),
-          daysUntil: Math.ceil((new Date(d.date) - today) / (1000 * 60 * 60 * 24))
-        }))
-        .filter(d => d.daysUntil < 0)
-        .sort((a, b) => b.daysUntil - a.daysUntil); // Most recent overdue first
+    for (const milestone of milestones) {
+      if (milestone.value) {
+        // It has a date populated
+        const popDate = new Date(milestone.value);
+        popDate.setHours(0, 0, 0, 0);
+        
+        const diffDays = Math.ceil((popDate - today) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0) {
+          continue; // Move to next milestone
+        }
+        
+        return {
+          name: milestone.name,
+          daysUntil: diffDays,
+          isNextGoal: true
+        };
+      } else {
+        // Value is EMPTY -> This is the NEXT goal to achieve!
+        const recommended = milestone.getRecommended();
 
-      return overdueDeadlines[0] || null;
+        if (recommended) {
+          recommended.setHours(0, 0, 0, 0);
+          const diffDays = Math.ceil((recommended - today) / (1000 * 60 * 60 * 24));
+          return {
+            name: milestone.name,
+            daysUntil: diffDays,
+            isNextGoal: true
+          };
+        }
+
+        return {
+          name: milestone.name,
+          isNextGoal: true,
+          noDeadline: true
+        };
+      }
     }
 
-    return upcomingDeadlines[0];
+    return { name: "Completed", isCompleted: true };
   };
 
   // Heat map color based on completion
@@ -195,7 +280,7 @@ export default function SMVCompactTable({
                   <td className="p-1 text-center">
                     {(() => {
                       const daysSinceNotice = calculateDaysFromNotice(row.timeline);
-                      const nextDeadline = getNextDeadline(row.timeline);
+                      const nextDeadline = getNextDeadline(row);
                       
                       return (
                         <div className="flex flex-col gap-0.5">

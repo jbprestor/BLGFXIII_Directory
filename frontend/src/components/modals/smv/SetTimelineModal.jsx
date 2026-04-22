@@ -293,19 +293,6 @@ export default function SetTimelineModal({
         sofReview = lguData.timeline.secretaryOfFinanceReviewDeadline
           ? new Date(lguData.timeline.secretaryOfFinanceReviewDeadline).toISOString().split('T')[0]
           : "";
-      } else if (roSubmission) {
-        // No saved review data at all — auto-calculate defaults for a new record
-        const roDate = new Date(roSubmission);
-        roDate.setDate(roDate.getDate() + 45);
-        roReview = roDate.toISOString().split('T')[0];
-        
-        const coDate = new Date(roDate);
-        coDate.setDate(coDate.getDate() + 30);
-        blgfCOReview = coDate.toISOString().split('T')[0];
-        
-        const sofDate = new Date(coDate);
-        sofDate.setDate(sofDate.getDate() + 30);
-        sofReview = sofDate.toISOString().split('T')[0];
       }
 
       const loadedFormData = {
@@ -416,7 +403,7 @@ export default function SetTimelineModal({
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Clear errors for this field
+    // Clear errors for this field locally; useEffect will re-evaluate globally
     setErrors(prev => ({ ...prev, [name]: "" }));
     
     // AUTO-UPDATE TAB 3 & TAB 4: Update activity dates when timeline changes
@@ -461,104 +448,6 @@ export default function SetTimelineModal({
           }
           return activity;
         }));
-        
-        // Auto-calculate and set RO Review date (RO Submission + 45 days)
-        if (value) {
-          const roDate = new Date(value);
-          roDate.setDate(roDate.getDate() + 45);
-          const roReviewDate = roDate.toISOString().split('T')[0];
-          
-          setReviewPublicationActivities(prev => prev.map(activity => {
-            if (activity.name === "Regional Office Review (45 days) - BLGF RO") {
-              return { ...activity, dateCompleted: roReviewDate };
-            }
-            return activity;
-          }));
-          
-          // Auto-calculate BLGF CO Review (RO Review + 30 days)
-          const coDate = new Date(roDate);
-          coDate.setDate(coDate.getDate() + 30);
-          const coReviewDate = coDate.toISOString().split('T')[0];
-          
-          setReviewPublicationActivities(prev => prev.map(activity => {
-            if (activity.name === "Central Office Review (30 days) - BLGF CO") {
-              return { ...activity, dateCompleted: coReviewDate };
-            }
-            return activity;
-          }));
-          
-          // Auto-calculate SOF Certification (BLGF CO + 30 days)
-          const sofDate = new Date(coDate);
-          sofDate.setDate(sofDate.getDate() + 30);
-          const sofCertDate = sofDate.toISOString().split('T')[0];
-          
-          setReviewPublicationActivities(prev => prev.map(activity => {
-            if (activity.name === "Indorsement / Certification to SOF (30 days) - BLGF CO") {
-              return { ...activity, dateCompleted: sofCertDate };
-            }
-            return activity;
-          }));
-        }
-      }
-    }
-    
-    // VALIDATION 1: 1st Public Consultation must be at least 2 weeks after 1st Publication AND not before 2nd Publication
-    if (name === 'firstPublicConsultationDate' && value) {
-      const firstConsDate = new Date(value);
-      
-      // Check 1: Must be at least 2 weeks after 1st Publication
-      if (formData.firstPublicationDate) {
-        const firstPubDate = new Date(formData.firstPublicationDate);
-        const diffTime = firstConsDate - firstPubDate;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (diffDays < 14) {
-          setErrors(prev => ({
-            ...prev,
-            firstPublicConsultationDate: `Must be at least 2 weeks (14 days) after 1st Publication (${formatDateLong(formData.firstPublicationDate)})`
-          }));
-          return;
-        }
-      }
-      
-      // Check 2: Must not be before 2nd Publication
-      if (formData.secondPublicationDate) {
-        const secondPubDate = new Date(formData.secondPublicationDate);
-        if (firstConsDate < secondPubDate) {
-          setErrors(prev => ({
-            ...prev,
-            firstPublicConsultationDate: `Must not be before 2nd Publication (${formatDateLong(formData.secondPublicationDate)})`
-          }));
-          return;
-        }
-      }
-    }
-    
-    // VALIDATION 2: Public Consultations must be within 60 days BEFORE RO Submission (RPVARA IRR Section 27)
-    // The 60-day period starts from the 1st Public Consultation
-    if (name === 'regionalOfficeSubmissionDeadline' && value && formData.firstPublicConsultationDate) {
-      const firstConsDate = new Date(formData.firstPublicConsultationDate);
-      const roSubmissionDate = new Date(value);
-      
-      const diffTime = roSubmissionDate - firstConsDate;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      // RO Submission must be WITHIN 60 days after 1st consultation (consultations within 60 days prior to submission)
-      if (diffDays > 60) {
-        setErrors(prev => ({
-          ...prev,
-          regionalOfficeSubmissionDeadline: `Consultations must be within 60 days before submission. Currently ${diffDays} days from 1st consultation (Max: 60 days)`
-        }));
-        return;
-      }
-      
-      // Also ensure RO Submission is AFTER 1st consultation (consultation must happen first)
-      if (diffDays < 0) {
-        setErrors(prev => ({
-          ...prev,
-          regionalOfficeSubmissionDeadline: `Must be after 1st Public Consultation (${formatDateLong(formData.firstPublicConsultationDate)})`
-        }));
-        return;
       }
     }
     
@@ -568,6 +457,65 @@ export default function SetTimelineModal({
     }));
     setHasChanges(true);
   };
+
+  // Cross-field Validation side-effect
+  useEffect(() => {
+    const newErrors = {
+      firstPublicConsultationDate: "",
+      secondPublicConsultationDate: "",
+      regionalOfficeSubmissionDeadline: ""
+    };
+
+    // 1st Public Consultation Validation
+    if (formData.firstPublicConsultationDate) {
+      const firstConsDate = new Date(formData.firstPublicConsultationDate);
+      
+      if (formData.firstPublicationDate) {
+        const firstPubDate = new Date(formData.firstPublicationDate);
+        const diffDays = Math.ceil((firstConsDate - firstPubDate) / (1000 * 60 * 60 * 24));
+        if (diffDays < 14) {
+          newErrors.firstPublicConsultationDate = `Must be at least 2 weeks (14 days) after 1st Publication (${formatDateLong(formData.firstPublicationDate)})`;
+        }
+      }
+      
+      if (!newErrors.firstPublicConsultationDate && formData.secondPublicationDate) {
+        const secondPubDate = new Date(formData.secondPublicationDate);
+        if (firstConsDate < secondPubDate) {
+          newErrors.firstPublicConsultationDate = `Must not be before 2nd Publication (${formatDateLong(formData.secondPublicationDate)})`;
+        }
+      }
+    }
+
+    // 2nd Public Consultation Validation
+    if (formData.secondPublicConsultationDate && formData.firstPublicConsultationDate) {
+      const secondConsDate = new Date(formData.secondPublicConsultationDate);
+      const firstConsDate = new Date(formData.firstPublicConsultationDate);
+      if (secondConsDate < firstConsDate) {
+        newErrors.secondPublicConsultationDate = `Must not be before 1st Public Consultation (${formatDateLong(formData.firstPublicConsultationDate)})`;
+      }
+    }
+
+    // RO Submission Validation
+    if (formData.regionalOfficeSubmissionDeadline && formData.secondPublicConsultationDate) {
+      const roSubDate = new Date(formData.regionalOfficeSubmissionDeadline);
+      const secondConsDate = new Date(formData.secondPublicConsultationDate);
+      const diffDays = Math.ceil((roSubDate - secondConsDate) / (1000 * 60 * 60 * 24));
+
+      if (diffDays > 60) {
+        newErrors.regionalOfficeSubmissionDeadline = `Must be within 60 days after 2nd consultation. Currently ${diffDays} days from 2nd consultation (Max: 60 days)`;
+      } else if (diffDays < 0) {
+        newErrors.regionalOfficeSubmissionDeadline = `Must be after 2nd Public Consultation (${formatDateLong(formData.secondPublicConsultationDate)})`;
+      }
+    }
+
+    setErrors(newErrors);
+  }, [
+    formData.firstPublicationDate,
+    formData.secondPublicationDate,
+    formData.firstPublicConsultationDate,
+    formData.secondPublicConsultationDate,
+    formData.regionalOfficeSubmissionDeadline
+  ]);
 
   // Handle activity field changes
   const handleActivityChange = (stageName, activityIndex, field, value) => {
@@ -1052,7 +1000,7 @@ export default function SetTimelineModal({
                   <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
                     <label className="font-bold flex items-center gap-2 text-sm md:text-base">
                       <span className="text-lg">📤</span> RO Submission
-                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info z-50 text-left" data-tip="Submission of Proposed SMV to BLGF Regional Office. Must occur within 60 days of the 1st Public Consultation (RPVARA Section 27).">
+                      <div className="tooltip tooltip-right cursor-help text-base-content/40 hover:text-info z-50 text-left" data-tip="Submission of Proposed SMV to BLGF Regional Office. Must occur within 60 days of the 2nd Public Consultation.">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                       </div>
                     </label>
@@ -1062,14 +1010,14 @@ export default function SetTimelineModal({
                     value={formData.regionalOfficeSubmissionDeadline}
                     onChange={handleChange}
                     className={`input input-bordered input-sm md:input-md w-full md:max-w-md ${errors.regionalOfficeSubmissionDeadline ? 'input-error' : ''}`}
-                    min={formData.firstPublicConsultationDate}
+                    min={formData.secondPublicConsultationDate}
                     placeholder="Select submission date..."
                   />
                   {errors.regionalOfficeSubmissionDeadline ? (
                     <span className="label-text-alt text-xs text-error mt-2 font-medium">⚠️ {errors.regionalOfficeSubmissionDeadline}</span>
-                  ) : formData.firstPublicConsultationDate && (
+                  ) : formData.secondPublicConsultationDate && (
                     <span className="text-xs text-info font-medium mt-2 ml-1">
-                      Valid Range: {formatDateLong(formData.firstPublicConsultationDate)} to {formatDateLong(new Date(new Date(formData.firstPublicConsultationDate).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])}
+                      Valid Range: {formatDateLong(formData.secondPublicConsultationDate)} to {formatDateLong(new Date(new Date(formData.secondPublicConsultationDate).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])}
                     </span>
                   )}
                 </div>

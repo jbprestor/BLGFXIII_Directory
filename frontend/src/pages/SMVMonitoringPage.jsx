@@ -8,6 +8,7 @@ import SMVStatsCards from "../components/smv/SMVStatsCards.jsx";
 import SMVTimelineAlerts from "../components/smv/SMVTimelineAlerts.jsx";
 import SMVFilters from "../components/smv/SMVFilters.jsx";
 import SMVSummaryTable from "../components/smv/SMVSummaryTable.jsx";
+import SMVExcelTable from "../components/smv/SMVExcelTable.jsx";
 import SMVActivityTimeline from "../components/smv/SMVActivityTimeline.jsx";
 import SetTimelineModal from "../components/modals/smv/SetTimelineModal.jsx";
 
@@ -26,6 +27,7 @@ export default function SMVMonitoringPage() {
   const [progressFilter, setProgressFilter] = useState("all");
   const [selectedYear, setSelectedYear] = useState(2025);
   const [activeTab, setActiveTab] = useState("table");
+  const [tableStyle, setTableStyle] = useState("detailed"); // "detailed" | "grid"
 
   // Timeline modal state
   const [timelineModalOpen, setTimelineModalOpen] = useState(false);
@@ -73,12 +75,7 @@ export default function SMVMonitoringPage() {
 
       console.log(`📊 Fetched ${allMonitorings.length} monitoring records for year ${selectedYear}`);
 
-      // Log each monitoring record to debug Surigao del Sur issue
-      allMonitorings.forEach(m => {
-        const lguName = m.lguId?.name || 'Unknown';
-        const lguId = m.lguId?._id || m.lguId;
-        console.log(`  - ${lguName} (LGU ID: ${lguId}, Monitoring ID: ${m._id})`);
-      });
+
 
       // Filter by selected year
       const filteredByYear = allMonitorings.filter(m =>
@@ -127,12 +124,7 @@ export default function SMVMonitoringPage() {
         return monitoringLguId === lgu._id || monitoringLguId === lgu._id.toString();
       }) || {};
 
-      console.log(`🔍 Matching for ${lgu.name}:`, {
-        lguId: lgu._id,
-        foundMonitoring: !!monitoring._id,
-        monitoringId: monitoring._id,
-        monitoringLguId: monitoring.lguId
-      });
+
 
       // Try to use saved stageMap first, otherwise construct from activities
       let stageMap;
@@ -274,6 +266,66 @@ export default function SMVMonitoringPage() {
     [lgus]
   );
 
+  const handleExportCSV = () => {
+    // Generate CSV headers
+    const headers = [
+      "LGU Name",
+      "Status",
+      "Overall Progress",
+      "BLGF Notice Date",
+      "1st Publication",
+      "2nd Publication",
+      "1st Public Consultation",
+      "2nd Public Consultation",
+      "RO Submission",
+      "RO Review & Endorsement",
+      "CO Review & Endorsement",
+      "SoF Approval"
+    ];
+
+    // Map data to CSV rows
+    const csvRows = filteredTableData.map(row => {
+      const t = row.timeline || {};
+      
+      // Helper to format date safely for CSV
+      const d = (val) => {
+        if (!val) return "";
+        return new Date(val).toLocaleDateString('en-US');
+      };
+
+      return [
+        `"${row.lguName}"`,
+        `"${row.currentStage}"`,
+        `"${row.overallProgress}%"`,
+        `"${d(t.blgfNoticeDate)}"`,
+        `"${d(t.firstPublicationDate)}"`,
+        `"${d(t.secondPublicationDate)}"`,
+        `"${d(t.firstPublicConsultationDate)}"`,
+        `"${d(t.secondPublicConsultationDate)}"`,
+        `"${d(t.regionalOfficeSubmissionDeadline)}"`,
+        `"${d(t.roReviewDeadline)}"`,
+        `"${d(t.blgfCentralOfficeReviewDeadline)}"`,
+        `"${d(t.secretaryOfFinanceReviewDeadline)}"`
+      ].join(",");
+    });
+
+    // Combine headers and rows
+    const csvContent = [headers.join(","), ...csvRows].join("\n");
+
+    // Trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `SMV_Monitoring_Export_${selectedYear}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("CSV Downloaded!");
+  };
+
   const handleCheckboxToggle = async (monitoringId, activity, lguId) => {
     if (!isAdmin) return;
 
@@ -342,15 +394,7 @@ export default function SMVMonitoringPage() {
 
   // Handle opening timeline modal
   const handleSetTimeline = (rowData) => {
-    console.log('🎯 handleSetTimeline received rowData:', {
-      lguName: rowData.lguName,
-      lguId: rowData.lguId,
-      monitoringId: rowData.monitoringId,
-      hasTimeline: !!rowData.timeline,
-      timelineKeys: rowData.timeline ? Object.keys(rowData.timeline) : [],
-      hasStageMap: !!rowData.stageMap,
-      stageMapKeys: rowData.stageMap ? Object.keys(rowData.stageMap) : []
-    });
+
 
     if (rowData.monitoringId) {
       console.log('✅ Monitoring exists in database with ID:', rowData.monitoringId);
@@ -505,7 +549,6 @@ export default function SMVMonitoringPage() {
 
       // Handle proposed publication activities - clean data
       if (allData.proposedPublicationActivities) {
-        console.log("📋 Raw proposedPublicationActivities:", allData.proposedPublicationActivities);
         updateData.proposedPublicationActivities = allData.proposedPublicationActivities.map(activity => ({
           name: activity.name,
           status: activity.status || 'Not Completed',
@@ -514,19 +557,16 @@ export default function SMVMonitoringPage() {
           isHeader: activity.isHeader || false,
           isNote: activity.isNote || false
         }));
-        console.log("✅ Cleaned proposedPublicationActivities:", updateData.proposedPublicationActivities);
       }
 
       // Handle review publication activities - clean data
       if (allData.reviewPublicationActivities) {
-        console.log("📋 Raw reviewPublicationActivities:", allData.reviewPublicationActivities);
         updateData.reviewPublicationActivities = allData.reviewPublicationActivities.map(activity => ({
           name: activity.name,
           status: activity.status || 'Not Completed',
           dateCompleted: activity.dateCompleted || '',
           remarks: activity.remarks || ''
         }));
-        console.log("✅ Cleaned reviewPublicationActivities:", updateData.reviewPublicationActivities);
       }
 
       // Debug: Log the data being sent
@@ -650,9 +690,9 @@ export default function SMVMonitoringPage() {
           {/* Table View Tab - Simplified */}
           {activeTab === "table" && (
             <section className="p-3 sm:p-4 lg:p-6">
-              {/* Enhanced Header with Count */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
+              {/* Enhanced Header with Count & Actions */}
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3 self-start md:self-auto">
                   <div className="p-2.5 bg-primary/10 rounded-xl">
                     <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -662,17 +702,44 @@ export default function SMVMonitoringPage() {
                     <h3 className="text-xl font-bold text-base-content">
                       LGU Monitoring
                     </h3>
-                    <p className="text-xs text-base-content/60 font-medium">
+                    <p className="text-xs text-base-content/60 font-medium whitespace-nowrap">
                       Track SMV development progress across all LGUs
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                  {/* View Toggles */}
+                  <div className="join bg-base-200/50 p-1 rounded-lg border border-base-300">
+                    <button 
+                      onClick={() => setTableStyle("detailed")}
+                      className={`btn btn-sm join-item ${tableStyle === "detailed" ? "btn-primary" : "btn-ghost"}`}
+                      title="Detailed Cards View"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                      <span className="hidden sm:inline">Cards</span>
+                    </button>
+                    <button 
+                      onClick={() => setTableStyle("grid")}
+                      className={`btn btn-sm join-item ${tableStyle === "grid" ? "btn-primary" : "btn-ghost"}`}
+                      title="Timeline Grid View"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                      <span className="hidden sm:inline">Grid</span>
+                    </button>
+                  </div>
+
+                  {/* Export Button */}
+                  <button onClick={handleExportCSV} className="btn btn-sm btn-outline btn-primary gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span className="hidden sm:inline">Export CSV</span>
+                  </button>
+
                   <div className="stats shadow-md bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
-                    <div className="stat py-3 px-4">
-                      <div className="stat-title text-[10px] font-bold uppercase tracking-wide">Total</div>
-                      <div className="stat-value text-2xl text-primary">{filteredTableData.length}</div>
-                      <div className="stat-desc text-[10px] font-medium">{filteredTableData.length === 1 ? 'LGU' : 'LGUs'}</div>
+                    <div className="stat py-2 px-3 sm:px-4">
+                      <div className="stat-title text-[9px] sm:text-[10px] font-bold uppercase tracking-wide">Total</div>
+                      <div className="stat-value text-xl sm:text-2xl text-primary leading-none">{filteredTableData.length}</div>
+                      <div className="stat-desc text-[9px] sm:text-[10px] font-medium hidden sm:block">{filteredTableData.length === 1 ? 'LGU' : 'LGUs'}</div>
                     </div>
                   </div>
                 </div>
@@ -691,13 +758,19 @@ export default function SMVMonitoringPage() {
                 setProgressFilter={setProgressFilter}
               />
 
-              {/* Summary Table - Dashboard Card Style */}
-              <SMVSummaryTable
-                filteredTableData={filteredTableData}
-                stages={stages}
-                isAdmin={isAdmin}
-                onSetTimeline={handleSetTimeline}
-              />
+              {/* Conditional Table Rendering based on view toggle */}
+              {tableStyle === "grid" ? (
+                <SMVExcelTable 
+                  filteredTableData={filteredTableData} 
+                />
+              ) : (
+                <SMVSummaryTable
+                  filteredTableData={filteredTableData}
+                  stages={stages}
+                  isAdmin={isAdmin}
+                  onSetTimeline={handleSetTimeline}
+                />
+              )}
             </section>
           )}
 

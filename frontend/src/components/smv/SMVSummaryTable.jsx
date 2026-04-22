@@ -25,8 +25,9 @@ export default function SMVSummaryTable({
     return daysSinceNotice;
   };
 
-  // Find the NEXT unfilled milestone and calculate its recommended deadline.
-  // A filled date = that step is DONE. We look for the first EMPTY step.
+  // Find the NEXT milestone where the LGU is stuck.
+  // A filled date in the past = completed. 
+  // An empty date or a filled date in the future = the active bottleneck.
   const getNextDeadline = (row) => {
     const { timeline } = row;
     if (!timeline) return null;
@@ -35,30 +36,15 @@ export default function SMVSummaryTable({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Ordered milestones: each has a name, its date field, and how to calculate
-    // its recommended deadline from previous dates.
     const milestones = [
-      {
-        name: "RO Submission",
-        value: timeline.regionalOfficeSubmissionDeadline,
-        // Recommended: within 12 months of BLGF Notice
-        getRecommended: () => {
-          if (!timeline.blgfNoticeDate) return null;
-          const d = new Date(timeline.blgfNoticeDate);
-          d.setFullYear(d.getFullYear() + 1);
-          return d;
-        }
-      },
       {
         name: "1st Publication",
         value: timeline.firstPublicationDate,
-        // No strict deadline — just mark as "Next" without countdown
         getRecommended: () => null
       },
       {
         name: "2nd Publication",
         value: timeline.secondPublicationDate,
-        // Recommended: 1 week after 1st Publication
         getRecommended: () => {
           if (!timeline.firstPublicationDate) return null;
           const d = new Date(timeline.firstPublicationDate);
@@ -69,7 +55,6 @@ export default function SMVSummaryTable({
       {
         name: "1st Consultation",
         value: timeline.firstPublicConsultationDate,
-        // Recommended: 2 weeks after 2nd Publication
         getRecommended: () => {
           if (!timeline.secondPublicationDate) return null;
           const d = new Date(timeline.secondPublicationDate);
@@ -80,18 +65,21 @@ export default function SMVSummaryTable({
       {
         name: "2nd Consultation",
         value: timeline.secondPublicConsultationDate,
-        // Recommended: within 60 days before RO Submission
+        getRecommended: () => null
+      },
+      {
+        name: "RO Submission",
+        value: timeline.regionalOfficeSubmissionDeadline,
         getRecommended: () => {
-          if (!timeline.regionalOfficeSubmissionDeadline) return null;
-          const d = new Date(timeline.regionalOfficeSubmissionDeadline);
-          d.setDate(d.getDate() - 60);
+          if (!timeline.secondPublicConsultationDate) return null;
+          const d = new Date(timeline.secondPublicConsultationDate);
+          d.setDate(d.getDate() + 60);
           return d;
         }
       },
       {
         name: "RO Review",
         value: timeline.roReviewDeadline,
-        // Recommended: RO Submission + 45 days
         getRecommended: () => {
           if (!timeline.regionalOfficeSubmissionDeadline) return null;
           const d = new Date(timeline.regionalOfficeSubmissionDeadline);
@@ -102,7 +90,6 @@ export default function SMVSummaryTable({
       {
         name: "CO Review",
         value: timeline.blgfCentralOfficeReviewDeadline,
-        // Recommended: RO Review + 30 days
         getRecommended: () => {
           if (!timeline.roReviewDeadline) return null;
           const d = new Date(timeline.roReviewDeadline);
@@ -113,7 +100,6 @@ export default function SMVSummaryTable({
       {
         name: "SoF Approval",
         value: timeline.secretaryOfFinanceReviewDeadline,
-        // Recommended: CO Review + 30 days
         getRecommended: () => {
           if (!timeline.blgfCentralOfficeReviewDeadline) return null;
           const d = new Date(timeline.blgfCentralOfficeReviewDeadline);
@@ -123,10 +109,28 @@ export default function SMVSummaryTable({
       },
     ];
 
-    // Walk through milestones in order. Find the first one that is NOT filled.
     for (const milestone of milestones) {
-      if (!milestone.value) {
-        // This is the next goal to achieve
+      if (milestone.value) {
+        // It has a date populated
+        const popDate = new Date(milestone.value);
+        popDate.setHours(0, 0, 0, 0);
+        
+        const diffDays = Math.ceil((popDate - today) / (1000 * 60 * 60 * 24));
+        
+        // If the date is strictly in the past, it's considered "Completed" in a linear timeline.
+        if (diffDays < 0) {
+          continue; // Move to next milestone
+        }
+        
+        // Date is today or in the future: this is the explicit NEXT goal!
+        return {
+          name: milestone.name,
+          daysUntil: diffDays,
+          isNextGoal: true
+        };
+      } else {
+        // Value is EMPTY -> This is the NEXT goal to achieve!
+        // We infer its deadline using the previous step's date via getRecommended()
         const recommended = milestone.getRecommended();
 
         if (recommended) {
@@ -135,20 +139,20 @@ export default function SMVSummaryTable({
           return {
             name: milestone.name,
             daysUntil: diffDays,
-            isNextGoal: true,
+            isNextGoal: true
           };
         }
 
-        // No recommended date calculable — just show as next goal
+        // It's empty and we have no recommended date (e.g. earlier steps missing)
         return {
           name: milestone.name,
           isNextGoal: true,
-          noDeadline: true,
+          noDeadline: true
         };
       }
     }
 
-    // All milestones filled → process is complete
+    // All set and all passed
     return { name: "Completed", isCompleted: true };
   };
 
@@ -328,13 +332,6 @@ export default function SMVSummaryTable({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span className="text-xs">Timeline not set</span>
-                      </div>
-                     )}
-                     
-                     {daysSinceNotice !== null && (
-                      <div className="flex items-center gap-1 mt-2 text-[10px] opacity-60 uppercase tracking-widest font-mono">
-                        <span className="w-1.5 h-1.5 bg-current rounded-full"></span>
-                        Day {daysSinceNotice}
                       </div>
                      )}
                   </td>
