@@ -3,6 +3,8 @@ import { createContext, useState, useContext, useEffect } from "react";
 import useApi from "../services/axios.js";
 const AuthContext = createContext();
 
+const INACTIVITY_LIMIT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 export function useAuth() {
   return useContext(AuthContext);
 }
@@ -15,6 +17,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
+    const lastActivity = localStorage.getItem("lastActivity");
+
+    // Check if session expired while away
+    if (lastActivity && Date.now() - parseInt(lastActivity, 10) > INACTIVITY_LIMIT) {
+      console.log("Session expired while away");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("lastActivity");
+      setLoading(false);
+      return;
+    }
+
     if (token && userData && userData !== "undefined") {
       try {
         setUser(JSON.parse(userData)); // restore user from localStorage
@@ -30,7 +44,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!user) return;
 
-    const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
     let isLoggedOut = false;
 
     const updateActivity = () => {
@@ -94,6 +107,7 @@ export function AuthProvider({ children }) {
       // Clear local storage and user state
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("lastActivity");
       setUser(null);
       // Force full reload to homepage
       window.location.replace("/"); // replaces current history entry

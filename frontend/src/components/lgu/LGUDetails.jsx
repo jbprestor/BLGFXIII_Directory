@@ -348,16 +348,24 @@ export default function LGUDetails({
                       <select className="select select-bordered w-full focus:select-primary" value={editData?.classification || ''} onChange={e => handleChange('classification', e.target.value)}>
                         <option value="">Select...</option>
                         <option value="HUC">HUC</option>
-                        <option value="CC">CC</option>
-                        <option value="Municipality">Municipality</option>
-                        <option value="Province">Province</option>
-                        <option value="ICC">ICC</option>
+                        <option value="City">CITY</option>
+                        <option value="Province">PROVINCE</option>
+                        <option value="Municipality">MUNICIPALITY</option>
                       </select>
                     </div>
 
                     <div className="form-control w-full">
                       <label className="label font-medium">Income Class</label>
-                      <input type="text" className="input input-bordered w-full focus:input-primary" value={editData?.incomeClass || ''} onChange={e => handleChange('incomeClass', e.target.value)} />
+                      <select className="select select-bordered w-full focus:select-primary" value={editData?.incomeClass || ''} onChange={e => handleChange('incomeClass', e.target.value)}>
+                        <option value="">Select...</option>
+                        <option value="1st Class">1st Class</option>
+                        <option value="2nd Class">2nd Class</option>
+                        <option value="3rd Class">3rd Class</option>
+                        <option value="4th Class">4th Class</option>
+                        <option value="5th Class">5th Class</option>
+                        <option value="6th Class">6th Class</option>
+                        <option value="Special Class">Special Class</option>
+                      </select>
                     </div>
                   </div>
 
