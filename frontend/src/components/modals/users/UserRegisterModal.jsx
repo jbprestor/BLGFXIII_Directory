@@ -17,12 +17,12 @@ export default function UserRegisterModal({ onClose, onGoToLogin }) {
     const [error, setError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
-    // Region options (could be fetched, but hardcoding for now based on context)
+    // Region options
     const REGIONS = [
-        "region_i", "region_ii", "region_iii", "region_iv_a", "region_iv_b",
-        "region_v", "region_vi", "region_vii", "region_viii", "region_ix",
-        "region_x", "region_xi", "region_xii", "region_xiii", "ncr", "car", "barmm"
-    ].map(r => r.toUpperCase()); // Simple normalization
+        "Region I", "Region II", "Region III", "Region IV-A", "Region IV-B",
+        "Region V", "Region VI", "Region VII", "Region VIII", "Region IX",
+        "Region X", "Region XI", "Region XII", "Region XIII (Caraga)", "NCR", "CAR", "BARMM"
+    ];
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -116,17 +116,39 @@ export default function UserRegisterModal({ onClose, onGoToLogin }) {
                         </div>
 
                         <div className="form-control">
-                            <label className="label pt-0"><span className="label-text font-medium text-base-content/80">Region</span></label>
-                            <input
-                                type="text"
-                                name="region"
-                                placeholder="Region (e.g. Region XIII)"
-                                value={formData.region}
+                            <label className="label pt-0"><span className="label-text font-medium text-base-content/80">Role</span></label>
+                            <select
+                                name="role"
+                                value={formData.role}
                                 onChange={handleChange}
                                 required
-                                className="input input-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-200/50 hover:bg-base-200 transition-all"
-                            />
+                                className="select select-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-200/50 hover:bg-base-200 transition-all font-medium"
+                            >
+                                <option value="Admin">Admin</option>
+                                <option value="Regional">Regional</option>
+                                <option value="Provincial">Provincial</option>
+                                <option value="City">City</option>
+                                <option value="Municipal">Municipal</option>
+                            </select>
                         </div>
+
+                        {formData.role !== "Admin" && (
+                            <div className="form-control">
+                                <label className="label pt-0"><span className="label-text font-medium text-base-content/80">Region</span></label>
+                                <select
+                                    name="region"
+                                    value={formData.region}
+                                    onChange={handleChange}
+                                    required={formData.role !== "Admin"}
+                                    className="select select-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 bg-base-200/50 hover:bg-base-200 transition-all font-medium"
+                                >
+                                    <option value="" disabled>Select a Region</option>
+                                    {REGIONS.map((r) => (
+                                        <option key={r} value={r}>{r}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div className="form-control">
                             <label className="label pt-0"><span className="label-text font-medium text-base-content/80">Email Address</span></label>

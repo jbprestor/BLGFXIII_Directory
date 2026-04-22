@@ -88,6 +88,7 @@ export default function UserCreateModal({
   const roleOptions = [
     { value: "Regional", label: "Regional" },
     { value: "Provincial", label: "Provincial" },
+    { value: "City", label: "City" },
     { value: "Municipal", label: "Municipal" },
     { value: "Admin", label: "Admin" },
   ];

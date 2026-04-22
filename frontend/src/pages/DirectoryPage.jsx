@@ -19,9 +19,9 @@ export default function DirectoryPage() {
   const { user } = useAuth();
   const { getAllAssessors, createAssessor, updateAssessor, deleteAssessor } = useApi();
 
-  const canAdd = user?.role === "Admin";
-  const canEdit = user?.role === "Admin";
-  const canDelete = user?.role === "Admin";
+  const canAdd = user?.role === "Admin" || user?.role === "Regional";
+  const canEdit = user?.role === "Admin" || user?.role === "Regional";
+  const canDelete = user?.role === "Admin" || user?.role === "Regional";
 
   // State management
   const [directory, setDirectory] = useState([]);

@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 
 export default function UsersPage() {
   const { user } = useAuth();
-  const { getPendingUsers, getAllUsers, updateUserStatus } = useApi();
+  const { getPendingUsers, getAllUsers, updateUserStatus, toggleUserActive, deleteUserAccount } = useApi();
   
   const [pendingUsers, setPendingUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -63,6 +63,34 @@ export default function UsersPage() {
     }
   };
 
+  const handleToggleActive = async (userId, currentName) => {
+    setActionLoading(prev => ({ ...prev, [userId]: true }));
+    try {
+      const res = await toggleUserActive(userId);
+      toast.success(res.data?.message || "User status updated!");
+      await fetchUsers();
+    } catch (error) {
+      toast.error("Failed to update user: " + (error.response?.data?.message || error.message));
+    } finally {
+      setActionLoading(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to permanently delete ${userName}? This cannot be undone.`)) return;
+    
+    setActionLoading(prev => ({ ...prev, [userId]: true }));
+    try {
+      await deleteUserAccount(userId);
+      toast.success(`${userName} has been permanently deleted.`);
+      await fetchUsers();
+    } catch (error) {
+      toast.error("Failed to delete user: " + (error.response?.data?.message || error.message));
+    } finally {
+      setActionLoading(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Intl.DateTimeFormat("en-US", {
@@ -93,6 +121,7 @@ export default function UsersPage() {
       Admin: "badge-error",
       Regional: "badge-primary",
       Provincial: "badge-secondary",
+      City: "badge-info",
       Municipal: "badge-accent"
     };
     
@@ -306,7 +335,9 @@ export default function UsersPage() {
                         <th>Role</th>
                         <th>Region</th>
                         <th>Status</th>
+                        <th>Active</th>
                         <th>Registered</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -324,7 +355,36 @@ export default function UsersPage() {
                           </td>
                           <td>{getStatusBadge(user.status)}</td>
                           <td>
+                            <span className={`badge badge-sm ${user.isActive ? 'badge-success' : 'badge-error'}`}>
+                              {user.isActive ? 'Active' : 'Blocked'}
+                            </span>
+                          </td>
+                          <td>
                             <div className="text-sm">{formatDate(user.createdAt)}</div>
+                          </td>
+                          <td>
+                            <div className="flex gap-1">
+                              <button
+                                className={`btn btn-xs ${user.isActive ? 'btn-warning' : 'btn-success'}`}
+                                onClick={() => handleToggleActive(user._id, `${user.firstName} ${user.lastName}`)}
+                                disabled={actionLoading[user._id]}
+                                title={user.isActive ? 'Block user' : 'Unblock user'}
+                              >
+                                {actionLoading[user._id] ? (
+                                  <span className="loading loading-spinner loading-xs"></span>
+                                ) : user.isActive ? '🚫 Block' : '✅ Unblock'}
+                              </button>
+                              <button
+                                className="btn btn-xs btn-error"
+                                onClick={() => handleDeleteUser(user._id, `${user.firstName} ${user.lastName}`)}
+                                disabled={actionLoading[user._id]}
+                                title="Delete user permanently"
+                              >
+                                {actionLoading[user._id] ? (
+                                  <span className="loading loading-spinner loading-xs"></span>
+                                ) : '🗑️ Delete'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

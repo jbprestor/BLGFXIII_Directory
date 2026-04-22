@@ -9,8 +9,10 @@ import {
   updateProfile,
   uploadProfilePicture,
   deleteProfilePicture,
+  toggleUserActive,
+  deleteUser,
 } from "../controllers/userController.js";
-import { authenticate } from "../middleware/authMiddleware.js";
+import { authenticate, authorize } from "../middleware/authMiddleware.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -57,10 +59,12 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 
 // Protected routes (require authentication)
-router.get("/", authenticate, getAllUsers);
-router.get("/pending", authenticate, getPendingUsers);
-router.patch("/:userId/status", authenticate, updateUserStatus);
-router.post("/migrate", authenticate, migrateExistingUsers);
+router.get("/", authenticate, authorize("Admin"), getAllUsers);
+router.get("/pending", authenticate, authorize("Admin"), getPendingUsers);
+router.patch("/:userId/status", authenticate, authorize("Admin"), updateUserStatus);
+router.patch("/:userId/toggle-active", authenticate, authorize("Admin"), toggleUserActive);
+router.delete("/:userId", authenticate, authorize("Admin"), deleteUser);
+router.post("/migrate", authenticate, authorize("Admin"), migrateExistingUsers);
 
 // Profile management routes
 router.put("/profile", authenticate, updateProfile);

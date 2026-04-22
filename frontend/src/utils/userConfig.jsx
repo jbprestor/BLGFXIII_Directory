@@ -28,7 +28,7 @@ export const USER_FIELD_CONFIG = {
     label: "Role",
     type: "select",
     validation: ["required"],
-    options: ["Admin", "Regional", "Provincial", "Municipal"],
+    options: ["Admin", "Regional", "Provincial", "City", "Municipal"],
   },
   region: {
     label: "Region",

@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["Admin", "Regional", "Provincial", "Municipal"],
+      enum: ["Admin", "Regional", "Provincial", "City", "Municipal"],
       default: "Municipal",
     },
     region: {
@@ -90,7 +90,7 @@ const validate = (data) => {
     password: passwordComplexity().required().label("Password"),
     firstName: Joi.string().required().label("First Name"),
     lastName: Joi.string().required().label("Last Name"),
-    role: Joi.string().valid("Admin", "Regional", "Provincial", "Municipal").label("Role"),
+    role: Joi.string().valid("Admin", "Regional", "Provincial", "City", "Municipal").label("Role"),
     region: Joi.string().label("Region"),
     isActive: Joi.boolean().label("Is Active"),
     status: Joi.string().valid("pending", "approved", "rejected").label("Status"),

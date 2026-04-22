@@ -14,7 +14,7 @@ import SetTimelineModal from "../components/modals/smv/SetTimelineModal.jsx";
 
 export default function SMVMonitoringPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "Admin";
+  const canModify = user?.role === "Admin" || user?.role === "Regional";
   const { getAllLgus, getSMVProcesses, updateSMVTimeline, api } = useApi();
 
   const [monitorings, setMonitorings] = useState([]);
@@ -327,7 +327,7 @@ export default function SMVMonitoringPage() {
   };
 
   const handleCheckboxToggle = async (monitoringId, activity, lguId) => {
-    if (!isAdmin) return;
+    if (!canModify) return;
 
     try {
       let newMonitoringId = monitoringId;
@@ -767,7 +767,7 @@ export default function SMVMonitoringPage() {
                 <SMVSummaryTable
                   filteredTableData={filteredTableData}
                   stages={stages}
-                  isAdmin={isAdmin}
+                  isAdmin={canModify}
                   onSetTimeline={handleSetTimeline}
                 />
               )}

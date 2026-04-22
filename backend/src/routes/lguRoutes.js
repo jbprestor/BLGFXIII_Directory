@@ -12,7 +12,7 @@ import {
   getProvinces,
   getLGUsByProvince
 } from "../controllers/lguController.js";
-import { authenticate } from "../middleware/authMiddleware.js";
+import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -29,10 +29,10 @@ router.get("/:id/assessors", getLGUWithAssessors); // Get LGU + assessors
 router.get("/:id/smv-process", getLGUWithSMVProcess); // Get LGU + SMV Monitoring
 
 /**
- * Protected Routes
+ * Protected Routes - Admin and Regional only
  */
-router.post("/", authenticate, createLGU);    // Add new LGU
-router.put("/:id", authenticate, updateLGU);  // Update LGU
-router.delete("/:id", authenticate, deleteLGU); // Delete LGU
+router.post("/", authenticate, authorize("Admin", "Regional"), createLGU);    // Add new LGU
+router.put("/:id", authenticate, authorize("Admin", "Regional"), updateLGU);  // Update LGU
+router.delete("/:id", authenticate, authorize("Admin", "Regional"), deleteLGU); // Delete LGU
 
 export { router as lguRoutes };

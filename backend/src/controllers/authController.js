@@ -66,6 +66,14 @@ export const loginUser = async (req, res) => {
     if (!user)
       return res.status(401).json({ message: "Invalid email or password" });
 
+    if (user.status === "pending") {
+      return res.status(403).json({ message: "Your account is still pending approval from an administrator." });
+    }
+
+    if (user.status === "rejected") {
+      return res.status(403).json({ message: "Your account registration was rejected." });
+    }
+
     if (!user.isActive) {
       return res
         .status(401)

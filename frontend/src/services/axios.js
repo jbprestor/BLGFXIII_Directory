@@ -54,7 +54,8 @@ export default function useApi() {
   api.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401) {
+      const isLoginEndpoint = error.config?.url?.includes('/users/login');
+      if (error.response?.status === 401 && !isLoginEndpoint) {
         console.error("Authentication failed - token may be expired");
         // Clear invalid token and user data
         localStorage.removeItem("token");
@@ -77,6 +78,8 @@ export default function useApi() {
   const logoutUser = () => api.post("/auth/logout");
   const getPendingUsers = () => api.get("/users/pending");
   const updateUserStatus = (userId, status) => api.patch(`/users/${userId}/status`, { status });
+  const toggleUserActive = (userId) => api.patch(`/users/${userId}/toggle-active`);
+  const deleteUserAccount = (userId) => api.delete(`/users/${userId}`);
   const updateProfile = (data) => api.put("/users/profile", data);
   const uploadProfilePicture = (formData) => api.post("/users/profile/picture", formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -139,6 +142,8 @@ export default function useApi() {
     logoutUser,
     getPendingUsers,
     updateUserStatus,
+    toggleUserActive,
+    deleteUserAccount,
     updateProfile,
     uploadProfilePicture,
     deleteProfilePicture,

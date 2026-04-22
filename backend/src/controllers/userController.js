@@ -368,3 +368,79 @@ export const deleteProfilePicture = async (req, res) => {
     });
   }
 };
+
+// Toggle user active status (Block/Unblock) - Admin only
+export const toggleUserActive = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Prevent admin from blocking themselves
+    if (user._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({ success: false, message: "You cannot block your own account" });
+    }
+
+    user.isActive = !user.isActive;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: user,
+      message: user.isActive ? "User unblocked successfully" : "User blocked successfully",
+    });
+  } catch (err) {
+    console.error("Error toggling user active status:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update user status",
+      error: err.message,
+    });
+  }
+};
+
+// Delete user permanently - Admin only
+export const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Prevent admin from deleting themselves
+    if (user._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({ success: false, message: "You cannot delete your own account" });
+    }
+
+    // Delete profile picture file if exists
+    if (user.profilePicture) {
+      const filePath = path.join(process.cwd(), user.profilePicture);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (deleteError) {
+          console.error("Error deleting profile picture:", deleteError);
+        }
+      }
+    }
+
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete user",
+      error: err.message,
+    });
+  }
+};

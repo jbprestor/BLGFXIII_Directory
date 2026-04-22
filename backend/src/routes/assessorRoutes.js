@@ -9,7 +9,7 @@ import {
   searchAssessors,
   getAssessorNotifications
 } from "../controllers/assessorController.js";
-import { authenticate } from "../middleware/authMiddleware.js";
+import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -21,9 +21,9 @@ router.get("/lgu/:lguId", getAssessorsByLGU);
 router.get("/:id", getAssessorById); // keep this last
 
 
-// Protected routes
-router.post("/", createAssessor);
-router.put("/:id", authenticate, updateAssessor);
-router.delete("/:id", authenticate, deleteAssessor);
+// Protected routes - Admin and Regional only
+router.post("/", authenticate, authorize("Admin", "Regional"), createAssessor);
+router.put("/:id", authenticate, authorize("Admin", "Regional"), updateAssessor);
+router.delete("/:id", authenticate, authorize("Admin", "Regional"), deleteAssessor);
 
 export { router as assessorRoutes };
