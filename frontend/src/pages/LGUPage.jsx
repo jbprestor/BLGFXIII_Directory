@@ -449,11 +449,14 @@ export default function LGUPage() {
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">
               {currentLgu ? currentLgu.name :
                 selectedProvince ? `${selectedProvince} LGUs` :
-                  'Provinces'}
+                  headAssessorStatus === 'vacant' ? 'Vacant Head Assessor LGUs' :
+                  headAssessorStatus === 'filled' ? 'Filled Head Assessor LGUs' :
+                    'Provinces'}
             </h1>
             <p className="text-xs sm:text-sm text-base-content/60 mt-1">
               {currentLgu ? `${currentLgu.classification} • ${currentLgu.incomeClass}` :
                 selectedProvince ? `Browse ${provinces[selectedProvince]?.length?.toLocaleString() || 0} LGUs in ${selectedProvince}` :
+                  headAssessorStatus !== 'all' ? `${filteredLgus.length} LGUs found` :
                   `Browse ${Object.keys(provinces).length.toLocaleString()} Provinces`}
             </p>
           </div>
@@ -522,6 +525,113 @@ export default function LGUPage() {
 
           {!selectedProvince && (
             <>
+              {/* Flat LGU list when Head Assessor filter is active */}
+              {headAssessorStatus !== "all" ? (
+                <>
+                  {filteredLgus.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Building className="w-16 h-16 text-base-content/40 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No LGUs Found</h3>
+                      <p className="text-base-content/60 mb-4">No LGUs match the current filter</p>
+                      <button className="btn btn-outline" onClick={() => setHeadAssessorStatus("all")}>Clear Filter</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="table table-sm w-full bg-base-100 rounded-xl border border-base-200 shadow-sm">
+                          <thead>
+                            <tr className="bg-base-200/60">
+                              <th className="text-xs uppercase tracking-wider">#</th>
+                              <th className="text-xs uppercase tracking-wider">LGU Name</th>
+                              <th className="text-xs uppercase tracking-wider">Province</th>
+                              <th className="text-xs uppercase tracking-wider">Classification</th>
+                              <th className="text-xs uppercase tracking-wider">Head Assessor Status</th>
+                              <th className="text-xs uppercase tracking-wider">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredLgus
+                              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                              .map((lgu, idx) => {
+                                const exactTitles = ["municipal assessor", "city assessor", "provincial assessor"];
+                                const lguAssessors = allAssessors.filter(a => {
+                                  const aLguId = a.lgu?._id || a.lgu?.id || a.lgu;
+                                  return String(aLguId) === String(lgu._id || lgu.id);
+                                });
+                                const headAssessor = lguAssessors.find(a => {
+                                  const oDes = (a.officialDesignation || "").toLowerCase().trim();
+                                  const pPos = (a.plantillaPosition || "").toLowerCase().trim();
+                                  return exactTitles.includes(oDes) || exactTitles.includes(pPos);
+                                });
+
+                                return (
+                                  <tr key={lgu._id || lgu.id} className="hover:bg-base-200/30 transition-colors">
+                                    <td className="text-sm text-base-content/60">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
+                                    <td className="font-medium text-sm">{lgu.name}</td>
+                                    <td className="text-sm text-base-content/70">{lgu.province}</td>
+                                    <td>
+                                      <span className={`badge badge-sm ${lgu.classification === 'Province' ? 'badge-primary' : lgu.classification === 'City' || lgu.classification === 'HUC' ? 'badge-secondary' : 'badge-accent'}`}>
+                                        {lgu.classification}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      {headAssessor ? (
+                                        <div>
+                                          <span className="badge badge-sm badge-success gap-1">Filled</span>
+                                          <div className="text-xs text-base-content/60 mt-1">
+                                            {headAssessor.firstName} {headAssessor.lastName}
+                                            {headAssessor.statusOfAppointment !== 'Permanent' && (
+                                              <span className="text-warning ml-1">({headAssessor.statusOfAppointment})</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <span className="badge badge-sm badge-warning gap-1">Vacant</span>
+                                      )}
+                                    </td>
+                                    <td>
+                                      <button
+                                        className="btn btn-ghost btn-xs"
+                                        onClick={() => {
+                                          setSelectedProvince(lgu.province);
+                                          setSelectedLguId(lgu._id || lgu.id);
+                                        }}
+                                      >
+                                        View
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination for flat list */}
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
+                        <button
+                          className="btn btn-xs sm:btn-sm btn-ghost"
+                          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </button>
+                        <span className="text-xs sm:text-sm whitespace-nowrap">
+                          Page {currentPage} / {Math.max(1, Math.ceil(filteredLgus.length / itemsPerPage))}
+                        </span>
+                        <button
+                          className="btn btn-xs sm:btn-sm btn-ghost"
+                          onClick={() => setCurrentPage((p) => Math.min(p + 1, Math.ceil(filteredLgus.length / itemsPerPage)))}
+                          disabled={currentPage >= Math.ceil(filteredLgus.length / itemsPerPage)}
+                        >
+                          <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
               {Object.keys(provinces).length === 0 ? (
                 <div className="text-center py-12">
                   <Building className="w-16 h-16 text-base-content/40 mx-auto mb-4" />
@@ -673,6 +783,8 @@ export default function LGUPage() {
                   <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               </div>
+            </>
+            )}
             </>
           )}
 

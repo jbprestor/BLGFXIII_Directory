@@ -21,7 +21,7 @@ const lguSchema = new mongoose.Schema(
     },
     classification: {
       type: String,
-      enum: ["HUC", "CC", "Municipality", "Province", "ICC"],
+      enum: ["HUC", "CC", "City", "Municipality", "Province", "ICC"],
       required: true,
       index: true,
     },

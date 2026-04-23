@@ -10,20 +10,17 @@ export async function getDashboardStats(req, res) {
             totalLgus,
             totalAssessors,
             assessors,
-            smvProjects
+            smvProjects,
+            recentSmvUpdates
         ] = await Promise.all([
             LGU.countDocuments({}),
-            Assessor.countDocuments({ isActive: true }),
+            Assessor.countDocuments({ isActive: true, statusOfAppointment: { $ne: 'Retired' } }),
             Assessor.find({ isActive: true }).select('lgu officialDesignation plantillaPosition statusOfAppointment').lean(),
-            SMVMonitoring.find({}).select('overallStatus complianceStatus').lean()
+            SMVMonitoring.find({}).select('overallStatus complianceStatus').lean(),
+            SMVMonitoring.find({}).sort({ updatedAt: -1 }).limit(5).populate('lguId', 'name classification province').lean()
         ]);
 
         // 2. Vacant Head Assessor Calculation
-        // Rule: A position is FILLED if: 
-        // (Status == 'Permanent') AND (officialDesignation OR plantillaPosition is 'Provincial/City/Municipal Assessor')
-        // Otherwise, if an LGU has NO such filled position, it is considered to have a VACANT Head Assessor.
-
-        // Get all Active LGU IDs
         const allLguIds = await LGU.find({}).distinct('_id');
         const lguIdsWithFilledHead = new Set();
 
@@ -39,7 +36,6 @@ export async function getDashboardStats(req, res) {
             const isTitleMatch = exactTitles.includes(oDes) || exactTitles.includes(pPos);
             const isPermanent = status === "permanent";
 
-            // If it's a permanent appointment to the exact head title, it's FILLED.
             if (isTitleMatch && isPermanent) {
                 lguIdsWithFilledHead.add(a.lgu.toString());
             }
@@ -47,47 +43,68 @@ export async function getDashboardStats(req, res) {
 
         const vacantHeadAssessors = allLguIds.length - lguIdsWithFilledHead.size;
 
+        // 3. SMV Stats for Graphs
+        const pipelineCounts = {
+            "Preparatory": 0,
+            "Data Collection": 0,
+            "Data Analysis": 0,
+            "Preparation of Proposed SMV": 0,
+            "Public Consultation": 0,
+            "Review by RO": 0,
+            "Submission to BLGF CO": 0,
+            "DOF Review": 0,
+            "Valuation Testing": 0,
+            "Finalization": 0,
+            "Completed": 0
+        };
 
-        // 2. SMV Stats
-        const smvStats = {
-            total: smvProjects.length,
-            atRisk: 0,
-            pipeline: {
-                "Preparatory": 0,
-                "Data Collection": 0,
-                "Data Analysis": 0,
-                "Preparation of Proposed SMV": 0,
-                "Public Consultation": 0,
-                "Review by RO": 0,
-                "Submission to BLGF CO": 0,
-                "DOF Review": 0,
-                "Valuation Testing": 0,
-                "Finalization": 0,
-                "Completed": 0
-            }
+        const riskCounts = {
+            "On Track": 0,
+            "Delayed": 0,
+            "At Risk": 0,
+            "Overdue": 0
         };
 
         smvProjects.forEach(proj => {
-            // Compliance Status
-            if (['At Risk', 'Delayed', 'Overdue'].includes(proj.complianceStatus)) {
-                smvStats.atRisk++;
+            // Pipeline Stage
+            if (proj.overallStatus && pipelineCounts[proj.overallStatus] !== undefined) {
+                pipelineCounts[proj.overallStatus]++;
             }
 
-            // Pipeline Stage
-            if (proj.overallStatus && smvStats.pipeline[proj.overallStatus] !== undefined) {
-                smvStats.pipeline[proj.overallStatus]++;
-            } else if (proj.overallStatus) {
-                // Fallback for any unknown status
-                if (!smvStats.pipeline["Other"]) smvStats.pipeline["Other"] = 0;
-                smvStats.pipeline["Other"]++;
+            // Compliance Status
+            const cStatus = proj.complianceStatus || 'On Track';
+            if (riskCounts[cStatus] !== undefined) {
+                riskCounts[cStatus]++;
             }
         });
+
+        // Format for Recharts
+        const formattedPipeline = Object.entries(pipelineCounts).map(([name, count]) => ({ name, count }));
+        const formattedRisk = Object.entries(riskCounts).map(([name, value]) => ({ name, value }));
+
+        const smvStats = {
+            total: smvProjects.length,
+            atRisk: riskCounts['At Risk'] + riskCounts['Delayed'] + riskCounts['Overdue'],
+            pipeline: formattedPipeline,
+            riskBreakdown: formattedRisk
+        };
+
+        // 4. Recent Activities
+        const recentActivities = recentSmvUpdates.map(proj => ({
+            id: proj._id,
+            type: 'SMV Update',
+            lguName: proj.lguId?.name || 'Unknown LGU',
+            lguType: proj.lguId?.classification || '',
+            status: proj.overallStatus,
+            date: proj.updatedAt
+        }));
 
         res.status(200).json({
             totalLgus,
             totalAssessors,
             vacantHeadAssessors: Math.max(0, vacantHeadAssessors), // Ensure no negative
-            smvStats
+            smvStats,
+            recentActivities
         });
 
     } catch (error) {

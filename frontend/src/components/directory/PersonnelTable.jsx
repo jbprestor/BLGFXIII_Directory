@@ -96,7 +96,7 @@ export default function PersonnelTable({
 
                     {/* Position */}
                     <td className="p-2 text-xs sm:text-sm">
-                      {person.plantillaPosition || "N/A"}
+                      {person.officialDesignation || "N/A"}
                     </td>
 
                     {/* Status */}
@@ -171,10 +171,6 @@ export default function PersonnelTable({
                             {person.statusOfAppointment || "N/A"}
                           </div>
                           <div>
-                            <strong>Plantilla Position:</strong>{" "}
-                            {person.plantillaPosition || "N/A"}
-                          </div>
-                          <div>
                             <strong>Official Designation:</strong>{" "}
                             {person.officialDesignation || "N/A"}
                           </div>
@@ -237,7 +233,7 @@ export default function PersonnelTable({
                     {person.fullName || "Unnamed"}
                   </div>
                   <div className="text-xs text-base-content/70 truncate">
-                    {person.plantillaPosition || "Position N/A"}
+                    {person.officialDesignation || "Position N/A"}
                   </div>
                   <div className="text-[10px] text-base-content/50 uppercase tracking-wide">
                     {person.lguName || "LGU N/A"}

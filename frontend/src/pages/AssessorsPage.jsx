@@ -219,7 +219,7 @@ export default function AssessorsPage() {
     let result = assessors.filter((a) => {
       const searchMatch =
         !searchLower ||
-        ["fullName", "lguName", "plantillaPosition", "officeEmail", "region"].some(
+        ["fullName", "lguName", "officialDesignation", "officeEmail", "region"].some(
           (field) => (a[field] || "").toLowerCase().includes(searchLower)
         );
 
@@ -242,8 +242,8 @@ export default function AssessorsPage() {
       // Position Category Logic
       let positionMatch = true;
       if (selectedPositionCategory !== "all") {
-        // Check both fields to ensure we catch "Assistant" if it's in either
-        const designation = ((a.officialDesignation || "") + " " + (a.plantillaPosition || "")).toLowerCase();
+        // Check only Official Designation to determine if Assistant
+        const designation = (a.officialDesignation || "").toLowerCase();
         const isAssistant = designation.includes("assistant");
 
         if (selectedPositionCategory === "Head Assessor") {

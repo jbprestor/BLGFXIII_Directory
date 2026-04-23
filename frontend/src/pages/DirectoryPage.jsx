@@ -125,13 +125,11 @@ export default function DirectoryPage() {
   const getCategory = (person) => {
     if (person.statusOfAppointment === "Retired") return "retired";
 
-    const pos = (person.plantillaPosition || "").toLowerCase();
+    // Check only designation for robustness
+    const designation = (person.officialDesignation || "").toLowerCase();
 
-    // Check both plantilla and designation for robustness
-    const designation = ((person.officialDesignation || "") + " " + pos).toLowerCase();
-
-    const isAssessor = pos.includes("assessor") || designation.includes("assessor");
-    const isAssistant = pos.includes("assistant") || designation.includes("assistant");
+    const isAssessor = designation.includes("assessor");
+    const isAssistant = designation.includes("assistant");
 
     // Heads: usually contain "Assessor" but NOT "Assistant", and often Provincial/City/Municipal
     // Strict check: if contains Assistant, it's Assistant. Else if Assessor, it's Head.
@@ -150,7 +148,7 @@ export default function DirectoryPage() {
         [
           "name",
           "lguName",
-          "plantillaPosition",
+          "officialDesignation",
           "emailAddress",
           "officeEmail",
           "region",
@@ -194,7 +192,7 @@ export default function DirectoryPage() {
       // Position Category from Advanced Search (Optional overlap with Tabs)
       let posCatMatch = true;
       if (selectedPositionCategory !== "all") {
-        const designation = ((person.officialDesignation || "") + " " + (person.plantillaPosition || "")).toLowerCase();
+        const designation = (person.officialDesignation || "").toLowerCase();
         const isAssistant = designation.includes("assistant");
         if (selectedPositionCategory === "Head Assessor") posCatMatch = !isAssistant;
         if (selectedPositionCategory === "Assistant Assessor") posCatMatch = isAssistant;
